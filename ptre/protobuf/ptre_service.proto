@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package tensorflow;
+option java_outer_classname = "PtreServiceProtos";
+option java_multiple_files = true;
+option java_package = "org.tensorflow.ptre";
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// GRPC Helper messages used to exchange RDMA information.
+//
+////////////////////////////////////////////////////////////////////////////////
+
+message Channel {
+  int32 lid = 1;
+  int32 qpn = 2;
+  int32 psn = 3;
+  uint64 snp = 4;
+  uint64 iid = 5;
+}
+
+message MemoryRegion {
+  uint64 remote_addr = 1;
+  uint32 rkey = 2;
+}
+message GetRemoteAddressRequest {
+  string host_name = 1;
+  Channel channel = 2;
+  repeated MemoryRegion mr = 3;
+}
+
+message GetRemoteAddressResponse {
+  string host_name = 1;
+  Channel channel = 2;
+  repeated MemoryRegion mr = 3;
+}
+
+message ErrorStatusProto {
+  int32 error_code = 1;
+  string error_message = 2;
+  string error_details = 3;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PtreService
+//
+////////////////////////////////////////////////////////////////////////////////
+
+service PtreService {
+  rpc GetRemoteAddress(GetRemoteAddressRequest)
+      returns (GetRemoteAddressResponse);
+}
