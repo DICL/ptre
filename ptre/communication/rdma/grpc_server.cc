@@ -4,23 +4,48 @@
 
 namespace ptre {
 
-class RdmaServiceImpl final : public Rdma::Service {
-  grpc::Status GetRemoteAddress(grpc::ServerContext* context,
-                                const GetRemoteAddressRequest* request,
-                                GetRemoteAddressResponse* response) override {
-    response->set_host_name("hostname");
-    return grpc::Status::OK;
-  }
-};
+//GrpcServer::~GrpcServer() {
+//  if (t_ != nullptr) {
+//    t_->join();
+//  }
+//}
 
-void GrpcServer::RunServer() {
-  std::string server_address("0.0.0.0:50051");
+grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* context,
+                                const GetRemoteAddressRequest* request,
+                                GetRemoteAddressResponse* response) {
+  /// need rank
+  /// 
+  int rank = rdma_manager_->rank();
+  std::string tensor_name = request->tensor_name();
+  RemoteMR rmr = rdma_manager_->GetRemoteMR(tensor_name);
+
+  response->set_rank(rank);
+  response->set_tensor_name(tensor_name);
+  MemoryRegion* mr_proto = response->add_mr();
+  mr_proto->set_remote_addr(rmr.remote_addr);
+  mr_proto->set_rkey(rmr.rkey);
+  return grpc::Status::OK;
+}
+
+void RdmaServiceImpl::SetRdmaManager(RdmaManager* rdma_manager) {
+  rdma_manager_ = rdma_manager;
+}
+
+//void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
+//  rdma_manager_ = rdma_manager;
+//}
+
+/* static */
+void GrpcServer::RunServer(RdmaManager* rdma_manager) {
   RdmaServiceImpl service;
+  service.SetRdmaManager(rdma_manager);
+  std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
-  server_ = std::move(std::unique_ptr<grpc::Server>(builder.BuildAndStart()));
-  server_->Wait();
+  //server_ = std::move(std::unique_ptr<grpc::Server>(builder.BuildAndStart()));
+  auto server = builder.BuildAndStart();
+  server->Wait();
 }
 
 }  // namespace ptre

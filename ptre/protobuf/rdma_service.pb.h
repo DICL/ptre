@@ -474,47 +474,31 @@ class GetRemoteAddressRequest :
 
   // accessors -------------------------------------------------------
 
-  // repeated .ptre.MemoryRegion mr = 3;
-  int mr_size() const;
-  void clear_mr();
-  static const int kMrFieldNumber = 3;
-  ::ptre::MemoryRegion* mutable_mr(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >*
-      mutable_mr();
-  const ::ptre::MemoryRegion& mr(int index) const;
-  ::ptre::MemoryRegion* add_mr();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >&
-      mr() const;
+  // string tensor_name = 2;
+  void clear_tensor_name();
+  static const int kTensorNameFieldNumber = 2;
+  const std::string& tensor_name() const;
+  void set_tensor_name(const std::string& value);
+  void set_tensor_name(std::string&& value);
+  void set_tensor_name(const char* value);
+  void set_tensor_name(const char* value, size_t size);
+  std::string* mutable_tensor_name();
+  std::string* release_tensor_name();
+  void set_allocated_tensor_name(std::string* tensor_name);
 
-  // string host_name = 1;
-  void clear_host_name();
-  static const int kHostNameFieldNumber = 1;
-  const std::string& host_name() const;
-  void set_host_name(const std::string& value);
-  void set_host_name(std::string&& value);
-  void set_host_name(const char* value);
-  void set_host_name(const char* value, size_t size);
-  std::string* mutable_host_name();
-  std::string* release_host_name();
-  void set_allocated_host_name(std::string* host_name);
-
-  // .ptre.Channel channel = 2;
-  bool has_channel() const;
-  void clear_channel();
-  static const int kChannelFieldNumber = 2;
-  const ::ptre::Channel& channel() const;
-  ::ptre::Channel* release_channel();
-  ::ptre::Channel* mutable_channel();
-  void set_allocated_channel(::ptre::Channel* channel);
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
 
   // @@protoc_insertion_point(class_scope:ptre.GetRemoteAddressRequest)
  private:
   class HasBitSetters;
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion > mr_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr host_name_;
-  ::ptre::Channel* channel_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr tensor_name_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
@@ -629,10 +613,10 @@ class GetRemoteAddressResponse :
 
   // accessors -------------------------------------------------------
 
-  // repeated .ptre.MemoryRegion mr = 3;
+  // repeated .ptre.MemoryRegion mr = 4;
   int mr_size() const;
   void clear_mr();
-  static const int kMrFieldNumber = 3;
+  static const int kMrFieldNumber = 4;
   ::ptre::MemoryRegion* mutable_mr(int index);
   ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >*
       mutable_mr();
@@ -641,26 +625,32 @@ class GetRemoteAddressResponse :
   const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >&
       mr() const;
 
-  // string host_name = 1;
-  void clear_host_name();
-  static const int kHostNameFieldNumber = 1;
-  const std::string& host_name() const;
-  void set_host_name(const std::string& value);
-  void set_host_name(std::string&& value);
-  void set_host_name(const char* value);
-  void set_host_name(const char* value, size_t size);
-  std::string* mutable_host_name();
-  std::string* release_host_name();
-  void set_allocated_host_name(std::string* host_name);
+  // string tensor_name = 2;
+  void clear_tensor_name();
+  static const int kTensorNameFieldNumber = 2;
+  const std::string& tensor_name() const;
+  void set_tensor_name(const std::string& value);
+  void set_tensor_name(std::string&& value);
+  void set_tensor_name(const char* value);
+  void set_tensor_name(const char* value, size_t size);
+  std::string* mutable_tensor_name();
+  std::string* release_tensor_name();
+  void set_allocated_tensor_name(std::string* tensor_name);
 
-  // .ptre.Channel channel = 2;
+  // .ptre.Channel channel = 3;
   bool has_channel() const;
   void clear_channel();
-  static const int kChannelFieldNumber = 2;
+  static const int kChannelFieldNumber = 3;
   const ::ptre::Channel& channel() const;
   ::ptre::Channel* release_channel();
   ::ptre::Channel* mutable_channel();
   void set_allocated_channel(::ptre::Channel* channel);
+
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
 
   // @@protoc_insertion_point(class_scope:ptre.GetRemoteAddressResponse)
  private:
@@ -668,8 +658,9 @@ class GetRemoteAddressResponse :
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion > mr_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr host_name_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr tensor_name_;
   ::ptre::Channel* channel_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
@@ -790,194 +781,141 @@ inline void MemoryRegion::set_rkey(::PROTOBUF_NAMESPACE_ID::uint32 value) {
 
 // GetRemoteAddressRequest
 
-// string host_name = 1;
-inline void GetRemoteAddressRequest::clear_host_name() {
-  host_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+// int32 rank = 1;
+inline void GetRemoteAddressRequest::clear_rank() {
+  rank_ = 0;
 }
-inline const std::string& GetRemoteAddressRequest::host_name() const {
-  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressRequest.host_name)
-  return host_name_.GetNoArena();
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteAddressRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressRequest.rank)
+  return rank_;
 }
-inline void GetRemoteAddressRequest::set_host_name(const std::string& value) {
+inline void GetRemoteAddressRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
-  host_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:ptre.GetRemoteAddressRequest.host_name)
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteAddressRequest.rank)
 }
-inline void GetRemoteAddressRequest::set_host_name(std::string&& value) {
+
+// string tensor_name = 2;
+inline void GetRemoteAddressRequest::clear_tensor_name() {
+  tensor_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& GetRemoteAddressRequest::tensor_name() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressRequest.tensor_name)
+  return tensor_name_.GetNoArena();
+}
+inline void GetRemoteAddressRequest::set_tensor_name(const std::string& value) {
   
-  host_name_.SetNoArena(
+  tensor_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteAddressRequest.tensor_name)
+}
+inline void GetRemoteAddressRequest::set_tensor_name(std::string&& value) {
+  
+  tensor_name_.SetNoArena(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:ptre.GetRemoteAddressRequest.host_name)
+  // @@protoc_insertion_point(field_set_rvalue:ptre.GetRemoteAddressRequest.tensor_name)
 }
-inline void GetRemoteAddressRequest::set_host_name(const char* value) {
+inline void GetRemoteAddressRequest::set_tensor_name(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
-  host_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:ptre.GetRemoteAddressRequest.host_name)
+  tensor_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:ptre.GetRemoteAddressRequest.tensor_name)
 }
-inline void GetRemoteAddressRequest::set_host_name(const char* value, size_t size) {
+inline void GetRemoteAddressRequest::set_tensor_name(const char* value, size_t size) {
   
-  host_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  tensor_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:ptre.GetRemoteAddressRequest.host_name)
+  // @@protoc_insertion_point(field_set_pointer:ptre.GetRemoteAddressRequest.tensor_name)
 }
-inline std::string* GetRemoteAddressRequest::mutable_host_name() {
+inline std::string* GetRemoteAddressRequest::mutable_tensor_name() {
   
-  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteAddressRequest.host_name)
-  return host_name_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteAddressRequest.tensor_name)
+  return tensor_name_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline std::string* GetRemoteAddressRequest::release_host_name() {
-  // @@protoc_insertion_point(field_release:ptre.GetRemoteAddressRequest.host_name)
+inline std::string* GetRemoteAddressRequest::release_tensor_name() {
+  // @@protoc_insertion_point(field_release:ptre.GetRemoteAddressRequest.tensor_name)
   
-  return host_name_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return tensor_name_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline void GetRemoteAddressRequest::set_allocated_host_name(std::string* host_name) {
-  if (host_name != nullptr) {
+inline void GetRemoteAddressRequest::set_allocated_tensor_name(std::string* tensor_name) {
+  if (tensor_name != nullptr) {
     
   } else {
     
   }
-  host_name_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), host_name);
-  // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteAddressRequest.host_name)
-}
-
-// .ptre.Channel channel = 2;
-inline bool GetRemoteAddressRequest::has_channel() const {
-  return this != internal_default_instance() && channel_ != nullptr;
-}
-inline void GetRemoteAddressRequest::clear_channel() {
-  if (GetArenaNoVirtual() == nullptr && channel_ != nullptr) {
-    delete channel_;
-  }
-  channel_ = nullptr;
-}
-inline const ::ptre::Channel& GetRemoteAddressRequest::channel() const {
-  const ::ptre::Channel* p = channel_;
-  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressRequest.channel)
-  return p != nullptr ? *p : *reinterpret_cast<const ::ptre::Channel*>(
-      &::ptre::_Channel_default_instance_);
-}
-inline ::ptre::Channel* GetRemoteAddressRequest::release_channel() {
-  // @@protoc_insertion_point(field_release:ptre.GetRemoteAddressRequest.channel)
-  
-  ::ptre::Channel* temp = channel_;
-  channel_ = nullptr;
-  return temp;
-}
-inline ::ptre::Channel* GetRemoteAddressRequest::mutable_channel() {
-  
-  if (channel_ == nullptr) {
-    auto* p = CreateMaybeMessage<::ptre::Channel>(GetArenaNoVirtual());
-    channel_ = p;
-  }
-  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteAddressRequest.channel)
-  return channel_;
-}
-inline void GetRemoteAddressRequest::set_allocated_channel(::ptre::Channel* channel) {
-  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaNoVirtual();
-  if (message_arena == nullptr) {
-    delete channel_;
-  }
-  if (channel) {
-    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena = nullptr;
-    if (message_arena != submessage_arena) {
-      channel = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, channel, submessage_arena);
-    }
-    
-  } else {
-    
-  }
-  channel_ = channel;
-  // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteAddressRequest.channel)
-}
-
-// repeated .ptre.MemoryRegion mr = 3;
-inline int GetRemoteAddressRequest::mr_size() const {
-  return mr_.size();
-}
-inline void GetRemoteAddressRequest::clear_mr() {
-  mr_.Clear();
-}
-inline ::ptre::MemoryRegion* GetRemoteAddressRequest::mutable_mr(int index) {
-  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteAddressRequest.mr)
-  return mr_.Mutable(index);
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >*
-GetRemoteAddressRequest::mutable_mr() {
-  // @@protoc_insertion_point(field_mutable_list:ptre.GetRemoteAddressRequest.mr)
-  return &mr_;
-}
-inline const ::ptre::MemoryRegion& GetRemoteAddressRequest::mr(int index) const {
-  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressRequest.mr)
-  return mr_.Get(index);
-}
-inline ::ptre::MemoryRegion* GetRemoteAddressRequest::add_mr() {
-  // @@protoc_insertion_point(field_add:ptre.GetRemoteAddressRequest.mr)
-  return mr_.Add();
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >&
-GetRemoteAddressRequest::mr() const {
-  // @@protoc_insertion_point(field_list:ptre.GetRemoteAddressRequest.mr)
-  return mr_;
+  tensor_name_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), tensor_name);
+  // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteAddressRequest.tensor_name)
 }
 
 // -------------------------------------------------------------------
 
 // GetRemoteAddressResponse
 
-// string host_name = 1;
-inline void GetRemoteAddressResponse::clear_host_name() {
-  host_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+// int32 rank = 1;
+inline void GetRemoteAddressResponse::clear_rank() {
+  rank_ = 0;
 }
-inline const std::string& GetRemoteAddressResponse::host_name() const {
-  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressResponse.host_name)
-  return host_name_.GetNoArena();
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteAddressResponse::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressResponse.rank)
+  return rank_;
 }
-inline void GetRemoteAddressResponse::set_host_name(const std::string& value) {
+inline void GetRemoteAddressResponse::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
-  host_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
-  // @@protoc_insertion_point(field_set:ptre.GetRemoteAddressResponse.host_name)
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteAddressResponse.rank)
 }
-inline void GetRemoteAddressResponse::set_host_name(std::string&& value) {
+
+// string tensor_name = 2;
+inline void GetRemoteAddressResponse::clear_tensor_name() {
+  tensor_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& GetRemoteAddressResponse::tensor_name() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteAddressResponse.tensor_name)
+  return tensor_name_.GetNoArena();
+}
+inline void GetRemoteAddressResponse::set_tensor_name(const std::string& value) {
   
-  host_name_.SetNoArena(
+  tensor_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteAddressResponse.tensor_name)
+}
+inline void GetRemoteAddressResponse::set_tensor_name(std::string&& value) {
+  
+  tensor_name_.SetNoArena(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
-  // @@protoc_insertion_point(field_set_rvalue:ptre.GetRemoteAddressResponse.host_name)
+  // @@protoc_insertion_point(field_set_rvalue:ptre.GetRemoteAddressResponse.tensor_name)
 }
-inline void GetRemoteAddressResponse::set_host_name(const char* value) {
+inline void GetRemoteAddressResponse::set_tensor_name(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
-  host_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
-  // @@protoc_insertion_point(field_set_char:ptre.GetRemoteAddressResponse.host_name)
+  tensor_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:ptre.GetRemoteAddressResponse.tensor_name)
 }
-inline void GetRemoteAddressResponse::set_host_name(const char* value, size_t size) {
+inline void GetRemoteAddressResponse::set_tensor_name(const char* value, size_t size) {
   
-  host_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  tensor_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       ::std::string(reinterpret_cast<const char*>(value), size));
-  // @@protoc_insertion_point(field_set_pointer:ptre.GetRemoteAddressResponse.host_name)
+  // @@protoc_insertion_point(field_set_pointer:ptre.GetRemoteAddressResponse.tensor_name)
 }
-inline std::string* GetRemoteAddressResponse::mutable_host_name() {
+inline std::string* GetRemoteAddressResponse::mutable_tensor_name() {
   
-  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteAddressResponse.host_name)
-  return host_name_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteAddressResponse.tensor_name)
+  return tensor_name_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline std::string* GetRemoteAddressResponse::release_host_name() {
-  // @@protoc_insertion_point(field_release:ptre.GetRemoteAddressResponse.host_name)
+inline std::string* GetRemoteAddressResponse::release_tensor_name() {
+  // @@protoc_insertion_point(field_release:ptre.GetRemoteAddressResponse.tensor_name)
   
-  return host_name_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  return tensor_name_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
-inline void GetRemoteAddressResponse::set_allocated_host_name(std::string* host_name) {
-  if (host_name != nullptr) {
+inline void GetRemoteAddressResponse::set_allocated_tensor_name(std::string* tensor_name) {
+  if (tensor_name != nullptr) {
     
   } else {
     
   }
-  host_name_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), host_name);
-  // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteAddressResponse.host_name)
+  tensor_name_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), tensor_name);
+  // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteAddressResponse.tensor_name)
 }
 
-// .ptre.Channel channel = 2;
+// .ptre.Channel channel = 3;
 inline bool GetRemoteAddressResponse::has_channel() const {
   return this != internal_default_instance() && channel_ != nullptr;
 }
@@ -1028,7 +966,7 @@ inline void GetRemoteAddressResponse::set_allocated_channel(::ptre::Channel* cha
   // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteAddressResponse.channel)
 }
 
-// repeated .ptre.MemoryRegion mr = 3;
+// repeated .ptre.MemoryRegion mr = 4;
 inline int GetRemoteAddressResponse::mr_size() const {
   return mr_.size();
 }

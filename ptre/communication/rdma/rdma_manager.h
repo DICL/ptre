@@ -4,14 +4,61 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <thread>
 
+#include "ptre/communication/rdma/rdma.h"
 #include "ptre/protobuf/rdma_service.pb.h"
+
+#include "tensorflow/core/framework/tensor.h"
 
 namespace ptre {
 
+namespace {
+using tensorflow::Tensor;
+}  // namespace
+
+/// RdmaManager
+///
+/// ibv_context
+/// set memory region
+/// create cq
+/// create qp
 class RdmaManager {
+ public:
+  RdmaManager(int ptre_size, int ptre_rank);
+  /// The input tensor's buffer must be fixed.
+  void InitTensorMR(int dst_id, const std::string& name,
+                   const Tensor& recv, const Tensor& send);
+  void MarkMRInitialized();
+  bool IsMRInitialized();
+/// message GetRemoteAddressResponse {
+///   int32 rank = 1;
+///   string tensor_name = 2;
+///   Channel channel = 3;
+///   repeated MemoryRegion mr = 4;
+/// }
+  bool IsRemoteMRSet(int rank, const std::string& name);
+  void SetRemoteMR(int rank, const std::string& name, uint64_t remote_addr,
+                   uint32_t rkey);
+  RemoteMR GetRemoteMR(const std::string& name);
+  void RdmaWriteTensor(int dst_id, const std::string& name,
+                       const Tensor& tensor);
+
+  int rank() { return ptre_rank_; }
+
  private:
-  std::unordered_map<int, RdmaChannel> remotes_;
+  std::mutex mu_;
+  bool is_mr_initialized_ = false;
+
+  int ptre_size_;
+  int ptre_rank_;
+  RdmaEnv rdma_env_;
+  std::map<RemoteTensorId, RemoteMR> rmrs_;  // remote memory regions
+  std::map<std::string, ibv_mr*> recv_mrs_;
+  std::map<std::string, ibv_mr*> send_mrs_;
+  //std::map<int, std::map<std::string, RemoteMR>> rmrs_;
+  std::map<int, ibv_qp*> qps_;
+  //std::unordered_map<int, RdmaChannel> remotes_;
   //std::vector<Channel> channels_;
   //std::vector<MemoryRegion> mrs_;
 };

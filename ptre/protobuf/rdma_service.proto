@@ -19,14 +19,17 @@ message MemoryRegion {
   uint64 remote_addr = 1;
   uint32 rkey = 2;
 }
+
 message GetRemoteAddressRequest {
-  string host_name = 1;
-  Channel channel = 2;
-  repeated MemoryRegion mr = 3;
+  int32 rank = 1;
+  string tensor_name = 2;
+  //Channel channel = 3;
+  //repeated MemoryRegion mr = 4;
 }
 
 message GetRemoteAddressResponse {
-  string host_name = 1;
-  Channel channel = 2;
-  repeated MemoryRegion mr = 3;
+  int32 rank = 1;
+  string tensor_name = 2;
+  Channel channel = 3;
+  repeated MemoryRegion mr = 4;
 }

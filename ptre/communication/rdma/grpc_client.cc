@@ -1,0 +1,53 @@
+#include "ptre/communication/rdma/grpc_client.h"
+
+#include <iostream>
+#include <sstream>
+
+namespace ptre {
+
+namespace {
+using grpc::ClientContext;
+}  // namespace
+
+std::string grpc_target(int dst_rank) {
+  /// 172.30.1.1 ib001
+  /// 172.20.1.1 dumbo001
+  std::stringstream ss;
+  ss << "172.20.1." << (dst_rank + 1) << ":50051";
+  return ss.str();
+}
+
+GrpcClient::GrpcClient(int dst_rank) : dst_rank_(dst_rank) {
+  std::string target(grpc_target(dst_rank_));
+  std::cout << "target: " << target << std::endl;
+  std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(target,
+      grpc::InsecureChannelCredentials());
+  stub_ = Rdma::NewStub(channel);
+}
+
+void GrpcClient::SetRdmaManager(RdmaManager* rdma_manager) {
+  rdma_manager_ = rdma_manager;
+}
+
+int GrpcClient::GetRemoteAddress(const std::string& name) {
+  GetRemoteAddressRequest request;
+  request.set_rank(dst_rank_);
+  request.set_tensor_name(name);
+
+  GetRemoteAddressResponse response;
+
+  ClientContext context;
+  grpc::Status status = stub_->GetRemoteAddress(&context, request, &response);
+
+	if (status.ok()) {
+    rdma_manager_->SetRemoteMR(dst_rank_, name, response.mr()[0].remote_addr(),
+                               response.mr()[0].rkey());
+    return 0;
+  } else {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return -1;
+  }
+}
+
+}  // namespace ptre

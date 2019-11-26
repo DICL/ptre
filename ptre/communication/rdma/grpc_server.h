@@ -6,15 +6,32 @@
 #include <grpcpp/grpcpp.h>
 
 #include "ptre/protobuf/rdma_service.grpc.pb.h"
+#include "ptre/communication/rdma/rdma_manager.h"
 
 namespace ptre {
 
-class GrpcServer {
+class RdmaServiceImpl final : public Rdma::Service {
+  grpc::Status GetRemoteAddress(grpc::ServerContext* context,
+                                const GetRemoteAddressRequest* request,
+                                GetRemoteAddressResponse* response) override;
+
  public:
-  void RunServer();
+  void SetRdmaManager(RdmaManager* rdma_manager);
 
  private:
-  std::unique_ptr<grpc::Server> server_;
+  RdmaManager* rdma_manager_ = nullptr;
+};
+
+class GrpcServer {
+ public:
+  //~GrpcServer();
+  //void SetRdmaManager(RdmaManager* rdma_manager);
+  static void RunServer(RdmaManager* rdma_manager);
+
+ private:
+  //std::unique_ptr<grpc::Server> server_;
+  //std::unique_ptr<std::thread> t_ = nullptr;
+  //RdmaManager* rdma_manager_;
 };
 
 }  // namespace ptre

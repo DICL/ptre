@@ -60,10 +60,8 @@ static void InitDefaultsscc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto(
   ::ptre::GetRemoteAddressRequest::InitAsDefaultInstance();
 }
 
-::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto =
-    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 2, InitDefaultsscc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto}, {
-      &scc_info_Channel_rdma_5fservice_2eproto.base,
-      &scc_info_MemoryRegion_rdma_5fservice_2eproto.base,}};
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto}, {}};
 
 static void InitDefaultsscc_info_GetRemoteAddressResponse_rdma_5fservice_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -122,15 +120,15 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressRequest, host_name_),
-  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressRequest, channel_),
-  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressRequest, mr_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressRequest, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressRequest, tensor_name_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, host_name_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, tensor_name_),
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, channel_),
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, mr_),
 };
@@ -138,7 +136,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 0, -1, sizeof(::ptre::Channel)},
   { 10, -1, sizeof(::ptre::MemoryRegion)},
   { 17, -1, sizeof(::ptre::GetRemoteAddressRequest)},
-  { 25, -1, sizeof(::ptre::GetRemoteAddressResponse)},
+  { 24, -1, sizeof(::ptre::GetRemoteAddressResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -152,15 +150,15 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "\n\022rdma_service.proto\022\004ptre\"J\n\007Channel\022\013\n"
   "\003lid\030\001 \001(\005\022\013\n\003qpn\030\002 \001(\005\022\013\n\003psn\030\003 \001(\005\022\013\n\003"
   "snp\030\004 \001(\004\022\013\n\003iid\030\005 \001(\004\"1\n\014MemoryRegion\022\023"
-  "\n\013remote_addr\030\001 \001(\004\022\014\n\004rkey\030\002 \001(\r\"l\n\027Get"
-  "RemoteAddressRequest\022\021\n\thost_name\030\001 \001(\t\022"
-  "\036\n\007channel\030\002 \001(\0132\r.ptre.Channel\022\036\n\002mr\030\003 "
-  "\003(\0132\022.ptre.MemoryRegion\"m\n\030GetRemoteAddr"
-  "essResponse\022\021\n\thost_name\030\001 \001(\t\022\036\n\007channe"
-  "l\030\002 \001(\0132\r.ptre.Channel\022\036\n\002mr\030\003 \003(\0132\022.ptr"
-  "e.MemoryRegion2Y\n\004Rdma\022Q\n\020GetRemoteAddre"
-  "ss\022\035.ptre.GetRemoteAddressRequest\032\036.ptre"
-  ".GetRemoteAddressResponseb\006proto3"
+  "\n\013remote_addr\030\001 \001(\004\022\014\n\004rkey\030\002 \001(\r\"<\n\027Get"
+  "RemoteAddressRequest\022\014\n\004rank\030\001 \001(\005\022\023\n\013te"
+  "nsor_name\030\002 \001(\t\"}\n\030GetRemoteAddressRespo"
+  "nse\022\014\n\004rank\030\001 \001(\005\022\023\n\013tensor_name\030\002 \001(\t\022\036"
+  "\n\007channel\030\003 \001(\0132\r.ptre.Channel\022\036\n\002mr\030\004 \003"
+  "(\0132\022.ptre.MemoryRegion2Y\n\004Rdma\022Q\n\020GetRem"
+  "oteAddress\022\035.ptre.GetRemoteAddressReques"
+  "t\032\036.ptre.GetRemoteAddressResponseb\006proto"
+  "3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
@@ -173,7 +171,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 473,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 441,
   &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 4, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
   file_level_metadata_rdma_5fservice_2eproto, 4, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
@@ -922,22 +920,14 @@ void MemoryRegion::InternalSwap(MemoryRegion* other) {
 // ===================================================================
 
 void GetRemoteAddressRequest::InitAsDefaultInstance() {
-  ::ptre::_GetRemoteAddressRequest_default_instance_._instance.get_mutable()->channel_ = const_cast< ::ptre::Channel*>(
-      ::ptre::Channel::internal_default_instance());
 }
 class GetRemoteAddressRequest::HasBitSetters {
  public:
-  static const ::ptre::Channel& channel(const GetRemoteAddressRequest* msg);
 };
 
-const ::ptre::Channel&
-GetRemoteAddressRequest::HasBitSetters::channel(const GetRemoteAddressRequest* msg) {
-  return *msg->channel_;
-}
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
-const int GetRemoteAddressRequest::kHostNameFieldNumber;
-const int GetRemoteAddressRequest::kChannelFieldNumber;
-const int GetRemoteAddressRequest::kMrFieldNumber;
+const int GetRemoteAddressRequest::kRankFieldNumber;
+const int GetRemoteAddressRequest::kTensorNameFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 GetRemoteAddressRequest::GetRemoteAddressRequest()
@@ -947,25 +937,20 @@ GetRemoteAddressRequest::GetRemoteAddressRequest()
 }
 GetRemoteAddressRequest::GetRemoteAddressRequest(const GetRemoteAddressRequest& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
-      _internal_metadata_(nullptr),
-      mr_(from.mr_) {
+      _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  host_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (from.host_name().size() > 0) {
-    host_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.host_name_);
+  tensor_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (from.tensor_name().size() > 0) {
+    tensor_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.tensor_name_);
   }
-  if (from.has_channel()) {
-    channel_ = new ::ptre::Channel(*from.channel_);
-  } else {
-    channel_ = nullptr;
-  }
+  rank_ = from.rank_;
   // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteAddressRequest)
 }
 
 void GetRemoteAddressRequest::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto.base);
-  host_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  channel_ = nullptr;
+  tensor_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  rank_ = 0;
 }
 
 GetRemoteAddressRequest::~GetRemoteAddressRequest() {
@@ -974,8 +959,7 @@ GetRemoteAddressRequest::~GetRemoteAddressRequest() {
 }
 
 void GetRemoteAddressRequest::SharedDtor() {
-  host_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (this != internal_default_instance()) delete channel_;
+  tensor_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void GetRemoteAddressRequest::SetCachedSize(int size) const {
@@ -993,12 +977,8 @@ void GetRemoteAddressRequest::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  mr_.Clear();
-  host_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (GetArenaNoVirtual() == nullptr && channel_ != nullptr) {
-    delete channel_;
-  }
-  channel_ = nullptr;
+  tensor_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  rank_ = 0;
   _internal_metadata_.Clear();
 }
 
@@ -1010,30 +990,18 @@ const char* GetRemoteAddressRequest::_InternalParse(const char* ptr, ::PROTOBUF_
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     CHK_(ptr);
     switch (tag >> 3) {
-      // string host_name = 1;
+      // int32 rank = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_host_name(), ptr, ctx, "ptre.GetRemoteAddressRequest.host_name");
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // .ptre.Channel channel = 2;
+      // string tensor_name = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
-          ptr = ctx->ParseMessage(mutable_channel(), ptr);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_tensor_name(), ptr, ctx, "ptre.GetRemoteAddressRequest.tensor_name");
           CHK_(ptr);
-        } else goto handle_unusual;
-        continue;
-      // repeated .ptre.MemoryRegion mr = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
-          ptr -= 1;
-          do {
-            ptr += 1;
-            ptr = ctx->ParseMessage(add_mr(), ptr);
-            CHK_(ptr);
-            if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<::PROTOBUF_NAMESPACE_ID::uint8>(ptr) == 26);
         } else goto handle_unusual;
         continue;
       default: {
@@ -1066,37 +1034,28 @@ bool GetRemoteAddressRequest::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // string host_name = 1;
+      // int32 rank = 1;
       case 1: {
-        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (10 & 0xFF)) {
-          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
-                input, this->mutable_host_name()));
-          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-            this->host_name().data(), static_cast<int>(this->host_name().length()),
-            ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
-            "ptre.GetRemoteAddressRequest.host_name"));
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (8 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &rank_)));
         } else {
           goto handle_unusual;
         }
         break;
       }
 
-      // .ptre.Channel channel = 2;
+      // string tensor_name = 2;
       case 2: {
         if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (18 & 0xFF)) {
-          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
-               input, mutable_channel()));
-        } else {
-          goto handle_unusual;
-        }
-        break;
-      }
-
-      // repeated .ptre.MemoryRegion mr = 3;
-      case 3: {
-        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
-          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
-                input, add_mr()));
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
+                input, this->mutable_tensor_name()));
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+            this->tensor_name().data(), static_cast<int>(this->tensor_name().length()),
+            ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
+            "ptre.GetRemoteAddressRequest.tensor_name"));
         } else {
           goto handle_unusual;
         }
@@ -1130,29 +1089,19 @@ void GetRemoteAddressRequest::SerializeWithCachedSizes(
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string host_name = 1;
-  if (this->host_name().size() > 0) {
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
+  }
+
+  // string tensor_name = 2;
+  if (this->tensor_name().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->host_name().data(), static_cast<int>(this->host_name().length()),
+      this->tensor_name().data(), static_cast<int>(this->tensor_name().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "ptre.GetRemoteAddressRequest.host_name");
+      "ptre.GetRemoteAddressRequest.tensor_name");
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
-      1, this->host_name(), output);
-  }
-
-  // .ptre.Channel channel = 2;
-  if (this->has_channel()) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
-      2, HasBitSetters::channel(this), output);
-  }
-
-  // repeated .ptre.MemoryRegion mr = 3;
-  for (unsigned int i = 0,
-      n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
-      3,
-      this->mr(static_cast<int>(i)),
-      output);
+      2, this->tensor_name(), output);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1168,30 +1117,20 @@ void GetRemoteAddressRequest::SerializeWithCachedSizes(
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string host_name = 1;
-  if (this->host_name().size() > 0) {
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
+  }
+
+  // string tensor_name = 2;
+  if (this->tensor_name().size() > 0) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->host_name().data(), static_cast<int>(this->host_name().length()),
+      this->tensor_name().data(), static_cast<int>(this->tensor_name().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "ptre.GetRemoteAddressRequest.host_name");
+      "ptre.GetRemoteAddressRequest.tensor_name");
     target =
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
-        1, this->host_name(), target);
-  }
-
-  // .ptre.Channel channel = 2;
-  if (this->has_channel()) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessageToArray(
-        2, HasBitSetters::channel(this), target);
-  }
-
-  // repeated .ptre.MemoryRegion mr = 3;
-  for (unsigned int i = 0,
-      n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessageToArray(
-        3, this->mr(static_cast<int>(i)), target);
+        2, this->tensor_name(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1215,29 +1154,18 @@ size_t GetRemoteAddressRequest::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .ptre.MemoryRegion mr = 3;
-  {
-    unsigned int count = static_cast<unsigned int>(this->mr_size());
-    total_size += 1UL * count;
-    for (unsigned int i = 0; i < count; i++) {
-      total_size +=
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          this->mr(static_cast<int>(i)));
-    }
-  }
-
-  // string host_name = 1;
-  if (this->host_name().size() > 0) {
+  // string tensor_name = 2;
+  if (this->tensor_name().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->host_name());
+        this->tensor_name());
   }
 
-  // .ptre.Channel channel = 2;
-  if (this->has_channel()) {
+  // int32 rank = 1;
+  if (this->rank() != 0) {
     total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *channel_);
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->rank());
   }
 
   int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
@@ -1267,13 +1195,12 @@ void GetRemoteAddressRequest::MergeFrom(const GetRemoteAddressRequest& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  mr_.MergeFrom(from.mr_);
-  if (from.host_name().size() > 0) {
+  if (from.tensor_name().size() > 0) {
 
-    host_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.host_name_);
+    tensor_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.tensor_name_);
   }
-  if (from.has_channel()) {
-    mutable_channel()->::ptre::Channel::MergeFrom(from.channel());
+  if (from.rank() != 0) {
+    set_rank(from.rank());
   }
 }
 
@@ -1302,10 +1229,9 @@ void GetRemoteAddressRequest::Swap(GetRemoteAddressRequest* other) {
 void GetRemoteAddressRequest::InternalSwap(GetRemoteAddressRequest* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
-  CastToBase(&mr_)->InternalSwap(CastToBase(&other->mr_));
-  host_name_.Swap(&other->host_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  tensor_name_.Swap(&other->tensor_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
-  swap(channel_, other->channel_);
+  swap(rank_, other->rank_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteAddressRequest::GetMetadata() const {
@@ -1329,7 +1255,8 @@ GetRemoteAddressResponse::HasBitSetters::channel(const GetRemoteAddressResponse*
   return *msg->channel_;
 }
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
-const int GetRemoteAddressResponse::kHostNameFieldNumber;
+const int GetRemoteAddressResponse::kRankFieldNumber;
+const int GetRemoteAddressResponse::kTensorNameFieldNumber;
 const int GetRemoteAddressResponse::kChannelFieldNumber;
 const int GetRemoteAddressResponse::kMrFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
@@ -1344,22 +1271,25 @@ GetRemoteAddressResponse::GetRemoteAddressResponse(const GetRemoteAddressRespons
       _internal_metadata_(nullptr),
       mr_(from.mr_) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  host_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (from.host_name().size() > 0) {
-    host_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.host_name_);
+  tensor_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (from.tensor_name().size() > 0) {
+    tensor_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.tensor_name_);
   }
   if (from.has_channel()) {
     channel_ = new ::ptre::Channel(*from.channel_);
   } else {
     channel_ = nullptr;
   }
+  rank_ = from.rank_;
   // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteAddressResponse)
 }
 
 void GetRemoteAddressResponse::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetRemoteAddressResponse_rdma_5fservice_2eproto.base);
-  host_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  channel_ = nullptr;
+  tensor_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&channel_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&rank_) -
+      reinterpret_cast<char*>(&channel_)) + sizeof(rank_));
 }
 
 GetRemoteAddressResponse::~GetRemoteAddressResponse() {
@@ -1368,7 +1298,7 @@ GetRemoteAddressResponse::~GetRemoteAddressResponse() {
 }
 
 void GetRemoteAddressResponse::SharedDtor() {
-  host_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  tensor_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (this != internal_default_instance()) delete channel_;
 }
 
@@ -1388,11 +1318,12 @@ void GetRemoteAddressResponse::Clear() {
   (void) cached_has_bits;
 
   mr_.Clear();
-  host_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  tensor_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (GetArenaNoVirtual() == nullptr && channel_ != nullptr) {
     delete channel_;
   }
   channel_ = nullptr;
+  rank_ = 0;
   _internal_metadata_.Clear();
 }
 
@@ -1404,30 +1335,37 @@ const char* GetRemoteAddressResponse::_InternalParse(const char* ptr, ::PROTOBUF
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     CHK_(ptr);
     switch (tag >> 3) {
-      // string host_name = 1;
+      // int32 rank = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_host_name(), ptr, ctx, "ptre.GetRemoteAddressResponse.host_name");
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // .ptre.Channel channel = 2;
+      // string tensor_name = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_tensor_name(), ptr, ctx, "ptre.GetRemoteAddressResponse.tensor_name");
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .ptre.Channel channel = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
           ptr = ctx->ParseMessage(mutable_channel(), ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // repeated .ptre.MemoryRegion mr = 3;
-      case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+      // repeated .ptre.MemoryRegion mr = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
             ptr = ctx->ParseMessage(add_mr(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<::PROTOBUF_NAMESPACE_ID::uint8>(ptr) == 26);
+          } while (::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<::PROTOBUF_NAMESPACE_ID::uint8>(ptr) == 34);
         } else goto handle_unusual;
         continue;
       default: {
@@ -1460,24 +1398,37 @@ bool GetRemoteAddressResponse::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // string host_name = 1;
+      // int32 rank = 1;
       case 1: {
-        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (10 & 0xFF)) {
-          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
-                input, this->mutable_host_name()));
-          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-            this->host_name().data(), static_cast<int>(this->host_name().length()),
-            ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
-            "ptre.GetRemoteAddressResponse.host_name"));
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (8 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &rank_)));
         } else {
           goto handle_unusual;
         }
         break;
       }
 
-      // .ptre.Channel channel = 2;
+      // string tensor_name = 2;
       case 2: {
         if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (18 & 0xFF)) {
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
+                input, this->mutable_tensor_name()));
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+            this->tensor_name().data(), static_cast<int>(this->tensor_name().length()),
+            ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
+            "ptre.GetRemoteAddressResponse.tensor_name"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // .ptre.Channel channel = 3;
+      case 3: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
           DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
                input, mutable_channel()));
         } else {
@@ -1486,9 +1437,9 @@ bool GetRemoteAddressResponse::MergePartialFromCodedStream(
         break;
       }
 
-      // repeated .ptre.MemoryRegion mr = 3;
-      case 3: {
-        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
+      // repeated .ptre.MemoryRegion mr = 4;
+      case 4: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (34 & 0xFF)) {
           DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
                 input, add_mr()));
         } else {
@@ -1524,27 +1475,32 @@ void GetRemoteAddressResponse::SerializeWithCachedSizes(
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string host_name = 1;
-  if (this->host_name().size() > 0) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->host_name().data(), static_cast<int>(this->host_name().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "ptre.GetRemoteAddressResponse.host_name");
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
-      1, this->host_name(), output);
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
   }
 
-  // .ptre.Channel channel = 2;
+  // string tensor_name = 2;
+  if (this->tensor_name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->tensor_name().data(), static_cast<int>(this->tensor_name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ptre.GetRemoteAddressResponse.tensor_name");
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->tensor_name(), output);
+  }
+
+  // .ptre.Channel channel = 3;
   if (this->has_channel()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
-      2, HasBitSetters::channel(this), output);
+      3, HasBitSetters::channel(this), output);
   }
 
-  // repeated .ptre.MemoryRegion mr = 3;
+  // repeated .ptre.MemoryRegion mr = 4;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
-      3,
+      4,
       this->mr(static_cast<int>(i)),
       output);
   }
@@ -1562,30 +1518,35 @@ void GetRemoteAddressResponse::SerializeWithCachedSizes(
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string host_name = 1;
-  if (this->host_name().size() > 0) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->host_name().data(), static_cast<int>(this->host_name().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "ptre.GetRemoteAddressResponse.host_name");
-    target =
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
-        1, this->host_name(), target);
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
   }
 
-  // .ptre.Channel channel = 2;
+  // string tensor_name = 2;
+  if (this->tensor_name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->tensor_name().data(), static_cast<int>(this->tensor_name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ptre.GetRemoteAddressResponse.tensor_name");
+    target =
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
+        2, this->tensor_name(), target);
+  }
+
+  // .ptre.Channel channel = 3;
   if (this->has_channel()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessageToArray(
-        2, HasBitSetters::channel(this), target);
+        3, HasBitSetters::channel(this), target);
   }
 
-  // repeated .ptre.MemoryRegion mr = 3;
+  // repeated .ptre.MemoryRegion mr = 4;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessageToArray(
-        3, this->mr(static_cast<int>(i)), target);
+        4, this->mr(static_cast<int>(i)), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1609,7 +1570,7 @@ size_t GetRemoteAddressResponse::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .ptre.MemoryRegion mr = 3;
+  // repeated .ptre.MemoryRegion mr = 4;
   {
     unsigned int count = static_cast<unsigned int>(this->mr_size());
     total_size += 1UL * count;
@@ -1620,18 +1581,25 @@ size_t GetRemoteAddressResponse::ByteSizeLong() const {
     }
   }
 
-  // string host_name = 1;
-  if (this->host_name().size() > 0) {
+  // string tensor_name = 2;
+  if (this->tensor_name().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->host_name());
+        this->tensor_name());
   }
 
-  // .ptre.Channel channel = 2;
+  // .ptre.Channel channel = 3;
   if (this->has_channel()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *channel_);
+  }
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->rank());
   }
 
   int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
@@ -1662,12 +1630,15 @@ void GetRemoteAddressResponse::MergeFrom(const GetRemoteAddressResponse& from) {
   (void) cached_has_bits;
 
   mr_.MergeFrom(from.mr_);
-  if (from.host_name().size() > 0) {
+  if (from.tensor_name().size() > 0) {
 
-    host_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.host_name_);
+    tensor_name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.tensor_name_);
   }
   if (from.has_channel()) {
     mutable_channel()->::ptre::Channel::MergeFrom(from.channel());
+  }
+  if (from.rank() != 0) {
+    set_rank(from.rank());
   }
 }
 
@@ -1697,9 +1668,10 @@ void GetRemoteAddressResponse::InternalSwap(GetRemoteAddressResponse* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
   CastToBase(&mr_)->InternalSwap(CastToBase(&other->mr_));
-  host_name_.Swap(&other->host_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+  tensor_name_.Swap(&other->tensor_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
     GetArenaNoVirtual());
   swap(channel_, other->channel_);
+  swap(rank_, other->rank_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteAddressResponse::GetMetadata() const {

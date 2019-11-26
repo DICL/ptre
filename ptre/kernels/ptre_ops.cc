@@ -1,32 +1,40 @@
 //#include "ptre/core/ptre_global.h"
 
 #include <thread>
+#include <iostream>
+#include <vector>
 
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/grpc_server.h"
+#include "ptre/communication/rdma/grpc_client.h"
+#include "ptre/communication/rdma/rdma_manager.h"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
 namespace tensorflow {
 
+using ::ptre::ConsensusManager;
+using ::ptre::RdmaManager;
+using ::ptre::RdmaServiceImpl;
+using ::ptre::GrpcClient;
+
 namespace {
 
 struct PtreGlobal {
-
-  ptre::ConsensusManager cm;
+  ConsensusManager cm;
+  RdmaManager* rdma_manager;
   //std::vector<Tensor*> remote_tensors;
-
-  mutex mu;
-
+  std::mutex mu;
   //std::queue<PtreRequest> request_queue;
 
   // Background thread running PTRE communication.
+  std::thread grpc_server_thread;
   std::thread background_thread;
 
   bool new_incoming;
 
-  int rank = 0;
-  int size = 1;
+  int rank;
+  int size;
 
   ~PtreGlobal() {
     if (background_thread.joinable()) {
@@ -34,37 +42,85 @@ struct PtreGlobal {
       background_thread.join();
     }
   }
-
 };
-
-void InitRdma() {
-}
-
-void BackgroundThreadLoop() {
-  //TODO: 1. Init Ptre
-  while(true) {
-    // TODO: Eliminate the need for thread sleep by making all activity
-    // depend on other activity (e.g. condition or MPI waits).
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    //TODO: Fetch a push task from a task queue.
-    
-  }
-}
-
-//void PtreRemoteVariables(
 
 static PtreGlobal ptre_global;
 
+void RunGrpcServer() {
+  RdmaServiceImpl service;
+  service.SetRdmaManager(ptre_global.rdma_manager);
+  std::string server_address("0.0.0.0:50051");
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
+  auto server = builder.BuildAndStart();
+  std::cout << "Grpc server listening on " << server_address << std::endl;
+  server->Wait();
+}
+
+void InitComm(int size, int rank) {
+  ptre_global.size = size;
+  ptre_global.rank = rank;
+  std::cout << "Initializing RdmaManager" << std::endl;
+  ptre_global.rdma_manager = new RdmaManager(size, rank);
+  std::cout << "Running grpc server" << std::endl;
+  ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
+}
+
+void InitRemoteMR() {
+}
+
+void BackgroundThreadLoop() {
+  /// TODO: 1. Init MR
+  while(true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    /// TODO: Fetch a push task from a task queue.
+  }
+}
+
+
+void InitPtreOnce() {
+  //while(true) {
+  //  if (ptre_global.rdma_manager->IsMRInitialized()) {
+  //    break;
+  //  }
+  //}
+
+  //ptre_global.background_thread = std::thread(BackgroundThreadLoop);
+}
+
 }  // namespace
+
+REGISTER_OP("InitComm")
+    .Attr("size: int")
+    .Attr("rank: int");
+class InitCommOp : public OpKernel {
+ public:
+  explicit InitCommOp(OpKernelConstruction* context) : OpKernel(context) {
+    context->GetAttr<int>("size", &size_);
+    context->GetAttr<int>("rank", &rank_);
+  }
+  void Compute(OpKernelContext* context) override {
+    InitComm(size_, rank_);
+  }
+ private:
+  int size_;
+  int rank_;
+};
+REGISTER_KERNEL_BUILDER(Name("InitComm").Device(DEVICE_CPU),
+                        InitCommOp);
 
 REGISTER_OP("InitGlobalConsensus")
     .Attr("T: {float32}")
     .Attr("NumTensors: int")
+    .Attr("names: list(string)")
     .Input("vars: NumTensors * T");
 class InitGlobalConsensusOp : public OpKernel {
  public:
   explicit InitGlobalConsensusOp(OpKernelConstruction* context)
-      : OpKernel(context) {}
+      : OpKernel(context) {
+    context->GetAttr("names", &names_);
+  }
   void Compute(OpKernelContext* context) override {
     std::vector<const Tensor*> inputs;
     int num_inputs = context->num_inputs();
@@ -73,10 +129,61 @@ class InitGlobalConsensusOp : public OpKernel {
       inputs.push_back(&input);
     }
     ptre_global.cm.InitGlobalConsensus(inputs);
+    auto recv_tensors = ptre_global.cm.GetGlobalConsensusList();
+    auto send_tensors = ptre_global.cm.GetSendTensorsList();
+    for (int i = 0; i < ptre_global.size; i++) {
+      if (i == ptre_global.rank) {
+        continue;
+      }
+      for (int j = 0; j < num_inputs; j++) {
+        ptre_global.rdma_manager->InitTensorMR(i, names_[j], *recv_tensors[j],
+                                               *send_tensors[j]);
+      }
+    }
+    ptre_global.rdma_manager->MarkMRInitialized();
   }
+ private:
+  std::vector<std::string> names_;
 };
 REGISTER_KERNEL_BUILDER(Name("InitGlobalConsensus").Device(DEVICE_CPU),
                         InitGlobalConsensusOp);
+
+REGISTER_OP("InitRemoteMr")
+    .Attr("names: list(string)");
+class InitRemoteMrOp : public OpKernel {
+ public:
+  explicit InitRemoteMrOp(OpKernelConstruction* context) : OpKernel(context) {
+    context->GetAttr("names", &names_);
+  }
+  void Compute(OpKernelContext* context) override {
+    int done_flag = 0;
+    while (!done_flag) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+      done_flag = 1;
+      for (int i = 0; i < ptre_global.size; i++) {
+        if (i == ptre_global.rank) {
+          continue;
+        }
+        GrpcClient grpc_client(i);
+        grpc_client.SetRdmaManager(ptre_global.rdma_manager);
+        for (int j = 0; j < names_.size(); j++) {
+          if (ptre_global.rdma_manager->IsRemoteMRSet(i, names_[j])) {
+            continue;
+          }
+          int ret = grpc_client.GetRemoteAddress(names_[j]);
+          if (ret < 0) {
+            done_flag = 0;
+          }
+        }
+      }
+    }
+    std::cout << "Init RemoteMR done." << std::endl;
+  }
+ private:
+  std::vector<std::string> names_;
+};
+REGISTER_KERNEL_BUILDER(Name("InitRemoteMr").Device(DEVICE_CPU),
+                        InitRemoteMrOp);
 
 REGISTER_OP("PushModel")
     .Attr("T: {float32}")
