@@ -47,7 +47,7 @@ struct TableStruct_rdma_5fservice_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[4]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[6]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -64,6 +64,12 @@ extern GetRemoteAddressRequestDefaultTypeInternal _GetRemoteAddressRequest_defau
 class GetRemoteAddressResponse;
 class GetRemoteAddressResponseDefaultTypeInternal;
 extern GetRemoteAddressResponseDefaultTypeInternal _GetRemoteAddressResponse_default_instance_;
+class GetRemoteEnvRequest;
+class GetRemoteEnvRequestDefaultTypeInternal;
+extern GetRemoteEnvRequestDefaultTypeInternal _GetRemoteEnvRequest_default_instance_;
+class GetRemoteEnvResponse;
+class GetRemoteEnvResponseDefaultTypeInternal;
+extern GetRemoteEnvResponseDefaultTypeInternal _GetRemoteEnvResponse_default_instance_;
 class MemoryRegion;
 class MemoryRegionDefaultTypeInternal;
 extern MemoryRegionDefaultTypeInternal _MemoryRegion_default_instance_;
@@ -72,6 +78,8 @@ PROTOBUF_NAMESPACE_OPEN
 template<> ::ptre::Channel* Arena::CreateMaybeMessage<::ptre::Channel>(Arena*);
 template<> ::ptre::GetRemoteAddressRequest* Arena::CreateMaybeMessage<::ptre::GetRemoteAddressRequest>(Arena*);
 template<> ::ptre::GetRemoteAddressResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteAddressResponse>(Arena*);
+template<> ::ptre::GetRemoteEnvRequest* Arena::CreateMaybeMessage<::ptre::GetRemoteEnvRequest>(Arena*);
+template<> ::ptre::GetRemoteEnvResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteEnvResponse>(Arena*);
 template<> ::ptre::MemoryRegion* Arena::CreateMaybeMessage<::ptre::MemoryRegion>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace ptre {
@@ -365,6 +373,265 @@ class MemoryRegion :
 };
 // -------------------------------------------------------------------
 
+class GetRemoteEnvRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.GetRemoteEnvRequest) */ {
+ public:
+  GetRemoteEnvRequest();
+  virtual ~GetRemoteEnvRequest();
+
+  GetRemoteEnvRequest(const GetRemoteEnvRequest& from);
+  GetRemoteEnvRequest(GetRemoteEnvRequest&& from) noexcept
+    : GetRemoteEnvRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline GetRemoteEnvRequest& operator=(const GetRemoteEnvRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetRemoteEnvRequest& operator=(GetRemoteEnvRequest&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const GetRemoteEnvRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const GetRemoteEnvRequest* internal_default_instance() {
+    return reinterpret_cast<const GetRemoteEnvRequest*>(
+               &_GetRemoteEnvRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    2;
+
+  void Swap(GetRemoteEnvRequest* other);
+  friend void swap(GetRemoteEnvRequest& a, GetRemoteEnvRequest& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline GetRemoteEnvRequest* New() const final {
+    return CreateMaybeMessage<GetRemoteEnvRequest>(nullptr);
+  }
+
+  GetRemoteEnvRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<GetRemoteEnvRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const GetRemoteEnvRequest& from);
+  void MergeFrom(const GetRemoteEnvRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(GetRemoteEnvRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.GetRemoteEnvRequest";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.GetRemoteEnvRequest)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
+class GetRemoteEnvResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.GetRemoteEnvResponse) */ {
+ public:
+  GetRemoteEnvResponse();
+  virtual ~GetRemoteEnvResponse();
+
+  GetRemoteEnvResponse(const GetRemoteEnvResponse& from);
+  GetRemoteEnvResponse(GetRemoteEnvResponse&& from) noexcept
+    : GetRemoteEnvResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline GetRemoteEnvResponse& operator=(const GetRemoteEnvResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetRemoteEnvResponse& operator=(GetRemoteEnvResponse&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const GetRemoteEnvResponse& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const GetRemoteEnvResponse* internal_default_instance() {
+    return reinterpret_cast<const GetRemoteEnvResponse*>(
+               &_GetRemoteEnvResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    3;
+
+  void Swap(GetRemoteEnvResponse* other);
+  friend void swap(GetRemoteEnvResponse& a, GetRemoteEnvResponse& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline GetRemoteEnvResponse* New() const final {
+    return CreateMaybeMessage<GetRemoteEnvResponse>(nullptr);
+  }
+
+  GetRemoteEnvResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<GetRemoteEnvResponse>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const GetRemoteEnvResponse& from);
+  void MergeFrom(const GetRemoteEnvResponse& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(GetRemoteEnvResponse* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.GetRemoteEnvResponse";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // int32 lid = 2;
+  void clear_lid();
+  static const int kLidFieldNumber = 2;
+  ::PROTOBUF_NAMESPACE_ID::int32 lid() const;
+  void set_lid(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.GetRemoteEnvResponse)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
+  ::PROTOBUF_NAMESPACE_ID::int32 lid_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
 class GetRemoteAddressRequest :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.GetRemoteAddressRequest) */ {
  public:
@@ -407,7 +674,7 @@ class GetRemoteAddressRequest :
                &_GetRemoteAddressRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    4;
 
   void Swap(GetRemoteAddressRequest* other);
   friend void swap(GetRemoteAddressRequest& a, GetRemoteAddressRequest& b) {
@@ -546,7 +813,7 @@ class GetRemoteAddressResponse :
                &_GetRemoteAddressResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    5;
 
   void Swap(GetRemoteAddressResponse* other);
   friend void swap(GetRemoteAddressResponse& a, GetRemoteAddressResponse& b) {
@@ -779,6 +1046,56 @@ inline void MemoryRegion::set_rkey(::PROTOBUF_NAMESPACE_ID::uint32 value) {
 
 // -------------------------------------------------------------------
 
+// GetRemoteEnvRequest
+
+// int32 rank = 1;
+inline void GetRemoteEnvRequest::clear_rank() {
+  rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteEnvRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteEnvRequest.rank)
+  return rank_;
+}
+inline void GetRemoteEnvRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvRequest.rank)
+}
+
+// -------------------------------------------------------------------
+
+// GetRemoteEnvResponse
+
+// int32 rank = 1;
+inline void GetRemoteEnvResponse::clear_rank() {
+  rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteEnvResponse::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteEnvResponse.rank)
+  return rank_;
+}
+inline void GetRemoteEnvResponse::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvResponse.rank)
+}
+
+// int32 lid = 2;
+inline void GetRemoteEnvResponse::clear_lid() {
+  lid_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteEnvResponse::lid() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteEnvResponse.lid)
+  return lid_;
+}
+inline void GetRemoteEnvResponse::set_lid(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  lid_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvResponse.lid)
+}
+
+// -------------------------------------------------------------------
+
 // GetRemoteAddressRequest
 
 // int32 rank = 1;
@@ -999,6 +1316,10 @@ GetRemoteAddressResponse::mr() const {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

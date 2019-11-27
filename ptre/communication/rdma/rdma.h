@@ -4,11 +4,16 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <thread>
 
 #include <infiniband/verbs.h>
 
 namespace ptre {
 #define IB_PORT 1
+#define QUEUE_DEPTH_DEFAULT 1024
+#define MAX_CONCURRENT_WRITES 1000
+#define TIMEOUT_DEFAULT 14
+#define RETRY_CNT_DEFAULT 7
 
 struct RemoteTensorId {
   int dst_rank;
@@ -25,6 +30,9 @@ struct RdmaEnv {
   ibv_pd *pd;
   ibv_port_attr port_attr;
   ibv_device_attr dev_attr;
+  ibv_cq* cq;
+  ibv_wc wc[MAX_CONCURRENT_WRITES * 2];
+  std::thread polling_thread;
 };
 
 enum RdmaWriteIDType {
@@ -45,11 +53,23 @@ struct RemoteMR {
   uint32_t rkey;
 };
 
-struct RdmaTensorChannel {
-  ibv_qp* qp;
-  uint32_t qpn;
-  uint32_t lkey;
-  RemoteMR rmr;
+//struct SRdmaTensorChannel {
+//  ibv_qp* qp;
+//  uint32_t qpn;
+//  uint32_t lkey;
+//  RemoteMR rmr;
+//};
+
+class RdmaTensorChannel {
+ public:
+  RdmaTensorChannel(const RdmaEnv* env, const RemoteTensorId& id);
+  void Connect(uint32_t dlid);
+
+ private:
+  const RdmaEnv* env_;
+  RemoteTensorId id_;
+  ibv_qp* qp_ = nullptr;
+  bool connected_ = false;
 };
 
 /// local_tensor_send_buf ----- remote_tensor_recv_buf

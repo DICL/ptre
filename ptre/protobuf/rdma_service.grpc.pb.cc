@@ -19,6 +19,7 @@
 namespace ptre {
 
 static const char* Rdma_method_names[] = {
+  "/ptre.Rdma/GetRemoteEnv",
   "/ptre.Rdma/GetRemoteAddress",
 };
 
@@ -29,8 +30,29 @@ std::unique_ptr< Rdma::Stub> Rdma::NewStub(const std::shared_ptr< ::grpc::Channe
 }
 
 Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
-  : channel_(channel), rpcmethod_GetRemoteAddress_(Rdma_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  : channel_(channel), rpcmethod_GetRemoteEnv_(Rdma_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetRemoteAddress_(Rdma_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
+
+::grpc::Status Rdma::Stub::GetRemoteEnv(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest& request, ::ptre::GetRemoteEnvResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_GetRemoteEnv_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::GetRemoteEnv(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest* request, ::ptre::GetRemoteEnvResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteEnv_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetRemoteEnv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteEnvResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteEnv_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteEnvResponse>* Rdma::Stub::AsyncGetRemoteEnvRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteEnvResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteEnv_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteEnvResponse>* Rdma::Stub::PrepareAsyncGetRemoteEnvRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteEnvResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteEnv_, context, request, false);
+}
 
 ::grpc::Status Rdma::Stub::GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest& request, ::ptre::GetRemoteAddressResponse* response) {
   return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_GetRemoteAddress_, context, request, response);
@@ -56,11 +78,23 @@ Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[0],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetRemoteEnvRequest, ::ptre::GetRemoteEnvResponse>(
+          std::mem_fn(&Rdma::Service::GetRemoteEnv), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[1],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetRemoteAddressRequest, ::ptre::GetRemoteAddressResponse>(
           std::mem_fn(&Rdma::Service::GetRemoteAddress), this)));
 }
 
 Rdma::Service::~Service() {
+}
+
+::grpc::Status Rdma::Service::GetRemoteEnv(::grpc::ServerContext* context, const ::ptre::GetRemoteEnvRequest* request, ::ptre::GetRemoteEnvResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
 ::grpc::Status Rdma::Service::GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) {

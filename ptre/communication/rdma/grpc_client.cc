@@ -50,4 +50,23 @@ int GrpcClient::GetRemoteAddress(const std::string& name) {
   }
 }
 
+int GrpcClient::GetRemoteEnv() {
+  GetRemoteEnvRequest request;
+  request.set_rank(dst_rank_);
+
+  GetRemoteEnvResponse response;
+
+  ClientContext context;
+  grpc::Status status = stub_->GetRemoteEnv(&context, request, &response);
+
+	if (status.ok()) {
+    rdma_manager_->SetDlid(dst_rank_, response.lid());
+    return 0;
+  } else {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return -1;
+  }
+}
+
 }  // namespace ptre

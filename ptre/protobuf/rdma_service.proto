@@ -3,6 +3,9 @@ syntax = "proto3";
 package ptre;
 
 service Rdma {
+  rpc GetRemoteEnv(GetRemoteEnvRequest)
+    returns (GetRemoteEnvResponse);
+
   rpc GetRemoteAddress(GetRemoteAddressRequest)
     returns (GetRemoteAddressResponse);
 }
@@ -18,6 +21,15 @@ message Channel {
 message MemoryRegion {
   uint64 remote_addr = 1;
   uint32 rkey = 2;
+}
+
+message GetRemoteEnvRequest {
+  int32 rank = 1;
+}
+
+message GetRemoteEnvResponse {
+  int32 rank = 1;
+  int32 lid = 2;
 }
 
 message GetRemoteAddressRequest {

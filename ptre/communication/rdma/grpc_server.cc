@@ -27,6 +27,18 @@ grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
+                                           const GetRemoteEnvRequest* request,
+                                           GetRemoteEnvResponse* response) {
+  int rank = rdma_manager_->rank();
+  RdmaEnv* env = rdma_manager_->rdma_env();
+  
+  response->set_rank(rank);
+  response->set_lid(env->port_attr.lid);
+
+  return grpc::Status::OK;
+}
+
 void RdmaServiceImpl::SetRdmaManager(RdmaManager* rdma_manager) {
   rdma_manager_ = rdma_manager;
 }

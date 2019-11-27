@@ -68,7 +68,101 @@ int post_write(size_t buffer_size, uint64_t src_addr,
 
   struct ibv_send_wr* bad_wr;
   ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret < 0) {
+    std::cout << "Failed to ibv_post_send" << std::endl;
+  }
   return ret;
+}
+
+RdmaTensorChannel::RdmaTensorChannel(const RdmaEnv* env,
+                                     const RemoteTensorId& id)
+    : env_(env), id_(id) {
+  /// Create QP
+  {
+    struct ibv_qp_init_attr qp_init_attr;
+    memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
+    qp_init_attr.send_cq = env_->cq;
+    qp_init_attr.recv_cq = env_->cq;
+    qp_init_attr.cap.max_send_wr = QUEUE_DEPTH_DEFAULT;
+    qp_init_attr.cap.max_recv_wr = QUEUE_DEPTH_DEFAULT;
+    qp_init_attr.cap.max_send_sge = 1;
+    qp_init_attr.cap.max_recv_sge = 1;
+    qp_init_attr.qp_type = IBV_QPT_RC;
+
+    qp_ = ibv_create_qp(env_->pd, &qp_init_attr);
+    if (qp_ == nullptr) {
+      std::cout << "Failed to create QP" << std::endl;
+    }
+  }
+
+  /// Init QP
+  {
+    struct ibv_qp_attr attr;
+    memset(&attr, 0, sizeof(ibv_qp_attr));
+    attr.qp_state = IBV_QPS_INIT;
+    attr.pkey_index = 0;
+    attr.port_num = IB_PORT;
+    attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE;
+
+    int attr_mask =
+        IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS;
+    int r = ibv_modify_qp(qp_, &attr, attr_mask);
+    if (r < 0) {
+      std::cout << "Failed to set QP to INIT" << std::endl;
+    }
+  }
+}
+
+void RdmaTensorChannel::Connect(uint32_t dlid) {
+  if (!connected_) {
+    /// RTR
+    {
+      struct ibv_qp_attr attr;
+      memset(&attr, 0, sizeof(ibv_qp_attr));
+      attr.qp_state = IBV_QPS_RTR;
+
+      attr.path_mtu = IBV_MTU_4096;
+      attr.dest_qp_num = qp_->qp_num;
+      attr.rq_psn = 0;
+      attr.max_dest_rd_atomic = 1;
+      attr.min_rnr_timer = 12;
+      attr.ah_attr.is_global = 0;
+      attr.ah_attr.dlid = dlid;
+      attr.ah_attr.sl = 0;
+      attr.ah_attr.src_path_bits = 0;
+      attr.ah_attr.port_num = IB_PORT;
+
+      int r = ibv_modify_qp(qp_, &attr,
+                            IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU |
+                            IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
+                            IBV_QP_MAX_DEST_RD_ATOMIC |
+                            IBV_QP_MIN_RNR_TIMER);
+      if (r < 0) {
+        std::cout << "Failed to ibv_modify_qp to RTR " << r << std::endl;
+      }
+    }
+
+    /// RTS
+    {
+      struct ibv_qp_attr attr;
+      memset(&attr, 0, sizeof(ibv_qp_attr));
+      attr.qp_state = IBV_QPS_RTS;
+      attr.sq_psn = 0;
+      attr.timeout = TIMEOUT_DEFAULT;
+      attr.retry_cnt = RETRY_CNT_DEFAULT;
+      attr.rnr_retry = 7; /* infinite */
+      attr.max_rd_atomic = 1;
+
+      int r = ibv_modify_qp(qp_, &attr,
+                            IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
+                            IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
+                            IBV_QP_MAX_QP_RD_ATOMIC);
+      if (r < 0) {
+        std::cout << "Failed to ibv_modify_qp to RTS " << r << std::endl;
+      }
+    }
+    connected_ = true;
+  }
 }
 
 }  // namespace ptre

@@ -16,6 +16,7 @@ class GrpcClient {
   //GrpcClient(std::shared_ptr<::grpc::Channel> channel);
   GrpcClient(int dst_rank);
   int GetRemoteAddress(const std::string& name);
+  int GetRemoteEnv();
   void SetRdmaManager(RdmaManager* rdma_manager);
 
  private:

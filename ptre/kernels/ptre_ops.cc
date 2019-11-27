@@ -1,8 +1,10 @@
 //#include "ptre/core/ptre_global.h"
 
+#include <unistd.h>
 #include <thread>
 #include <iostream>
 #include <vector>
+#include <queue>
 
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/grpc_server.h"
@@ -26,12 +28,13 @@ struct PtreGlobal {
   //std::vector<Tensor*> remote_tensors;
   std::mutex mu;
   //std::queue<PtreRequest> request_queue;
+  std::queue<int> q;
 
   // Background thread running PTRE communication.
   std::thread grpc_server_thread;
   std::thread background_thread;
 
-  bool new_incoming;
+  //bool new_incoming;
 
   int rank;
   int size;
@@ -40,6 +43,9 @@ struct PtreGlobal {
     if (background_thread.joinable()) {
       //shut_down = true;
       background_thread.join();
+    }
+    if (grpc_server_thread.joinable()) {
+      grpc_server_thread.join();
     }
   }
 };
@@ -58,16 +64,18 @@ void RunGrpcServer() {
   server->Wait();
 }
 
-void InitComm(int size, int rank) {
-  ptre_global.size = size;
-  ptre_global.rank = rank;
-  std::cout << "Initializing RdmaManager" << std::endl;
-  ptre_global.rdma_manager = new RdmaManager(size, rank);
-  std::cout << "Running grpc server" << std::endl;
-  ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
+void InitRemoteMR() {
 }
 
-void InitRemoteMR() {
+void ProcessRequestQueue() {
+  std::lock_guard<std::mutex> l(ptre_global.mu);
+  auto& q = ptre_global.q;
+  if (!ptre_global.q.empty()) {
+    int dst_rank = q.front();
+    q.pop();
+    //std::cout << std::endl << "PushTensors to target=" << dst_rank << std::endl;
+    ptre_global.cm.PushTensors(dst_rank);
+  }
 }
 
 void BackgroundThreadLoop() {
@@ -75,6 +83,7 @@ void BackgroundThreadLoop() {
   while(true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     /// TODO: Fetch a push task from a task queue.
+    ProcessRequestQueue();
   }
 }
 
@@ -86,7 +95,20 @@ void InitPtreOnce() {
   //  }
   //}
 
-  //ptre_global.background_thread = std::thread(BackgroundThreadLoop);
+}
+
+void InitComm(int size, int rank) {
+  /// First Initialization step
+  ptre_global.size = size;
+  ptre_global.rank = rank;
+  ptre_global.cm.set_size(size);
+  ptre_global.cm.set_rank(rank);
+  std::cout << "Initializing RdmaManager" << std::endl;
+  ptre_global.rdma_manager = new RdmaManager(size, rank);
+  ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
+  std::cout << "Running grpc server" << std::endl;
+  ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
+  ptre_global.background_thread = std::thread(BackgroundThreadLoop);
 }
 
 }  // namespace
@@ -122,25 +144,28 @@ class InitGlobalConsensusOp : public OpKernel {
     context->GetAttr("names", &names_);
   }
   void Compute(OpKernelContext* context) override {
-    std::vector<const Tensor*> inputs;
     int num_inputs = context->num_inputs();
     for (int i = 0; i < num_inputs; i++) {
-      const Tensor &input = context->input(i);
-      inputs.push_back(&input);
+      ptre_global.cm.InitBufTensor(names_[i], context->input(i));
     }
-    ptre_global.cm.InitGlobalConsensus(inputs);
-    auto recv_tensors = ptre_global.cm.GetGlobalConsensusList();
-    auto send_tensors = ptre_global.cm.GetSendTensorsList();
-    for (int i = 0; i < ptre_global.size; i++) {
-      if (i == ptre_global.rank) {
-        continue;
-      }
-      for (int j = 0; j < num_inputs; j++) {
-        ptre_global.rdma_manager->InitTensorMR(i, names_[j], *recv_tensors[j],
-                                               *send_tensors[j]);
-      }
-    }
-    ptre_global.rdma_manager->MarkMRInitialized();
+    //std::vector<const Tensor*> inputs;
+    //for (int i = 0; i < num_inputs; i++) {
+    //  const Tensor &input = context->input(i);
+    //  inputs.push_back(&input);
+    //}
+    //ptre_global.cm.InitGlobalConsensus(inputs);
+    //auto recv_tensors = ptre_global.cm.GetGlobalConsensusList();
+    //auto send_tensors = ptre_global.cm.GetSendTensorsList();
+    //for (int i = 0; i < ptre_global.size; i++) {
+    //  if (i == ptre_global.rank) {
+    //    continue;
+    //  }
+    //  for (int j = 0; j < num_inputs; j++) {
+    //    ptre_global.rdma_manager->InitTensorMR(i, names_[j], recv_tensors[j],
+    //                                           send_tensors[j]);
+    //  }
+    //}
+    //ptre_global.rdma_manager->MarkMRInitialized();
   }
  private:
   std::vector<std::string> names_;
@@ -166,6 +191,12 @@ class InitRemoteMrOp : public OpKernel {
         }
         GrpcClient grpc_client(i);
         grpc_client.SetRdmaManager(ptre_global.rdma_manager);
+        if (!ptre_global.rdma_manager->IsDlidSet(i)) {
+          int ret = grpc_client.GetRemoteEnv();
+          if (ret < 0) {
+            done_flag = 0;
+          }
+        }
         for (int j = 0; j < names_.size(); j++) {
           if (ptre_global.rdma_manager->IsRemoteMRSet(i, names_[j])) {
             continue;
@@ -185,22 +216,63 @@ class InitRemoteMrOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(Name("InitRemoteMr").Device(DEVICE_CPU),
                         InitRemoteMrOp);
 
+REGISTER_OP("ConnectQps");
+class ConnectQpsOp : public OpKernel {
+ public:
+  explicit ConnectQpsOp(OpKernelConstruction* context) : OpKernel(context) {}
+  void Compute(OpKernelContext* context) override {
+    int done_flag = 0;
+    while (!done_flag) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+      done_flag = 1;
+      for (int i = 0; i < ptre_global.size; i++) {
+        if (i == ptre_global.rank) {
+          continue;
+        }
+        int r = ptre_global.rdma_manager->ConnectQP(i);
+        if (r < 0) {
+          done_flag = 0;
+        }
+      }
+    }
+  }
+};
+REGISTER_KERNEL_BUILDER(Name("ConnectQps").Device(DEVICE_CPU),
+                        ConnectQpsOp);
+
+
 REGISTER_OP("PushModel")
     .Attr("T: {float32}")
     .Attr("NumTensors: int")
+    .Attr("names: list(string)")
     .Input("vars: NumTensors * T");
 class PushModelOp : public OpKernel {
  public:
-  explicit PushModelOp(OpKernelConstruction* context) : OpKernel(context) {}
-  void Compute(OpKernelContext* context) override {
-    std::vector<const Tensor*> inputs;
-    int num_inputs = context->num_inputs();
-    for (int i = 0; i < num_inputs; i++) {
-      const Tensor &input = context->input(i);
-      inputs.push_back(&input);
-    }
-    ptre_global.cm.EnqueuePush(inputs);
+  explicit PushModelOp(OpKernelConstruction* context) : OpKernel(context) {
+    context->GetAttr("names", &names_);
   }
+  void Compute(OpKernelContext* context) override {
+    //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
+    int num_inputs = context->num_inputs();
+    std::lock_guard<std::mutex> l(ptre_global.mu);
+    while (!ptre_global.q.empty()) {
+      ptre_global.q.pop();
+    }
+    for (int i = 0; i < num_inputs; i++) {
+      ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
+    }
+    int target_rank = ptre_global.cm.GetRandomTarget();
+    ptre_global.q.push(target_rank);
+    //ptre_global.cm.SetPushReady();
+    //std::vector<const Tensor*> inputs;
+    //for (int i = 0; i < num_inputs; i++) {
+    //  const Tensor &input = context->input(i);
+    //  inputs.push_back(&input);
+    //}
+    //ptre_global.cm.EnqueuePushList(inputs);
+  }
+ private:
+  std::vector<std::string> names_;
 };
 REGISTER_KERNEL_BUILDER(Name("PushModel").Device(DEVICE_CPU), PushModelOp);
 
@@ -217,8 +289,11 @@ class GetRemoteVariableOp : public OpKernel {
     Tensor other(ptre_global.cm.global_consensus(index_));
     Tensor* output;
     OP_REQUIRES_OK(context, context->allocate_output(0, other.shape(), &output));
-    auto output_flat = output->flat<float>();
-    output_flat = other.flat<float>();
+    //auto output_flat = output->flat<float>();
+    usleep(1);
+    std::copy(other.tensor_data().begin(), other.tensor_data().end(),
+              const_cast<char*>(output->tensor_data().begin()));
+    //output_flat = other.flat<float>();
   }
 
  private:
@@ -246,6 +321,29 @@ class GetRemoteVariablesOp : public OpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("GetRemoteVariables").Device(DEVICE_CPU),
                         GetRemoteVariablesOp);
+
+REGISTER_OP("GetSendTensor")
+    .Attr("index: int")
+    .Output("var: float32");
+class GetSendTensorOp : public OpKernel {
+ public:
+  explicit GetSendTensorOp(OpKernelConstruction* context)
+      : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("index", &index_));
+  }
+  void Compute(OpKernelContext* context) override {
+    Tensor* other(ptre_global.cm.send_tensor(index_));
+    Tensor* output;
+    OP_REQUIRES_OK(context, context->allocate_output(0, other->shape(), &output));
+    auto output_flat = output->flat<float>();
+    output_flat = other->flat<float>();
+  }
+
+ private:
+  int index_;
+};
+REGISTER_KERNEL_BUILDER(Name("GetSendTensor").Device(DEVICE_CPU),
+                        GetSendTensorOp);
 
 REGISTER_OP("AverageModelWithRemote")
     .Attr("T: {float32}")

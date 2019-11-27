@@ -26,11 +26,16 @@ using tensorflow::Tensor;
 class RdmaManager {
  public:
   RdmaManager(int ptre_size, int ptre_rank);
+  ~RdmaManager();
   /// The input tensor's buffer must be fixed.
   void InitTensorMR(int dst_id, const std::string& name,
-                   const Tensor& recv, const Tensor& send);
+                    Tensor* recv, Tensor* send);
   void MarkMRInitialized();
   bool IsMRInitialized();
+  void CreateCQs();
+  void CreateQPs();
+  int ConnectQP(int dst_rank);
+  void ProcessCQ();
 /// message GetRemoteAddressResponse {
 ///   int32 rank = 1;
 ///   string tensor_name = 2;
@@ -38,15 +43,20 @@ class RdmaManager {
 ///   repeated MemoryRegion mr = 4;
 /// }
   bool IsRemoteMRSet(int rank, const std::string& name);
+  bool IsDlidSet(int rank) { return (dlids_.find(rank) != dlids_.end()); }
   void SetRemoteMR(int rank, const std::string& name, uint64_t remote_addr,
                    uint32_t rkey);
+  void SetDlid(int rank, uint32_t lid) { dlids_.emplace(rank, lid); }
   RemoteMR GetRemoteMR(const std::string& name);
   void RdmaWriteTensor(int dst_id, const std::string& name,
                        const Tensor& tensor);
 
   int rank() { return ptre_rank_; }
+  ibv_cq* cq() { return cq_; }
+  RdmaEnv* rdma_env() { return &rdma_env_; }
 
  private:
+  std::thread polling_thread_;
   std::mutex mu_;
   bool is_mr_initialized_ = false;
 
@@ -56,8 +66,13 @@ class RdmaManager {
   std::map<RemoteTensorId, RemoteMR> rmrs_;  // remote memory regions
   std::map<std::string, ibv_mr*> recv_mrs_;
   std::map<std::string, ibv_mr*> send_mrs_;
+  std::map<int, uint32_t> dlids_;
   //std::map<int, std::map<std::string, RemoteMR>> rmrs_;
+  ibv_cq* cq_;
+  std::map<int, ibv_cq*> cqs_;
   std::map<int, ibv_qp*> qps_;
+  std::map<int, bool> connected_;
+  ibv_wc wc_[MAX_CONCURRENT_WRITES * 2];
   //std::unordered_map<int, RdmaChannel> remotes_;
   //std::vector<Channel> channels_;
   //std::vector<MemoryRegion> mrs_;
