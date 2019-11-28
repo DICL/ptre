@@ -19,6 +19,14 @@ int init_rdma_env(RdmaEnv& env) {
     std::cout << "ibv_query_port done." << std::endl;
   }
 
+  /// Local address
+  {
+    //union ibv_gid gid;
+    int r = ibv_query_gid(env.context, IB_PORT, 0, &env.gid);
+    if (r < 0) std::cout << "Failed to ibv_query_gid\n";
+    else std::cout << "GID: " << env.gid.global.subnet_prefix << ", " << env.gid.global.interface_id << std::endl;
+  }
+
   ret = ibv_query_device(env.context, &env.dev_attr);
   if (ret < 0) {
     std::cout << "ibv_query_device failed. ret=" << ret << std::endl;
@@ -81,8 +89,8 @@ RdmaTensorChannel::RdmaTensorChannel(const RdmaEnv* env,
   {
     struct ibv_qp_init_attr qp_init_attr;
     memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
-    qp_init_attr.send_cq = env_->cq;
-    qp_init_attr.recv_cq = env_->cq;
+    //qp_init_attr.send_cq = env_->cq;
+    //qp_init_attr.recv_cq = env_->cq;
     qp_init_attr.cap.max_send_wr = QUEUE_DEPTH_DEFAULT;
     qp_init_attr.cap.max_recv_wr = QUEUE_DEPTH_DEFAULT;
     qp_init_attr.cap.max_send_sge = 1;

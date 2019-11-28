@@ -47,12 +47,16 @@ class RdmaManager {
   void SetRemoteMR(int rank, const std::string& name, uint64_t remote_addr,
                    uint32_t rkey);
   void SetDlid(int rank, uint32_t lid) { dlids_.emplace(rank, lid); }
+  void set_qpn(int rank, uint32_t qpn) { qpns_.emplace(rank, qpn); }
+  void set_snp(int rank, uint64_t snp) { snps_.emplace(rank, snp); }
+  void set_iid(int rank, uint64_t iid) { iids_.emplace(rank, iid); }
   RemoteMR GetRemoteMR(const std::string& name);
   void RdmaWriteTensor(int dst_id, const std::string& name,
                        const Tensor& tensor);
 
   int rank() { return ptre_rank_; }
   ibv_cq* cq() { return cq_; }
+  ibv_qp* qp(int dest_rank) { return qps_[dest_rank]; }
   RdmaEnv* rdma_env() { return &rdma_env_; }
 
  private:
@@ -67,7 +71,11 @@ class RdmaManager {
   std::map<std::string, ibv_mr*> recv_mrs_;
   std::map<std::string, ibv_mr*> send_mrs_;
   std::map<int, uint32_t> dlids_;
+  std::map<int, uint32_t> qpns_;
+  std::map<int, uint64_t> snps_;
+  std::map<int, uint64_t> iids_;
   //std::map<int, std::map<std::string, RemoteMR>> rmrs_;
+  ibv_comp_channel* event_channel_;
   ibv_cq* cq_;
   std::map<int, ibv_cq*> cqs_;
   std::map<int, ibv_qp*> qps_;

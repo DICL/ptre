@@ -17,7 +17,8 @@ std::string grpc_target(int dst_rank) {
   return ss.str();
 }
 
-GrpcClient::GrpcClient(int dst_rank) : dst_rank_(dst_rank) {
+GrpcClient::GrpcClient(int src_rank, int dst_rank)
+    : src_rank_(src_rank), dst_rank_(dst_rank) {
   std::string target(grpc_target(dst_rank_));
   std::cout << "target: " << target << std::endl;
   std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(target,
@@ -31,7 +32,7 @@ void GrpcClient::SetRdmaManager(RdmaManager* rdma_manager) {
 
 int GrpcClient::GetRemoteAddress(const std::string& name) {
   GetRemoteAddressRequest request;
-  request.set_rank(dst_rank_);
+  request.set_rank(src_rank_);
   request.set_tensor_name(name);
 
   GetRemoteAddressResponse response;
@@ -52,7 +53,7 @@ int GrpcClient::GetRemoteAddress(const std::string& name) {
 
 int GrpcClient::GetRemoteEnv() {
   GetRemoteEnvRequest request;
-  request.set_rank(dst_rank_);
+  request.set_rank(src_rank_);
 
   GetRemoteEnvResponse response;
 
@@ -61,6 +62,9 @@ int GrpcClient::GetRemoteEnv() {
 
 	if (status.ok()) {
     rdma_manager_->SetDlid(dst_rank_, response.lid());
+    rdma_manager_->set_qpn(dst_rank_, response.qpn());
+    rdma_manager_->set_snp(dst_rank_, response.snp());
+    rdma_manager_->set_iid(dst_rank_, response.iid());
     return 0;
   } else {
     std::cout << status.error_code() << ": " << status.error_message()

@@ -30,6 +30,9 @@ message GetRemoteEnvRequest {
 message GetRemoteEnvResponse {
   int32 rank = 1;
   int32 lid = 2;
+  int32 qpn = 3;
+  uint64 snp = 4;  // global subnet prefix
+  uint64 iid = 5;  // global interface id
 }
 
 message GetRemoteAddressRequest {

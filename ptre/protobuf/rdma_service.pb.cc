@@ -164,6 +164,9 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteEnvResponse, rank_),
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteEnvResponse, lid_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteEnvResponse, qpn_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteEnvResponse, snp_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteEnvResponse, iid_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressRequest, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -186,8 +189,8 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 10, -1, sizeof(::ptre::MemoryRegion)},
   { 17, -1, sizeof(::ptre::GetRemoteEnvRequest)},
   { 23, -1, sizeof(::ptre::GetRemoteEnvResponse)},
-  { 30, -1, sizeof(::ptre::GetRemoteAddressRequest)},
-  { 37, -1, sizeof(::ptre::GetRemoteAddressResponse)},
+  { 33, -1, sizeof(::ptre::GetRemoteAddressRequest)},
+  { 40, -1, sizeof(::ptre::GetRemoteAddressResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -204,18 +207,18 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "\003lid\030\001 \001(\005\022\013\n\003qpn\030\002 \001(\005\022\013\n\003psn\030\003 \001(\005\022\013\n\003"
   "snp\030\004 \001(\004\022\013\n\003iid\030\005 \001(\004\"1\n\014MemoryRegion\022\023"
   "\n\013remote_addr\030\001 \001(\004\022\014\n\004rkey\030\002 \001(\r\"#\n\023Get"
-  "RemoteEnvRequest\022\014\n\004rank\030\001 \001(\005\"1\n\024GetRem"
+  "RemoteEnvRequest\022\014\n\004rank\030\001 \001(\005\"X\n\024GetRem"
   "oteEnvResponse\022\014\n\004rank\030\001 \001(\005\022\013\n\003lid\030\002 \001("
-  "\005\"<\n\027GetRemoteAddressRequest\022\014\n\004rank\030\001 \001"
-  "(\005\022\023\n\013tensor_name\030\002 \001(\t\"}\n\030GetRemoteAddr"
-  "essResponse\022\014\n\004rank\030\001 \001(\005\022\023\n\013tensor_name"
-  "\030\002 \001(\t\022\036\n\007channel\030\003 \001(\0132\r.ptre.Channel\022\036"
-  "\n\002mr\030\004 \003(\0132\022.ptre.MemoryRegion2\240\001\n\004Rdma\022"
-  "E\n\014GetRemoteEnv\022\031.ptre.GetRemoteEnvReque"
-  "st\032\032.ptre.GetRemoteEnvResponse\022Q\n\020GetRem"
-  "oteAddress\022\035.ptre.GetRemoteAddressReques"
-  "t\032\036.ptre.GetRemoteAddressResponseb\006proto"
-  "3"
+  "\005\022\013\n\003qpn\030\003 \001(\005\022\013\n\003snp\030\004 \001(\004\022\013\n\003iid\030\005 \001(\004"
+  "\"<\n\027GetRemoteAddressRequest\022\014\n\004rank\030\001 \001("
+  "\005\022\023\n\013tensor_name\030\002 \001(\t\"}\n\030GetRemoteAddre"
+  "ssResponse\022\014\n\004rank\030\001 \001(\005\022\023\n\013tensor_name\030"
+  "\002 \001(\t\022\036\n\007channel\030\003 \001(\0132\r.ptre.Channel\022\036\n"
+  "\002mr\030\004 \003(\0132\022.ptre.MemoryRegion2\240\001\n\004Rdma\022E"
+  "\n\014GetRemoteEnv\022\031.ptre.GetRemoteEnvReques"
+  "t\032\032.ptre.GetRemoteEnvResponse\022Q\n\020GetRemo"
+  "teAddress\022\035.ptre.GetRemoteAddressRequest"
+  "\032\036.ptre.GetRemoteAddressResponseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
@@ -230,7 +233,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 601,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 640,
   &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
   file_level_metadata_rdma_5fservice_2eproto, 6, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
@@ -1244,6 +1247,9 @@ class GetRemoteEnvResponse::HasBitSetters {
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int GetRemoteEnvResponse::kRankFieldNumber;
 const int GetRemoteEnvResponse::kLidFieldNumber;
+const int GetRemoteEnvResponse::kQpnFieldNumber;
+const int GetRemoteEnvResponse::kSnpFieldNumber;
+const int GetRemoteEnvResponse::kIidFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 GetRemoteEnvResponse::GetRemoteEnvResponse()
@@ -1256,15 +1262,15 @@ GetRemoteEnvResponse::GetRemoteEnvResponse(const GetRemoteEnvResponse& from)
       _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::memcpy(&rank_, &from.rank_,
-    static_cast<size_t>(reinterpret_cast<char*>(&lid_) -
-    reinterpret_cast<char*>(&rank_)) + sizeof(lid_));
+    static_cast<size_t>(reinterpret_cast<char*>(&qpn_) -
+    reinterpret_cast<char*>(&rank_)) + sizeof(qpn_));
   // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteEnvResponse)
 }
 
 void GetRemoteEnvResponse::SharedCtor() {
   ::memset(&rank_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&lid_) -
-      reinterpret_cast<char*>(&rank_)) + sizeof(lid_));
+      reinterpret_cast<char*>(&qpn_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(qpn_));
 }
 
 GetRemoteEnvResponse::~GetRemoteEnvResponse() {
@@ -1291,8 +1297,8 @@ void GetRemoteEnvResponse::Clear() {
   (void) cached_has_bits;
 
   ::memset(&rank_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&lid_) -
-      reinterpret_cast<char*>(&rank_)) + sizeof(lid_));
+      reinterpret_cast<char*>(&qpn_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(qpn_));
   _internal_metadata_.Clear();
 }
 
@@ -1315,6 +1321,27 @@ const char* GetRemoteEnvResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAM
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
           lid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // int32 qpn = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+          qpn_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 snp = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+          snp_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 iid = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
+          iid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -1374,6 +1401,45 @@ bool GetRemoteEnvResponse::MergePartialFromCodedStream(
         break;
       }
 
+      // int32 qpn = 3;
+      case 3: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (24 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &qpn_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // uint64 snp = 4;
+      case 4: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (32 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::uint64, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64>(
+                 input, &snp_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // uint64 iid = 5;
+      case 5: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (40 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::uint64, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64>(
+                 input, &iid_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0) {
@@ -1411,6 +1477,21 @@ void GetRemoteEnvResponse::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(2, this->lid(), output);
   }
 
+  // int32 qpn = 3;
+  if (this->qpn() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(3, this->qpn(), output);
+  }
+
+  // uint64 snp = 4;
+  if (this->snp() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64(4, this->snp(), output);
+  }
+
+  // uint64 iid = 5;
+  if (this->iid() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64(5, this->iid(), output);
+  }
+
   if (_internal_metadata_.have_unknown_fields()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
         _internal_metadata_.unknown_fields(), output);
@@ -1432,6 +1513,21 @@ void GetRemoteEnvResponse::SerializeWithCachedSizes(
   // int32 lid = 2;
   if (this->lid() != 0) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(2, this->lid(), target);
+  }
+
+  // int32 qpn = 3;
+  if (this->qpn() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(3, this->qpn(), target);
+  }
+
+  // uint64 snp = 4;
+  if (this->snp() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(4, this->snp(), target);
+  }
+
+  // uint64 iid = 5;
+  if (this->iid() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(5, this->iid(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1469,6 +1565,27 @@ size_t GetRemoteEnvResponse::ByteSizeLong() const {
         this->lid());
   }
 
+  // uint64 snp = 4;
+  if (this->snp() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->snp());
+  }
+
+  // uint64 iid = 5;
+  if (this->iid() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->iid());
+  }
+
+  // int32 qpn = 3;
+  if (this->qpn() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->qpn());
+  }
+
   int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
   SetCachedSize(cached_size);
   return total_size;
@@ -1502,6 +1619,15 @@ void GetRemoteEnvResponse::MergeFrom(const GetRemoteEnvResponse& from) {
   if (from.lid() != 0) {
     set_lid(from.lid());
   }
+  if (from.snp() != 0) {
+    set_snp(from.snp());
+  }
+  if (from.iid() != 0) {
+    set_iid(from.iid());
+  }
+  if (from.qpn() != 0) {
+    set_qpn(from.qpn());
+  }
 }
 
 void GetRemoteEnvResponse::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -1531,6 +1657,9 @@ void GetRemoteEnvResponse::InternalSwap(GetRemoteEnvResponse* other) {
   _internal_metadata_.Swap(&other->_internal_metadata_);
   swap(rank_, other->rank_);
   swap(lid_, other->lid_);
+  swap(snp_, other->snp_);
+  swap(iid_, other->iid_);
+  swap(qpn_, other->qpn_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteEnvResponse::GetMetadata() const {

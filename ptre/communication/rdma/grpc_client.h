@@ -14,12 +14,13 @@ namespace ptre {
 class GrpcClient {
  public:
   //GrpcClient(std::shared_ptr<::grpc::Channel> channel);
-  GrpcClient(int dst_rank);
+  GrpcClient(int src_rank, int dst_rank);
   int GetRemoteAddress(const std::string& name);
   int GetRemoteEnv();
   void SetRdmaManager(RdmaManager* rdma_manager);
 
  private:
+  int src_rank_;
   int dst_rank_;
   std::unique_ptr<Rdma::Stub> stub_;
   RdmaManager* rdma_manager_ = nullptr;

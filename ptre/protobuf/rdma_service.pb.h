@@ -620,6 +620,24 @@ class GetRemoteEnvResponse :
   ::PROTOBUF_NAMESPACE_ID::int32 lid() const;
   void set_lid(::PROTOBUF_NAMESPACE_ID::int32 value);
 
+  // uint64 snp = 4;
+  void clear_snp();
+  static const int kSnpFieldNumber = 4;
+  ::PROTOBUF_NAMESPACE_ID::uint64 snp() const;
+  void set_snp(::PROTOBUF_NAMESPACE_ID::uint64 value);
+
+  // uint64 iid = 5;
+  void clear_iid();
+  static const int kIidFieldNumber = 5;
+  ::PROTOBUF_NAMESPACE_ID::uint64 iid() const;
+  void set_iid(::PROTOBUF_NAMESPACE_ID::uint64 value);
+
+  // int32 qpn = 3;
+  void clear_qpn();
+  static const int kQpnFieldNumber = 3;
+  ::PROTOBUF_NAMESPACE_ID::int32 qpn() const;
+  void set_qpn(::PROTOBUF_NAMESPACE_ID::int32 value);
+
   // @@protoc_insertion_point(class_scope:ptre.GetRemoteEnvResponse)
  private:
   class HasBitSetters;
@@ -627,6 +645,9 @@ class GetRemoteEnvResponse :
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::int32 rank_;
   ::PROTOBUF_NAMESPACE_ID::int32 lid_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 snp_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 iid_;
+  ::PROTOBUF_NAMESPACE_ID::int32 qpn_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
@@ -1092,6 +1113,48 @@ inline void GetRemoteEnvResponse::set_lid(::PROTOBUF_NAMESPACE_ID::int32 value) 
   
   lid_ = value;
   // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvResponse.lid)
+}
+
+// int32 qpn = 3;
+inline void GetRemoteEnvResponse::clear_qpn() {
+  qpn_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteEnvResponse::qpn() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteEnvResponse.qpn)
+  return qpn_;
+}
+inline void GetRemoteEnvResponse::set_qpn(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  qpn_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvResponse.qpn)
+}
+
+// uint64 snp = 4;
+inline void GetRemoteEnvResponse::clear_snp() {
+  snp_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 GetRemoteEnvResponse::snp() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteEnvResponse.snp)
+  return snp_;
+}
+inline void GetRemoteEnvResponse::set_snp(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  snp_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvResponse.snp)
+}
+
+// uint64 iid = 5;
+inline void GetRemoteEnvResponse::clear_iid() {
+  iid_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 GetRemoteEnvResponse::iid() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteEnvResponse.iid)
+  return iid_;
+}
+inline void GetRemoteEnvResponse::set_iid(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  iid_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteEnvResponse.iid)
 }
 
 // -------------------------------------------------------------------

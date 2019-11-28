@@ -59,10 +59,14 @@ void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
 }
 
 void RdmaManager::CreateCQs() {
+  event_channel_ = ibv_create_comp_channel(rdma_env_.context);
+  if (!event_channel_) {
+    std::cout << "Failed to create completion channel" << std::endl;
+  }
   cq_ = ibv_create_cq(rdma_env_.context, MAX_CONCURRENT_WRITES * 2,
-                             nullptr, nullptr, 0);
+                             nullptr, event_channel_, 0);
   if (cq_ == nullptr) {
-    std::cout << "Failed to create a CQ" << std::endl;
+    std::cout << "Failed to create CQ" << std::endl;
   }
   //for (int i = 0; i < ptre_size_; i++) {
   //  if (i == ptre_rank_) {
@@ -134,11 +138,15 @@ int RdmaManager::ConnectQP(int dst_rank) {
       attr.qp_state = IBV_QPS_RTR;
 
       attr.path_mtu = IBV_MTU_4096;
-      attr.dest_qp_num = qp->qp_num;
+      attr.dest_qp_num = qpns_[dst_rank];
       attr.rq_psn = 0;
       attr.max_dest_rd_atomic = 1;
       attr.min_rnr_timer = 12;
       attr.ah_attr.is_global = 0;
+      attr.ah_attr.grh.dgid.global.subnet_prefix = snps_[dst_rank];
+      attr.ah_attr.grh.dgid.global.interface_id = iids_[dst_rank];
+      attr.ah_attr.grh.flow_label = 0;
+      attr.ah_attr.grh.hop_limit = 255;
       attr.ah_attr.dlid = dlids_[dst_rank];
       attr.ah_attr.sl = 0;
       attr.ah_attr.src_path_bits = 0;
@@ -184,7 +192,17 @@ int RdmaManager::ConnectQP(int dst_rank) {
 void RdmaManager::ProcessCQ() {
   std::cout << "Start ProcessCQ()" << std::endl;
   while (true) {
-    //ibv_cq* cq = ptre_global.rdma_manager->cq();
+    ibv_cq* cq;
+    void* cq_context;
+    int r = ibv_get_cq_event(event_channel_, &cq, &cq_context);
+    if (r < 0) {
+      std::cout << "Failed to ibv_get_cq_event" << std::endl;
+    }
+    ibv_ack_cq_events(cq, 1);
+    r = ibv_req_notify_cq(cq_, 0);
+    if (r < 0) {
+      std::cout << "Failed to ibv_req_notify_cq" << std::endl;
+    }
     int ne = ibv_poll_cq(cq_, MAX_CONCURRENT_WRITES * 2,
                          static_cast<ibv_wc*>(wc_));
     for (int i = 0; i < ne; i++) {
@@ -192,9 +210,13 @@ void RdmaManager::ProcessCQ() {
         std::cout << "Failed status \n"
           << ibv_wc_status_str(wc_[i].status) << " " << wc_[i].status << " "
           << static_cast<int>(wc_[i].wr_id) << " " << wc_[i].vendor_err;
+      } else {
+        std::cout << "work completion for opcode=" << wc_[i].opcode << std::endl;
       }
-      RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(wc_[i].wr_id);
-      delete wr_id;
+      if (wc_[i].opcode == IBV_WC_RDMA_WRITE) {
+        RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(wc_[i].wr_id);
+        delete wr_id;
+      }
       //std::cout << "wc opcode=" << wc_[i].opcode << std::endl;
     }
   }

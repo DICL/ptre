@@ -30,9 +30,10 @@ struct RdmaEnv {
   ibv_pd *pd;
   ibv_port_attr port_attr;
   ibv_device_attr dev_attr;
-  ibv_cq* cq;
-  ibv_wc wc[MAX_CONCURRENT_WRITES * 2];
-  std::thread polling_thread;
+  union ibv_gid gid;
+  //ibv_cq* cq;
+  //ibv_wc wc[MAX_CONCURRENT_WRITES * 2];
+  //std::thread polling_thread;
 };
 
 enum RdmaWriteIDType {

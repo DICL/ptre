@@ -189,7 +189,7 @@ class InitRemoteMrOp : public OpKernel {
         if (i == ptre_global.rank) {
           continue;
         }
-        GrpcClient grpc_client(i);
+        GrpcClient grpc_client(ptre_global.rank, i);
         grpc_client.SetRdmaManager(ptre_global.rdma_manager);
         if (!ptre_global.rdma_manager->IsDlidSet(i)) {
           int ret = grpc_client.GetRemoteEnv();
