@@ -6,6 +6,7 @@
 #include <vector>
 #include <queue>
 
+#include "ptre/kernels/ptre_op_helpers.h"
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/grpc_client.h"
@@ -21,7 +22,6 @@ using ::ptre::RdmaServiceImpl;
 using ::ptre::GrpcClient;
 
 namespace {
-
 struct PtreGlobal {
   ConsensusManager cm;
   RdmaManager* rdma_manager;
@@ -110,8 +110,17 @@ void InitComm(int size, int rank) {
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
   ptre_global.background_thread = std::thread(BackgroundThreadLoop);
 }
-
 }  // namespace
+
+namespace functor {
+template <typename T>
+struct ApplyModelAveraging<CPUDevice, T> {
+  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstFlat remote) {
+    var.device(d) = 0.5 * (var + remote);
+  }
+};
+}  // namespace functor
 
 REGISTER_OP("InitComm")
     .Attr("size: int")
@@ -240,7 +249,6 @@ class ConnectQpsOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(Name("ConnectQps").Device(DEVICE_CPU),
                         ConnectQpsOp);
 
-
 REGISTER_OP("PushModel")
     .Attr("T: {float32}")
     .Attr("NumTensors: int")
@@ -254,6 +262,7 @@ class PushModelOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
     int num_inputs = context->num_inputs();
+    //std::cout << "PushTensor: " << names_[0] << std::endl;
     std::lock_guard<std::mutex> l(ptre_global.mu);
     while (!ptre_global.q.empty()) {
       ptre_global.q.pop();
@@ -289,11 +298,11 @@ class GetRemoteVariableOp : public OpKernel {
     Tensor other(ptre_global.cm.global_consensus(index_));
     Tensor* output;
     OP_REQUIRES_OK(context, context->allocate_output(0, other.shape(), &output));
-    //auto output_flat = output->flat<float>();
-    usleep(1);
-    std::copy(other.tensor_data().begin(), other.tensor_data().end(),
-              const_cast<char*>(output->tensor_data().begin()));
-    //output_flat = other.flat<float>();
+    //usleep(1);
+    //std::copy(other.tensor_data().begin(), other.tensor_data().end(),
+    //          const_cast<char*>(output->tensor_data().begin()));
+    auto output_flat = output->flat<float>();
+    output_flat = other.flat<float>();
   }
 
  private:
@@ -401,5 +410,114 @@ REGISTER_KERNEL_BUILDER(Name("AverageModelWithRemote").Device(DEVICE_CPU),
 
 //REGISTER_OP("Incoming")
 //    .
+REGISTER_OP("DummyListInput")
+    .Attr("T: {float32}")
+    .Attr("NumTensors: int")
+    .Input("vars: NumTensors * T");
+class DummyListInputOp : public AsyncOpKernel {
+ public:
+  explicit DummyListInputOp(OpKernelConstruction* context)
+      : AsyncOpKernel(context) {}
+  void ComputeAsync(OpKernelContext* context, DoneCallback done) override {
+    //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
+    int num_inputs = context->num_inputs();
+    //std::lock_guard<std::mutex> l(ptre_global.mu);
+    //while (!ptre_global.q.empty()) {
+    //  ptre_global.q.pop();
+    //}
+    //for (int i = 0; i < num_inputs; i++) {
+    //  ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
+    //}
+    int target_rank = ptre_global.cm.GetRandomTarget();
+    //ptre_global.q.push(target_rank);
+    done();
+  }
+};
+REGISTER_KERNEL_BUILDER(Name("DummyListInput").Device(DEVICE_CPU), DummyListInputOp);
+
+REGISTER_OP("DummySingleInput")
+    .Input("var: float32");
+class DummySingleInputOp : public AsyncOpKernel {
+ public:
+  explicit DummySingleInputOp(OpKernelConstruction* context)
+      : AsyncOpKernel(context) {}
+  void ComputeAsync(OpKernelContext* context, DoneCallback done) override {
+    //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
+    //int num_inputs = context->num_inputs();
+    //std::lock_guard<std::mutex> l(ptre_global.mu);
+    //while (!ptre_global.q.empty()) {
+    //  ptre_global.q.pop();
+    //}
+    //for (int i = 0; i < num_inputs; i++) {
+    //  ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
+    //}
+    int target_rank = ptre_global.cm.GetRandomTarget();
+    //ptre_global.q.push(target_rank);
+    done();
+  }
+};
+REGISTER_KERNEL_BUILDER(Name("DummySingleInput").Device(DEVICE_CPU), DummySingleInputOp);
+
+REGISTER_OP("ApplyModelAveraging")
+    .Input("var: Ref(T)")
+    .Input("remote: T")
+    .Output("out: Ref(T)")
+    .Attr("T: numbertype")
+    .Attr("use_locking: bool = false")
+template <typename Device, typename T>
+class ApplyModelAveragingOp : public OpKernel {
+ public:
+  explicit ApplyModelAveragingOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("use_locking", &use_exclusive_lock_));
+  }
+
+  void Compute(OpKernelContext* ctx) override {
+    const bool sparse = false;
+    auto locks = MaybeLockVariableInputMutexesInOrder<Device, T>(
+        ctx, use_exclusive_lock_, sparse, {0});
+    Tensor var;
+    OP_REQUIRES_OK(ctx, GetInputTensorFromVariable<Device, T>(
+                            ctx, 0, use_exclusive_lock_, sparse, &var));
+
+    OP_REQUIRES(
+        ctx, var.IsInitialized(),
+        errors::FailedPrecondition(
+            "Attempting to use uninitialized variables: ", requested_input(0)));
+    const Tensor& remote = ctx->input(1);
+    OP_REQUIRES(
+        ctx, var.shape().IsSameSize(remote.shape()),
+        errors::InvalidArgument("var and remote do not have the same shape",
+                                var.shape().DebugString(), " ",
+                                remote.shape().DebugString()));
+
+    const Device& device = ctx->template eigen_device<Device>();
+    functor::ApplyModelAveraging<Device, T>()(
+        device, var.flat<T>(), remote.flat<T>());
+
+    MaybeForwardRefInputToRefOutput(ctx, 0, 0);
+  }
+
+ private:
+  bool use_exclusive_lock_;
+};
+
+#define REGISTER_KERNELS(D, T)                                                \
+  REGISTER_KERNEL_BUILDER(                                                    \
+      Name("ApplyModelAveraging").Device(DEVICE_##D).TypeConstraint<T>("T"), \
+      ApplyModelAveragingOp<D##Device, T>);                                  \
+  REGISTER_KERNEL_BUILDER(Name("ResourceApplyModelAveraging")                \
+                              .Device(DEVICE_##D)                             \
+                              .HostMemory("var")                              \
+                              .TypeConstraint<T>("T"),                        \
+                          ApplyModelAveragingOp<D##Device, T>);
+#define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
+
+TF_CALL_half(REGISTER_CPU_KERNELS);
+TF_CALL_bfloat16(REGISTER_CPU_KERNELS);
+TF_CALL_float(REGISTER_CPU_KERNELS);
+TF_CALL_double(REGISTER_CPU_KERNELS);
+
+#undef REGISTER_CPU_KERNELS
+#undef REGISTER_KERNELS
     
 }  // namespace tensorflow

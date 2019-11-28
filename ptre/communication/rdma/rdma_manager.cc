@@ -40,7 +40,7 @@ void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
   strpc = recv->tensor_data();
   length = strpc.size();
   addr = (void*) strpc.data();
-  *((float*) addr) = 0;
+  //*((float*) addr) = 0;
   //*((float*) const_cast<char*>(addr)) = 0;
   mr = ibv_reg_mr(rdma_env_.pd, addr, length, ibv_access_flags);
   recv_mrs_.emplace(name, mr);
@@ -142,7 +142,7 @@ int RdmaManager::ConnectQP(int dst_rank) {
       attr.rq_psn = 0;
       attr.max_dest_rd_atomic = 1;
       attr.min_rnr_timer = 12;
-      attr.ah_attr.is_global = 0;
+      attr.ah_attr.is_global = 1;
       attr.ah_attr.grh.dgid.global.subnet_prefix = snps_[dst_rank];
       attr.ah_attr.grh.dgid.global.interface_id = iids_[dst_rank];
       attr.ah_attr.grh.flow_label = 0;

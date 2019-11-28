@@ -36,13 +36,9 @@ grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
   
   response->set_rank(rank);
   response->set_lid(env->port_attr.lid);
-  std::cout << "1111111111111111111111111\n";
   response->set_qpn(rdma_manager_->qp(src_rank)->qp_num);
-  std::cout << "2222222222222222222222222\n";
   response->set_snp(env->gid.global.subnet_prefix);
-  std::cout << "3333333333333333333333333\n";
   response->set_iid(env->gid.global.interface_id);
-  std::cout << "4444444444444444444444444\n";
 
   return grpc::Status::OK;
 }
