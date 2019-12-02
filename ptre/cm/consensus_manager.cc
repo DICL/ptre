@@ -86,6 +86,11 @@ const Tensor& ConsensusManager::global_consensus(int index) {
   return tensor;
 }
 
+const Tensor& ConsensusManager::global_consensus(const std::string& name) {
+  const Tensor& tensor = *(recv_tensors_[name]);
+  return tensor;
+}
+
 const std::vector<Tensor*>& ConsensusManager::GetGlobalConsensusList() {
   return global_consensus_;
 }

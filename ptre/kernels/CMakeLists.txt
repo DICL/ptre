@@ -1,6 +1,6 @@
-add_library(ptre_op_helpers SHARED ptre_op_helpers.cc)
-target_link_libraries(ptre_op_helpers
-                      :libtensorflow_framework.so.2)
+#add_library(ptre_op_helpers SHARED ptre_op_helpers.cc)
+#target_link_libraries(ptre_op_helpers
+#                      :libtensorflow_framework.so.2)
 
 add_library(ptre_ops SHARED ptre_ops.cc)
 target_link_libraries(ptre_ops

@@ -6,7 +6,7 @@
 #include <vector>
 #include <queue>
 
-#include "ptre/kernels/ptre_op_helpers.h"
+//#include "ptre/kernels/ptre_op_helpers.h"
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/grpc_client.h"
@@ -112,15 +112,15 @@ void InitComm(int size, int rank) {
 }
 }  // namespace
 
-namespace functor {
-template <typename T>
-struct ApplyModelAveraging<CPUDevice, T> {
-  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
-                  typename TTypes<T>::ConstFlat remote) {
-    var.device(d) = 0.5 * (var + remote);
-  }
-};
-}  // namespace functor
+//namespace functor {
+//template <typename T>
+//struct ApplyModelAveraging<CPUDevice, T> {
+//  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
+//                  typename TTypes<T>::ConstFlat remote) {
+//    var.device(d) = 0.5 * (var + remote);
+//  }
+//};
+//}  // namespace functor
 
 REGISTER_OP("InitComm")
     .Attr("size: int")
@@ -286,16 +286,25 @@ class PushModelOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(Name("PushModel").Device(DEVICE_CPU), PushModelOp);
 
 REGISTER_OP("GetRemoteVariable")
-    .Attr("index: int")
+    .Attr("index: int = -1")
+    .Attr("var_name: string")
     .Output("var: float32");
 class GetRemoteVariableOp : public OpKernel {
  public:
   explicit GetRemoteVariableOp(OpKernelConstruction* context)
       : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("index", &index_));
+    OP_REQUIRES_OK(context, context->GetAttr("var_name", &var_name_));
   }
   void Compute(OpKernelContext* context) override {
-    Tensor other(ptre_global.cm.global_consensus(index_));
+    //Tensor other(ptre_global.cm.global_consensus(index_));
+    Tensor other;
+    if (index_ >= 0) {
+      other = ptre_global.cm.global_consensus(index_);
+    //}
+    } else {
+      other = ptre_global.cm.global_consensus(var_name_);
+    }
     Tensor* output;
     OP_REQUIRES_OK(context, context->allocate_output(0, other.shape(), &output));
     //usleep(1);
@@ -307,6 +316,7 @@ class GetRemoteVariableOp : public OpKernel {
 
  private:
   int index_;
+  std::string var_name_;
 };
 REGISTER_KERNEL_BUILDER(Name("GetRemoteVariable").Device(DEVICE_CPU),
                         GetRemoteVariableOp);
@@ -458,6 +468,7 @@ class DummySingleInputOp : public AsyncOpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("DummySingleInput").Device(DEVICE_CPU), DummySingleInputOp);
 
+/*
 REGISTER_OP("ApplyModelAveraging")
     .Input("var: Ref(T)")
     .Input("remote: T")
@@ -519,5 +530,35 @@ TF_CALL_double(REGISTER_CPU_KERNELS);
 
 #undef REGISTER_CPU_KERNELS
 #undef REGISTER_KERNELS
+*/
+
+REGISTER_OP("ApplyModelAveraging")
+    .Input("var: Ref(T)")
+    .Input("remote: T")
+    .Output("out: Ref(T)")
+    .Attr("T: numbertype");
+template <typename T>
+class ApplyModelAveragingOp : public OpKernel {
+ public:
+  explicit ApplyModelAveragingOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
+
+  void Compute(OpKernelContext* ctx) {
+    Tensor var = ctx->mutable_input(0, false);
+    const Tensor& remote = ctx->input(1);
+    //const Device& device = ctx->template eigen_device<Device>();
+//  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
+//                  typename TTypes<T>::ConstFlat remote) {
+//    var.device(d) = 0.5 * (var + remote);
+//  }
+    //functor::ApplyModelAveraging<Device, T>()(
+    //    device, var.flat<T>(), remote.flat<T>());
+    var.flat<T>() = 0.5 * (var.flat<T>() + remote.flat<T>());
+
+    ctx->forward_ref_input_to_ref_output(0, 0);
+  }
+};
+REGISTER_KERNEL_BUILDER(
+    Name("ApplyModelAveraging").Device(DEVICE_CPU).TypeConstraint<float>("float"),
+    ApplyModelAveragingOp<float>);
     
 }  // namespace tensorflow

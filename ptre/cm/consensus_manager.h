@@ -33,6 +33,7 @@ class ConsensusManager {
   const std::vector<Tensor*>& GetSendTensorsList();
 
   const Tensor& global_consensus(int index);
+  const Tensor& global_consensus(const std::string& name);
   int num_vars() { return num_vars_; }
   void set_size(int size) { ptre_size_ = size; }
   void set_rank(int rank) { ptre_rank_ = rank; }
