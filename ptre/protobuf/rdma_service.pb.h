@@ -47,7 +47,7 @@ struct TableStruct_rdma_5fservice_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[6]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[8]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -70,6 +70,12 @@ extern GetRemoteEnvRequestDefaultTypeInternal _GetRemoteEnvRequest_default_insta
 class GetRemoteEnvResponse;
 class GetRemoteEnvResponseDefaultTypeInternal;
 extern GetRemoteEnvResponseDefaultTypeInternal _GetRemoteEnvResponse_default_instance_;
+class GetRemoteParamAddressRequest;
+class GetRemoteParamAddressRequestDefaultTypeInternal;
+extern GetRemoteParamAddressRequestDefaultTypeInternal _GetRemoteParamAddressRequest_default_instance_;
+class GetRemoteParamAddressResponse;
+class GetRemoteParamAddressResponseDefaultTypeInternal;
+extern GetRemoteParamAddressResponseDefaultTypeInternal _GetRemoteParamAddressResponse_default_instance_;
 class MemoryRegion;
 class MemoryRegionDefaultTypeInternal;
 extern MemoryRegionDefaultTypeInternal _MemoryRegion_default_instance_;
@@ -80,6 +86,8 @@ template<> ::ptre::GetRemoteAddressRequest* Arena::CreateMaybeMessage<::ptre::Ge
 template<> ::ptre::GetRemoteAddressResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteAddressResponse>(Arena*);
 template<> ::ptre::GetRemoteEnvRequest* Arena::CreateMaybeMessage<::ptre::GetRemoteEnvRequest>(Arena*);
 template<> ::ptre::GetRemoteEnvResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteEnvResponse>(Arena*);
+template<> ::ptre::GetRemoteParamAddressRequest* Arena::CreateMaybeMessage<::ptre::GetRemoteParamAddressRequest>(Arena*);
+template<> ::ptre::GetRemoteParamAddressResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteParamAddressResponse>(Arena*);
 template<> ::ptre::MemoryRegion* Arena::CreateMaybeMessage<::ptre::MemoryRegion>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace ptre {
@@ -952,6 +960,281 @@ class GetRemoteAddressResponse :
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
+// -------------------------------------------------------------------
+
+class GetRemoteParamAddressRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.GetRemoteParamAddressRequest) */ {
+ public:
+  GetRemoteParamAddressRequest();
+  virtual ~GetRemoteParamAddressRequest();
+
+  GetRemoteParamAddressRequest(const GetRemoteParamAddressRequest& from);
+  GetRemoteParamAddressRequest(GetRemoteParamAddressRequest&& from) noexcept
+    : GetRemoteParamAddressRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline GetRemoteParamAddressRequest& operator=(const GetRemoteParamAddressRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetRemoteParamAddressRequest& operator=(GetRemoteParamAddressRequest&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const GetRemoteParamAddressRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const GetRemoteParamAddressRequest* internal_default_instance() {
+    return reinterpret_cast<const GetRemoteParamAddressRequest*>(
+               &_GetRemoteParamAddressRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    6;
+
+  void Swap(GetRemoteParamAddressRequest* other);
+  friend void swap(GetRemoteParamAddressRequest& a, GetRemoteParamAddressRequest& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline GetRemoteParamAddressRequest* New() const final {
+    return CreateMaybeMessage<GetRemoteParamAddressRequest>(nullptr);
+  }
+
+  GetRemoteParamAddressRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<GetRemoteParamAddressRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const GetRemoteParamAddressRequest& from);
+  void MergeFrom(const GetRemoteParamAddressRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(GetRemoteParamAddressRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.GetRemoteParamAddressRequest";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.GetRemoteParamAddressRequest)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
+class GetRemoteParamAddressResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.GetRemoteParamAddressResponse) */ {
+ public:
+  GetRemoteParamAddressResponse();
+  virtual ~GetRemoteParamAddressResponse();
+
+  GetRemoteParamAddressResponse(const GetRemoteParamAddressResponse& from);
+  GetRemoteParamAddressResponse(GetRemoteParamAddressResponse&& from) noexcept
+    : GetRemoteParamAddressResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline GetRemoteParamAddressResponse& operator=(const GetRemoteParamAddressResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetRemoteParamAddressResponse& operator=(GetRemoteParamAddressResponse&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const GetRemoteParamAddressResponse& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const GetRemoteParamAddressResponse* internal_default_instance() {
+    return reinterpret_cast<const GetRemoteParamAddressResponse*>(
+               &_GetRemoteParamAddressResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    7;
+
+  void Swap(GetRemoteParamAddressResponse* other);
+  friend void swap(GetRemoteParamAddressResponse& a, GetRemoteParamAddressResponse& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline GetRemoteParamAddressResponse* New() const final {
+    return CreateMaybeMessage<GetRemoteParamAddressResponse>(nullptr);
+  }
+
+  GetRemoteParamAddressResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<GetRemoteParamAddressResponse>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const GetRemoteParamAddressResponse& from);
+  void MergeFrom(const GetRemoteParamAddressResponse& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(GetRemoteParamAddressResponse* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.GetRemoteParamAddressResponse";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated .ptre.MemoryRegion mr = 3;
+  int mr_size() const;
+  void clear_mr();
+  static const int kMrFieldNumber = 3;
+  ::ptre::MemoryRegion* mutable_mr(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >*
+      mutable_mr();
+  const ::ptre::MemoryRegion& mr(int index) const;
+  ::ptre::MemoryRegion* add_mr();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >&
+      mr() const;
+
+  // .ptre.Channel channel = 2;
+  bool has_channel() const;
+  void clear_channel();
+  static const int kChannelFieldNumber = 2;
+  const ::ptre::Channel& channel() const;
+  ::ptre::Channel* release_channel();
+  ::ptre::Channel* mutable_channel();
+  void set_allocated_channel(::ptre::Channel* channel);
+
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.GetRemoteParamAddressResponse)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion > mr_;
+  ::ptre::Channel* channel_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
 // ===================================================================
 
 
@@ -1376,9 +1659,130 @@ GetRemoteAddressResponse::mr() const {
   return mr_;
 }
 
+// -------------------------------------------------------------------
+
+// GetRemoteParamAddressRequest
+
+// int32 rank = 1;
+inline void GetRemoteParamAddressRequest::clear_rank() {
+  rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteParamAddressRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteParamAddressRequest.rank)
+  return rank_;
+}
+inline void GetRemoteParamAddressRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteParamAddressRequest.rank)
+}
+
+// -------------------------------------------------------------------
+
+// GetRemoteParamAddressResponse
+
+// int32 rank = 1;
+inline void GetRemoteParamAddressResponse::clear_rank() {
+  rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 GetRemoteParamAddressResponse::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteParamAddressResponse.rank)
+  return rank_;
+}
+inline void GetRemoteParamAddressResponse::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetRemoteParamAddressResponse.rank)
+}
+
+// .ptre.Channel channel = 2;
+inline bool GetRemoteParamAddressResponse::has_channel() const {
+  return this != internal_default_instance() && channel_ != nullptr;
+}
+inline void GetRemoteParamAddressResponse::clear_channel() {
+  if (GetArenaNoVirtual() == nullptr && channel_ != nullptr) {
+    delete channel_;
+  }
+  channel_ = nullptr;
+}
+inline const ::ptre::Channel& GetRemoteParamAddressResponse::channel() const {
+  const ::ptre::Channel* p = channel_;
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteParamAddressResponse.channel)
+  return p != nullptr ? *p : *reinterpret_cast<const ::ptre::Channel*>(
+      &::ptre::_Channel_default_instance_);
+}
+inline ::ptre::Channel* GetRemoteParamAddressResponse::release_channel() {
+  // @@protoc_insertion_point(field_release:ptre.GetRemoteParamAddressResponse.channel)
+  
+  ::ptre::Channel* temp = channel_;
+  channel_ = nullptr;
+  return temp;
+}
+inline ::ptre::Channel* GetRemoteParamAddressResponse::mutable_channel() {
+  
+  if (channel_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ptre::Channel>(GetArenaNoVirtual());
+    channel_ = p;
+  }
+  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteParamAddressResponse.channel)
+  return channel_;
+}
+inline void GetRemoteParamAddressResponse::set_allocated_channel(::ptre::Channel* channel) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaNoVirtual();
+  if (message_arena == nullptr) {
+    delete channel_;
+  }
+  if (channel) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena = nullptr;
+    if (message_arena != submessage_arena) {
+      channel = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, channel, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  channel_ = channel;
+  // @@protoc_insertion_point(field_set_allocated:ptre.GetRemoteParamAddressResponse.channel)
+}
+
+// repeated .ptre.MemoryRegion mr = 3;
+inline int GetRemoteParamAddressResponse::mr_size() const {
+  return mr_.size();
+}
+inline void GetRemoteParamAddressResponse::clear_mr() {
+  mr_.Clear();
+}
+inline ::ptre::MemoryRegion* GetRemoteParamAddressResponse::mutable_mr(int index) {
+  // @@protoc_insertion_point(field_mutable:ptre.GetRemoteParamAddressResponse.mr)
+  return mr_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >*
+GetRemoteParamAddressResponse::mutable_mr() {
+  // @@protoc_insertion_point(field_mutable_list:ptre.GetRemoteParamAddressResponse.mr)
+  return &mr_;
+}
+inline const ::ptre::MemoryRegion& GetRemoteParamAddressResponse::mr(int index) const {
+  // @@protoc_insertion_point(field_get:ptre.GetRemoteParamAddressResponse.mr)
+  return mr_.Get(index);
+}
+inline ::ptre::MemoryRegion* GetRemoteParamAddressResponse::add_mr() {
+  // @@protoc_insertion_point(field_add:ptre.GetRemoteParamAddressResponse.mr)
+  return mr_.Add();
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ptre::MemoryRegion >&
+GetRemoteParamAddressResponse::mr() const {
+  // @@protoc_insertion_point(field_list:ptre.GetRemoteParamAddressResponse.mr)
+  return mr_;
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

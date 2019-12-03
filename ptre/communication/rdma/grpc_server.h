@@ -14,6 +14,9 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteAddress(grpc::ServerContext* context,
                                 const GetRemoteAddressRequest* request,
                                 GetRemoteAddressResponse* response) override;
+  grpc::Status GetRemoteParamAddress(grpc::ServerContext* context,
+                                const GetRemoteParamAddressRequest* request,
+                                GetRemoteParamAddressResponse* response) override;
   grpc::Status GetRemoteEnv(grpc::ServerContext* context,
                                 const GetRemoteEnvRequest* request,
                                 GetRemoteEnvResponse* response) override;

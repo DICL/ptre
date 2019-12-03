@@ -27,6 +27,19 @@ grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+grpc::Status RdmaServiceImpl::GetRemoteParamAddress(grpc::ServerContext* context,
+                                const GetRemoteParamAddressRequest* request,
+                                GetRemoteParamAddressResponse* response) {
+  int rank = rdma_manager_->rank();
+  RemoteMR rpmr = rdma_manager_->GetRemoteParamMR();
+
+  response->set_rank(rank);
+  MemoryRegion* mr_proto = response->add_mr();
+  mr_proto->set_remote_addr(rpmr.remote_addr);
+  mr_proto->set_rkey(rpmr.rkey);
+  return grpc::Status::OK;
+}
+
 grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
                                            const GetRemoteEnvRequest* request,
                                            GetRemoteEnvResponse* response) {

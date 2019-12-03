@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <thread>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <queue>
 
@@ -38,6 +39,7 @@ struct PtreGlobal {
 
   int rank;
   int size;
+  std::vector<std::string> grpc_hosts;
 
   ~PtreGlobal() {
     if (background_thread.joinable()) {
@@ -97,12 +99,27 @@ void InitPtreOnce() {
 
 }
 
+void load_grpc_hosts() {
+  std::string in_line;
+  std::ifstream in("grpc_hosts");
+  while(std::getline(in, in_line)) {
+    ptre_global.grpc_hosts.emplace_back(in_line);
+  }
+  in.close();
+  for (int i = 0; i < ptre_global.size; i++) {
+    std::cout << ptre_global.grpc_hosts[i] << std::endl;
+  }
+}
+
 void InitComm(int size, int rank) {
   /// First Initialization step
   ptre_global.size = size;
   ptre_global.rank = rank;
   ptre_global.cm.set_size(size);
   ptre_global.cm.set_rank(rank);
+
+  load_grpc_hosts();
+
   std::cout << "Initializing RdmaManager" << std::endl;
   ptre_global.rdma_manager = new RdmaManager(size, rank);
   ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
@@ -157,6 +174,7 @@ class InitGlobalConsensusOp : public OpKernel {
     for (int i = 0; i < num_inputs; i++) {
       ptre_global.cm.InitBufTensor(names_[i], context->input(i));
     }
+    ptre_global.cm.InitBufParam();
     //std::vector<const Tensor*> inputs;
     //for (int i = 0; i < num_inputs; i++) {
     //  const Tensor &input = context->input(i);
@@ -198,7 +216,7 @@ class InitRemoteMrOp : public OpKernel {
         if (i == ptre_global.rank) {
           continue;
         }
-        GrpcClient grpc_client(ptre_global.rank, i);
+        GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
         grpc_client.SetRdmaManager(ptre_global.rdma_manager);
         if (!ptre_global.rdma_manager->IsDlidSet(i)) {
           int ret = grpc_client.GetRemoteEnv();
@@ -211,6 +229,12 @@ class InitRemoteMrOp : public OpKernel {
             continue;
           }
           int ret = grpc_client.GetRemoteAddress(names_[j]);
+          if (ret < 0) {
+            done_flag = 0;
+          }
+        }
+        if (!ptre_global.rdma_manager->IsRemoteParamMRSet(i)) {
+          int ret = grpc_client.GetRemoteParamAddress();
           if (ret < 0) {
             done_flag = 0;
           }
@@ -287,7 +311,7 @@ REGISTER_KERNEL_BUILDER(Name("PushModel").Device(DEVICE_CPU), PushModelOp);
 
 REGISTER_OP("GetRemoteVariable")
     .Attr("index: int = -1")
-    .Attr("var_name: string")
+    .Attr("var_name: string = ''")
     .Output("var: float32");
 class GetRemoteVariableOp : public OpKernel {
  public:
@@ -298,16 +322,17 @@ class GetRemoteVariableOp : public OpKernel {
   }
   void Compute(OpKernelContext* context) override {
     //Tensor other(ptre_global.cm.global_consensus(index_));
+    usleep(1);
     Tensor other;
     if (index_ >= 0) {
       other = ptre_global.cm.global_consensus(index_);
     //}
     } else {
+      //std::cout << "get_remote_variable with name: " << var_name_ << std::endl;
       other = ptre_global.cm.global_consensus(var_name_);
     }
     Tensor* output;
     OP_REQUIRES_OK(context, context->allocate_output(0, other.shape(), &output));
-    //usleep(1);
     //std::copy(other.tensor_data().begin(), other.tensor_data().end(),
     //          const_cast<char*>(output->tensor_data().begin()));
     auto output_flat = output->flat<float>();
@@ -560,5 +585,36 @@ class ApplyModelAveragingOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(
     Name("ApplyModelAveraging").Device(DEVICE_CPU).TypeConstraint<float>("float"),
     ApplyModelAveragingOp<float>);
+
+REGISTER_OP("IsNewIncoming")
+    .Output("out: bool");
+class IsNewIncomingOp : public OpKernel {
+ public:
+  explicit IsNewIncomingOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
+  void Compute(OpKernelContext* ctx) {
+    Tensor* output;
+    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({}), &output));
+    usleep(1);
+    bool* ret = ptre_global.cm.is_new_incoming_ptr();
+    //std::cout << "IsNewIncomingOp: *is_new_incoming_ptr = " << *ret << std::endl;
+    std::copy(ret, ret + sizeof(bool), const_cast<char*>(output->tensor_data().begin()));
+    //std::cout << "IsNewIncomingOp: *((bool*) output->tensor_data().begin()) = " << *((bool*) output->tensor_data().begin()) << std::endl;
+  }
+};
+REGISTER_KERNEL_BUILDER(
+    Name("IsNewIncoming").Device(DEVICE_CPU), IsNewIncomingOp);
     
+REGISTER_OP("MarkNoNew");
+class MarkNoNewOp : public OpKernel {
+ public:
+  explicit MarkNoNewOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
+  void Compute(OpKernelContext* ctx) {
+    ptre_global.cm.MarkNoNew();
+    bool* ret = ptre_global.cm.is_new_incoming_ptr();
+    //std::cout << "MarkNoNewOp: *is_new_incoming_ptr = " << *ret << std::endl;
+  }
+};
+REGISTER_KERNEL_BUILDER(
+    Name("MarkNoNew").Device(DEVICE_CPU), MarkNoNewOp);
+
 }  // namespace tensorflow

@@ -58,6 +58,28 @@ void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
             ", lkey=" << mr->lkey << ", rkey=" << mr->rkey << std::endl;
 }
 
+void RdmaManager::InitParamMR(bool* is_new_incoming, bool* send_in_flag) {
+  size_t length;
+  void* addr;
+  int ibv_access_flags = (IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
+                          IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC);
+  ibv_mr* mr;
+  length = sizeof(bool);
+  addr = (void*) is_new_incoming;
+  mr = ibv_reg_mr(rdma_env_.pd, addr, length, ibv_access_flags);
+  recv_in_flag_mr_ = mr;
+  std::cout << "RecvParamMR is set for addr=" << addr <<
+            ", lkey=" << mr->lkey << ", rkey=" << mr->rkey << std::endl;
+
+  /// Set tensor MR for send buf to perform rdma write operations on remote
+  /// nodes.
+  addr = (void*) send_in_flag;
+  mr = ibv_reg_mr(rdma_env_.pd, addr, length, ibv_access_flags);
+  send_in_flag_mr_ = mr;
+  std::cout << "SendParamMR is set for addr=" << addr <<
+            ", lkey=" << mr->lkey << ", rkey=" << mr->rkey << std::endl;
+}
+
 void RdmaManager::CreateCQs() {
   event_channel_ = ibv_create_comp_channel(rdma_env_.context);
   if (!event_channel_) {
@@ -240,6 +262,17 @@ bool RdmaManager::IsRemoteMRSet(int rank, const std::string& name) {
   return (rmrs_.find(id) != rmrs_.end());
 }
 
+bool RdmaManager::IsRemoteParamMRSet(int rank) {
+  return (rpmrs_.find(rank) != rpmrs_.end());
+}
+
+void RdmaManager::SetRemoteParamMR(int rank, uint64_t remote_addr,
+                                   uint32_t rkey) {
+  rpmrs_.emplace(rank, RemoteMR { remote_addr, rkey });
+  std::cout << "RemoteMR is set for rank=" << rank << ", name=is_new_incoming" <<
+            ", remote_addr=" << (void*) remote_addr << ", rkey=" << rkey << std::endl;
+}
+
 void RdmaManager::SetRemoteMR(int rank, const std::string& name,
                               uint64_t remote_addr, uint32_t rkey) {
   rmrs_.emplace(RemoteTensorId{ rank, name }, RemoteMR { remote_addr, rkey });
@@ -249,6 +282,13 @@ void RdmaManager::SetRemoteMR(int rank, const std::string& name,
 
 RemoteMR RdmaManager::GetRemoteMR(const std::string& name) {
   auto mr = recv_mrs_[name];
+  uint64_t remote_addr = (uint64_t) mr->addr;
+  uint32_t rkey = mr->rkey;
+  return RemoteMR{ remote_addr, rkey };
+}
+
+RemoteMR RdmaManager::GetRemoteParamMR() {
+  auto mr = recv_in_flag_mr_;
   uint64_t remote_addr = (uint64_t) mr->addr;
   uint32_t rkey = mr->rkey;
   return RemoteMR{ remote_addr, rkey };
@@ -269,6 +309,26 @@ void RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
   struct ibv_qp *qp = qps_[dst_rank];
   uint64_t wr_id = (uint64_t) new RdmaWriteID(RDMA_WRITE_ID_TENSOR_WRITE,
                                               nullptr);
+  int ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id,
+                       qp);
+  if (ret < 0) {
+    std::cout << "post_write failed." << std::endl;
+  }
+}
+
+void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
+  size_t buffer_size = sizeof(bool);
+  uint64_t src_addr = (uint64_t) flag;
+  struct ibv_mr *mr = send_in_flag_mr_;
+  uint32_t lkey = mr->lkey;
+
+  RemoteMR rmr = rpmrs_[dst_rank];
+  uint64_t remote_addr = rmr.remote_addr;
+  uint32_t rkey = rmr.rkey;
+  struct ibv_qp *qp = qps_[dst_rank];
+  uint64_t wr_id = (uint64_t) new RdmaWriteID(RDMA_WRITE_ID_INCOMING_FLAG_WRITE,
+                                              nullptr);
+  //std::cout << "   buffer_size=" << buffer_size << ", flag=" << flag << "(" << *flag << ")" << ", src_addr=" << src_addr << ", remote_addr=" << remote_addr << std::endl;
   int ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id,
                        qp);
   if (ret < 0) {

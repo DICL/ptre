@@ -37,7 +37,8 @@ struct RdmaEnv {
 };
 
 enum RdmaWriteIDType {
-  RDMA_WRITE_ID_TENSOR_WRITE
+  RDMA_WRITE_ID_TENSOR_WRITE,
+  RDMA_WRITE_ID_INCOMING_FLAG_WRITE
 };
 
 class RdmaWriteID {

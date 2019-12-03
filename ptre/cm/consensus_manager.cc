@@ -21,6 +21,8 @@ void ConsensusManager::InitGlobalConsensus(std::vector<const Tensor*>& vars) {
 void ConsensusManager::InitBufTensor(const std::string& name,
                                      const Tensor& tensor) {
   Tensor* recv_tensor = new Tensor(tensor.dtype(), tensor.shape());
+  std::copy(tensor.tensor_data().begin(), tensor.tensor_data().end(),
+            const_cast<char*>(recv_tensor->tensor_data().begin()));
   recv_tensors_.emplace(name, recv_tensor);
   global_consensus_.push_back(recv_tensor);
 
@@ -34,6 +36,11 @@ void ConsensusManager::InitBufTensor(const std::string& name,
     }
     rdma_manager_->InitTensorMR(i, name, recv_tensor, send_tensor);
   }
+}
+
+void ConsensusManager::InitBufParam() {
+  is_new_incoming_ = new bool(false);
+  rdma_manager_->InitParamMR(is_new_incoming_, &flag_to_send_);
 }
 
 void ConsensusManager::SetRdmaManager(RdmaManager* rdma_manager) {
@@ -69,6 +76,8 @@ void ConsensusManager::PushTensors(int dst_rank) {
     Tensor* t = it.second;
     rdma_manager_->RdmaWriteTensor(dst_rank, name, *t);
   }
+  flag_to_send_ = true;
+  rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
 }
 
 int ConsensusManager::GetRandomTarget() {

@@ -42,6 +42,14 @@ class GetRemoteAddressResponseDefaultTypeInternal {
  public:
   ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetRemoteAddressResponse> _instance;
 } _GetRemoteAddressResponse_default_instance_;
+class GetRemoteParamAddressRequestDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetRemoteParamAddressRequest> _instance;
+} _GetRemoteParamAddressRequest_default_instance_;
+class GetRemoteParamAddressResponseDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetRemoteParamAddressResponse> _instance;
+} _GetRemoteParamAddressResponse_default_instance_;
 }  // namespace ptre
 static void InitDefaultsscc_info_Channel_rdma_5fservice_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -115,6 +123,36 @@ static void InitDefaultsscc_info_GetRemoteEnvResponse_rdma_5fservice_2eproto() {
 ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetRemoteEnvResponse_rdma_5fservice_2eproto =
     {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_GetRemoteEnvResponse_rdma_5fservice_2eproto}, {}};
 
+static void InitDefaultsscc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::ptre::_GetRemoteParamAddressRequest_default_instance_;
+    new (ptr) ::ptre::GetRemoteParamAddressRequest();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::ptre::GetRemoteParamAddressRequest::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto}, {}};
+
+static void InitDefaultsscc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::ptre::_GetRemoteParamAddressResponse_default_instance_;
+    new (ptr) ::ptre::GetRemoteParamAddressResponse();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::ptre::GetRemoteParamAddressResponse::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 2, InitDefaultsscc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto}, {
+      &scc_info_Channel_rdma_5fservice_2eproto.base,
+      &scc_info_MemoryRegion_rdma_5fservice_2eproto.base,}};
+
 static void InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -129,7 +167,7 @@ static void InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto() {
 ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_MemoryRegion_rdma_5fservice_2eproto =
     {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto}, {}};
 
-static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_rdma_5fservice_2eproto[6];
+static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_rdma_5fservice_2eproto[8];
 static constexpr ::PROTOBUF_NAMESPACE_ID::EnumDescriptor const** file_level_enum_descriptors_rdma_5fservice_2eproto = nullptr;
 static constexpr ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor const** file_level_service_descriptors_rdma_5fservice_2eproto = nullptr;
 
@@ -183,6 +221,20 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, tensor_name_),
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, channel_),
   PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressResponse, mr_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteParamAddressRequest, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteParamAddressRequest, rank_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteParamAddressResponse, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteParamAddressResponse, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteParamAddressResponse, channel_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteParamAddressResponse, mr_),
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, sizeof(::ptre::Channel)},
@@ -191,6 +243,8 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 23, -1, sizeof(::ptre::GetRemoteEnvResponse)},
   { 33, -1, sizeof(::ptre::GetRemoteAddressRequest)},
   { 40, -1, sizeof(::ptre::GetRemoteAddressResponse)},
+  { 49, -1, sizeof(::ptre::GetRemoteParamAddressRequest)},
+  { 55, -1, sizeof(::ptre::GetRemoteParamAddressResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -200,6 +254,8 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteEnvResponse_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteAddressRequest_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteAddressResponse_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteParamAddressRequest_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteParamAddressResponse_default_instance_),
 };
 
 const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
@@ -214,29 +270,38 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "\005\022\023\n\013tensor_name\030\002 \001(\t\"}\n\030GetRemoteAddre"
   "ssResponse\022\014\n\004rank\030\001 \001(\005\022\023\n\013tensor_name\030"
   "\002 \001(\t\022\036\n\007channel\030\003 \001(\0132\r.ptre.Channel\022\036\n"
-  "\002mr\030\004 \003(\0132\022.ptre.MemoryRegion2\240\001\n\004Rdma\022E"
-  "\n\014GetRemoteEnv\022\031.ptre.GetRemoteEnvReques"
-  "t\032\032.ptre.GetRemoteEnvResponse\022Q\n\020GetRemo"
-  "teAddress\022\035.ptre.GetRemoteAddressRequest"
-  "\032\036.ptre.GetRemoteAddressResponseb\006proto3"
+  "\002mr\030\004 \003(\0132\022.ptre.MemoryRegion\",\n\034GetRemo"
+  "teParamAddressRequest\022\014\n\004rank\030\001 \001(\005\"m\n\035G"
+  "etRemoteParamAddressResponse\022\014\n\004rank\030\001 \001"
+  "(\005\022\036\n\007channel\030\002 \001(\0132\r.ptre.Channel\022\036\n\002mr"
+  "\030\003 \003(\0132\022.ptre.MemoryRegion2\202\002\n\004Rdma\022E\n\014G"
+  "etRemoteEnv\022\031.ptre.GetRemoteEnvRequest\032\032"
+  ".ptre.GetRemoteEnvResponse\022Q\n\020GetRemoteA"
+  "ddress\022\035.ptre.GetRemoteAddressRequest\032\036."
+  "ptre.GetRemoteAddressResponse\022`\n\025GetRemo"
+  "teParamAddress\022\".ptre.GetRemoteParamAddr"
+  "essRequest\032#.ptre.GetRemoteParamAddressR"
+  "esponseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
-static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdma_5fservice_2eproto_sccs[6] = {
+static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdma_5fservice_2eproto_sccs[8] = {
   &scc_info_Channel_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteAddressResponse_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteEnvRequest_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteEnvResponse_rdma_5fservice_2eproto.base,
+  &scc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto.base,
+  &scc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto.base,
   &scc_info_MemoryRegion_rdma_5fservice_2eproto.base,
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 640,
-  &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 6, 0,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 895,
+  &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 8, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
-  file_level_metadata_rdma_5fservice_2eproto, 6, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
+  file_level_metadata_rdma_5fservice_2eproto, 8, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
 };
 
 // Force running AddDescriptors() at dynamic initialization time.
@@ -2429,6 +2494,639 @@ void GetRemoteAddressResponse::InternalSwap(GetRemoteAddressResponse* other) {
 }
 
 
+// ===================================================================
+
+void GetRemoteParamAddressRequest::InitAsDefaultInstance() {
+}
+class GetRemoteParamAddressRequest::HasBitSetters {
+ public:
+};
+
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int GetRemoteParamAddressRequest::kRankFieldNumber;
+#endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
+
+GetRemoteParamAddressRequest::GetRemoteParamAddressRequest()
+  : ::PROTOBUF_NAMESPACE_ID::Message(), _internal_metadata_(nullptr) {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:ptre.GetRemoteParamAddressRequest)
+}
+GetRemoteParamAddressRequest::GetRemoteParamAddressRequest(const GetRemoteParamAddressRequest& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      _internal_metadata_(nullptr) {
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  rank_ = from.rank_;
+  // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteParamAddressRequest)
+}
+
+void GetRemoteParamAddressRequest::SharedCtor() {
+  rank_ = 0;
+}
+
+GetRemoteParamAddressRequest::~GetRemoteParamAddressRequest() {
+  // @@protoc_insertion_point(destructor:ptre.GetRemoteParamAddressRequest)
+  SharedDtor();
+}
+
+void GetRemoteParamAddressRequest::SharedDtor() {
+}
+
+void GetRemoteParamAddressRequest::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const GetRemoteParamAddressRequest& GetRemoteParamAddressRequest::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void GetRemoteParamAddressRequest::Clear() {
+// @@protoc_insertion_point(message_clear_start:ptre.GetRemoteParamAddressRequest)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  rank_ = 0;
+  _internal_metadata_.Clear();
+}
+
+#if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+const char* GetRemoteParamAddressRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // int32 rank = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag, &_internal_metadata_, ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
+}
+#else  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+bool GetRemoteParamAddressRequest::MergePartialFromCodedStream(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!PROTOBUF_PREDICT_TRUE(EXPRESSION)) goto failure
+  ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+  // @@protoc_insertion_point(parse_start:ptre.GetRemoteParamAddressRequest)
+  for (;;) {
+    ::std::pair<::PROTOBUF_NAMESPACE_ID::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // int32 rank = 1;
+      case 1: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (8 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &rank_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0) {
+          goto success;
+        }
+        DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SkipField(
+              input, tag, _internal_metadata_.mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:ptre.GetRemoteParamAddressRequest)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:ptre.GetRemoteParamAddressRequest)
+  return false;
+#undef DO_
+}
+#endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+
+void GetRemoteParamAddressRequest::SerializeWithCachedSizes(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:ptre.GetRemoteParamAddressRequest)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
+        _internal_metadata_.unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:ptre.GetRemoteParamAddressRequest)
+}
+
+::PROTOBUF_NAMESPACE_ID::uint8* GetRemoteParamAddressRequest::InternalSerializeWithCachedSizesToArray(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:ptre.GetRemoteParamAddressRequest)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:ptre.GetRemoteParamAddressRequest)
+  return target;
+}
+
+size_t GetRemoteParamAddressRequest::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ptre.GetRemoteParamAddressRequest)
+  size_t total_size = 0;
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::ComputeUnknownFieldsSize(
+        _internal_metadata_.unknown_fields());
+  }
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->rank());
+  }
+
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void GetRemoteParamAddressRequest::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:ptre.GetRemoteParamAddressRequest)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetRemoteParamAddressRequest* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetRemoteParamAddressRequest>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.GetRemoteParamAddressRequest)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.GetRemoteParamAddressRequest)
+    MergeFrom(*source);
+  }
+}
+
+void GetRemoteParamAddressRequest::MergeFrom(const GetRemoteParamAddressRequest& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:ptre.GetRemoteParamAddressRequest)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from.rank() != 0) {
+    set_rank(from.rank());
+  }
+}
+
+void GetRemoteParamAddressRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:ptre.GetRemoteParamAddressRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void GetRemoteParamAddressRequest::CopyFrom(const GetRemoteParamAddressRequest& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ptre.GetRemoteParamAddressRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GetRemoteParamAddressRequest::IsInitialized() const {
+  return true;
+}
+
+void GetRemoteParamAddressRequest::Swap(GetRemoteParamAddressRequest* other) {
+  if (other == this) return;
+  InternalSwap(other);
+}
+void GetRemoteParamAddressRequest::InternalSwap(GetRemoteParamAddressRequest* other) {
+  using std::swap;
+  _internal_metadata_.Swap(&other->_internal_metadata_);
+  swap(rank_, other->rank_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteParamAddressRequest::GetMetadata() const {
+  return GetMetadataStatic();
+}
+
+
+// ===================================================================
+
+void GetRemoteParamAddressResponse::InitAsDefaultInstance() {
+  ::ptre::_GetRemoteParamAddressResponse_default_instance_._instance.get_mutable()->channel_ = const_cast< ::ptre::Channel*>(
+      ::ptre::Channel::internal_default_instance());
+}
+class GetRemoteParamAddressResponse::HasBitSetters {
+ public:
+  static const ::ptre::Channel& channel(const GetRemoteParamAddressResponse* msg);
+};
+
+const ::ptre::Channel&
+GetRemoteParamAddressResponse::HasBitSetters::channel(const GetRemoteParamAddressResponse* msg) {
+  return *msg->channel_;
+}
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int GetRemoteParamAddressResponse::kRankFieldNumber;
+const int GetRemoteParamAddressResponse::kChannelFieldNumber;
+const int GetRemoteParamAddressResponse::kMrFieldNumber;
+#endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
+
+GetRemoteParamAddressResponse::GetRemoteParamAddressResponse()
+  : ::PROTOBUF_NAMESPACE_ID::Message(), _internal_metadata_(nullptr) {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:ptre.GetRemoteParamAddressResponse)
+}
+GetRemoteParamAddressResponse::GetRemoteParamAddressResponse(const GetRemoteParamAddressResponse& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      _internal_metadata_(nullptr),
+      mr_(from.mr_) {
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  if (from.has_channel()) {
+    channel_ = new ::ptre::Channel(*from.channel_);
+  } else {
+    channel_ = nullptr;
+  }
+  rank_ = from.rank_;
+  // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteParamAddressResponse)
+}
+
+void GetRemoteParamAddressResponse::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto.base);
+  ::memset(&channel_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&rank_) -
+      reinterpret_cast<char*>(&channel_)) + sizeof(rank_));
+}
+
+GetRemoteParamAddressResponse::~GetRemoteParamAddressResponse() {
+  // @@protoc_insertion_point(destructor:ptre.GetRemoteParamAddressResponse)
+  SharedDtor();
+}
+
+void GetRemoteParamAddressResponse::SharedDtor() {
+  if (this != internal_default_instance()) delete channel_;
+}
+
+void GetRemoteParamAddressResponse::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const GetRemoteParamAddressResponse& GetRemoteParamAddressResponse::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void GetRemoteParamAddressResponse::Clear() {
+// @@protoc_insertion_point(message_clear_start:ptre.GetRemoteParamAddressResponse)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  mr_.Clear();
+  if (GetArenaNoVirtual() == nullptr && channel_ != nullptr) {
+    delete channel_;
+  }
+  channel_ = nullptr;
+  rank_ = 0;
+  _internal_metadata_.Clear();
+}
+
+#if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+const char* GetRemoteParamAddressResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // int32 rank = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .ptre.Channel channel = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
+          ptr = ctx->ParseMessage(mutable_channel(), ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated .ptre.MemoryRegion mr = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(add_mr(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<::PROTOBUF_NAMESPACE_ID::uint8>(ptr) == 26);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag, &_internal_metadata_, ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
+}
+#else  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+bool GetRemoteParamAddressResponse::MergePartialFromCodedStream(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!PROTOBUF_PREDICT_TRUE(EXPRESSION)) goto failure
+  ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+  // @@protoc_insertion_point(parse_start:ptre.GetRemoteParamAddressResponse)
+  for (;;) {
+    ::std::pair<::PROTOBUF_NAMESPACE_ID::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // int32 rank = 1;
+      case 1: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (8 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &rank_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // .ptre.Channel channel = 2;
+      case 2: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (18 & 0xFF)) {
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
+               input, mutable_channel()));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // repeated .ptre.MemoryRegion mr = 3;
+      case 3: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
+                input, add_mr()));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0) {
+          goto success;
+        }
+        DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SkipField(
+              input, tag, _internal_metadata_.mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:ptre.GetRemoteParamAddressResponse)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:ptre.GetRemoteParamAddressResponse)
+  return false;
+#undef DO_
+}
+#endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+
+void GetRemoteParamAddressResponse::SerializeWithCachedSizes(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:ptre.GetRemoteParamAddressResponse)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
+  }
+
+  // .ptre.Channel channel = 2;
+  if (this->has_channel()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
+      2, HasBitSetters::channel(this), output);
+  }
+
+  // repeated .ptre.MemoryRegion mr = 3;
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
+      3,
+      this->mr(static_cast<int>(i)),
+      output);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
+        _internal_metadata_.unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:ptre.GetRemoteParamAddressResponse)
+}
+
+::PROTOBUF_NAMESPACE_ID::uint8* GetRemoteParamAddressResponse::InternalSerializeWithCachedSizesToArray(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:ptre.GetRemoteParamAddressResponse)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
+  }
+
+  // .ptre.Channel channel = 2;
+  if (this->has_channel()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessageToArray(
+        2, HasBitSetters::channel(this), target);
+  }
+
+  // repeated .ptre.MemoryRegion mr = 3;
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessageToArray(
+        3, this->mr(static_cast<int>(i)), target);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:ptre.GetRemoteParamAddressResponse)
+  return target;
+}
+
+size_t GetRemoteParamAddressResponse::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ptre.GetRemoteParamAddressResponse)
+  size_t total_size = 0;
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::ComputeUnknownFieldsSize(
+        _internal_metadata_.unknown_fields());
+  }
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated .ptre.MemoryRegion mr = 3;
+  {
+    unsigned int count = static_cast<unsigned int>(this->mr_size());
+    total_size += 1UL * count;
+    for (unsigned int i = 0; i < count; i++) {
+      total_size +=
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          this->mr(static_cast<int>(i)));
+    }
+  }
+
+  // .ptre.Channel channel = 2;
+  if (this->has_channel()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *channel_);
+  }
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->rank());
+  }
+
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void GetRemoteParamAddressResponse::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:ptre.GetRemoteParamAddressResponse)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetRemoteParamAddressResponse* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetRemoteParamAddressResponse>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.GetRemoteParamAddressResponse)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.GetRemoteParamAddressResponse)
+    MergeFrom(*source);
+  }
+}
+
+void GetRemoteParamAddressResponse::MergeFrom(const GetRemoteParamAddressResponse& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:ptre.GetRemoteParamAddressResponse)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  mr_.MergeFrom(from.mr_);
+  if (from.has_channel()) {
+    mutable_channel()->::ptre::Channel::MergeFrom(from.channel());
+  }
+  if (from.rank() != 0) {
+    set_rank(from.rank());
+  }
+}
+
+void GetRemoteParamAddressResponse::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:ptre.GetRemoteParamAddressResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void GetRemoteParamAddressResponse::CopyFrom(const GetRemoteParamAddressResponse& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ptre.GetRemoteParamAddressResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GetRemoteParamAddressResponse::IsInitialized() const {
+  return true;
+}
+
+void GetRemoteParamAddressResponse::Swap(GetRemoteParamAddressResponse* other) {
+  if (other == this) return;
+  InternalSwap(other);
+}
+void GetRemoteParamAddressResponse::InternalSwap(GetRemoteParamAddressResponse* other) {
+  using std::swap;
+  _internal_metadata_.Swap(&other->_internal_metadata_);
+  CastToBase(&mr_)->InternalSwap(CastToBase(&other->mr_));
+  swap(channel_, other->channel_);
+  swap(rank_, other->rank_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteParamAddressResponse::GetMetadata() const {
+  return GetMetadataStatic();
+}
+
+
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace ptre
 PROTOBUF_NAMESPACE_OPEN
@@ -2449,6 +3147,12 @@ template<> PROTOBUF_NOINLINE ::ptre::GetRemoteAddressRequest* Arena::CreateMaybe
 }
 template<> PROTOBUF_NOINLINE ::ptre::GetRemoteAddressResponse* Arena::CreateMaybeMessage< ::ptre::GetRemoteAddressResponse >(Arena* arena) {
   return Arena::CreateInternal< ::ptre::GetRemoteAddressResponse >(arena);
+}
+template<> PROTOBUF_NOINLINE ::ptre::GetRemoteParamAddressRequest* Arena::CreateMaybeMessage< ::ptre::GetRemoteParamAddressRequest >(Arena* arena) {
+  return Arena::CreateInternal< ::ptre::GetRemoteParamAddressRequest >(arena);
+}
+template<> PROTOBUF_NOINLINE ::ptre::GetRemoteParamAddressResponse* Arena::CreateMaybeMessage< ::ptre::GetRemoteParamAddressResponse >(Arena* arena) {
+  return Arena::CreateInternal< ::ptre::GetRemoteParamAddressResponse >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
 

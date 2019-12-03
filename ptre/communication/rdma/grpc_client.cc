@@ -17,11 +17,11 @@ std::string grpc_target(int dst_rank) {
   return ss.str();
 }
 
-GrpcClient::GrpcClient(int src_rank, int dst_rank)
-    : src_rank_(src_rank), dst_rank_(dst_rank) {
-  std::string target(grpc_target(dst_rank_));
-  std::cout << "target: " << target << std::endl;
-  std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(target,
+GrpcClient::GrpcClient(int src_rank, int dst_rank, const std::string& hostname)
+    : src_rank_(src_rank), dst_rank_(dst_rank), hostname_(hostname) {
+  //std::string target(grpc_target(dst_rank_));
+  std::cout << "target: " << hostname << std::endl;
+  std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(hostname,
       grpc::InsecureChannelCredentials());
   stub_ = Rdma::NewStub(channel);
 }
@@ -43,6 +43,25 @@ int GrpcClient::GetRemoteAddress(const std::string& name) {
 	if (status.ok()) {
     rdma_manager_->SetRemoteMR(dst_rank_, name, response.mr()[0].remote_addr(),
                                response.mr()[0].rkey());
+    return 0;
+  } else {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return -1;
+  }
+}
+
+int GrpcClient::GetRemoteParamAddress() {
+  GetRemoteParamAddressRequest request;
+  request.set_rank(src_rank_);
+
+  GetRemoteParamAddressResponse response;
+
+  ClientContext context;
+  grpc::Status status = stub_->GetRemoteParamAddress(&context, request, &response);
+  if (status.ok()) {
+    rdma_manager_->SetRemoteParamMR(dst_rank_, response.mr()[0].remote_addr(),
+                                    response.mr()[0].rkey());
     return 0;
   } else {
     std::cout << status.error_code() << ": " << status.error_message()

@@ -18,6 +18,7 @@ class ConsensusManager {
  public:
   void InitGlobalConsensus(std::vector<const Tensor*>& vars);
   void InitBufTensor(const std::string& name, const Tensor& tensor);
+  void InitBufParam();
   bool IsInitialized() { return is_initialized_; }
   void SetRdmaManager(RdmaManager* rdma_manager);
   void EnqueuePushList(std::vector<const Tensor*>& vars);
@@ -39,6 +40,8 @@ class ConsensusManager {
   void set_rank(int rank) { ptre_rank_ = rank; }
   int size() { return ptre_size_; }
   int rank() { return ptre_rank_; }
+  bool* is_new_incoming_ptr() { return is_new_incoming_; }
+  void MarkNoNew() { *is_new_incoming_ = false; }
   Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
 
  private:
@@ -51,6 +54,8 @@ class ConsensusManager {
   std::vector<Tensor*> send_tensors_list_;
   int num_vars_;
   bool is_initialized_ = false;
+  bool* is_new_incoming_ = nullptr;
+  bool flag_to_send_ = true;
 
   std::mutex mu_;
   std::vector<Tensor*> for_push_;

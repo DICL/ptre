@@ -30,6 +30,7 @@ class RdmaManager {
   /// The input tensor's buffer must be fixed.
   void InitTensorMR(int dst_id, const std::string& name,
                     Tensor* recv, Tensor* send);
+  void InitParamMR(bool* is_new_incoming, bool* send_in_flag);
   void MarkMRInitialized();
   bool IsMRInitialized();
   void CreateCQs();
@@ -43,16 +44,20 @@ class RdmaManager {
 ///   repeated MemoryRegion mr = 4;
 /// }
   bool IsRemoteMRSet(int rank, const std::string& name);
+  bool IsRemoteParamMRSet(int rank);
   bool IsDlidSet(int rank) { return (dlids_.find(rank) != dlids_.end()); }
   void SetRemoteMR(int rank, const std::string& name, uint64_t remote_addr,
                    uint32_t rkey);
+  void SetRemoteParamMR(int rank, uint64_t remote_addr, uint32_t rkey);
   void SetDlid(int rank, uint32_t lid) { dlids_.emplace(rank, lid); }
   void set_qpn(int rank, uint32_t qpn) { qpns_.emplace(rank, qpn); }
   void set_snp(int rank, uint64_t snp) { snps_.emplace(rank, snp); }
   void set_iid(int rank, uint64_t iid) { iids_.emplace(rank, iid); }
   RemoteMR GetRemoteMR(const std::string& name);
+  RemoteMR GetRemoteParamMR();
   void RdmaWriteTensor(int dst_id, const std::string& name,
                        const Tensor& tensor);
+  void RdmaWriteIncomingFlag(int dst_rank, bool* flag);
 
   int rank() { return ptre_rank_; }
   ibv_cq* cq() { return cq_; }
@@ -67,7 +72,10 @@ class RdmaManager {
   int ptre_size_;
   int ptre_rank_;
   RdmaEnv rdma_env_;
-  std::map<RemoteTensorId, RemoteMR> rmrs_;  // remote memory regions
+  std::map<RemoteTensorId, RemoteMR> rmrs_;  // remote tensor data memory regions
+  std::map<int, RemoteMR> rpmrs_;  // remote parameter memory regions
+  ibv_mr* recv_in_flag_mr_;  // is_new_incoming_
+  ibv_mr* send_in_flag_mr_;  // is_new_incoming_
   std::map<std::string, ibv_mr*> recv_mrs_;
   std::map<std::string, ibv_mr*> send_mrs_;
   std::map<int, uint32_t> dlids_;

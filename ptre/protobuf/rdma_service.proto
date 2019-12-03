@@ -8,6 +8,9 @@ service Rdma {
 
   rpc GetRemoteAddress(GetRemoteAddressRequest)
     returns (GetRemoteAddressResponse);
+
+  rpc GetRemoteParamAddress(GetRemoteParamAddressRequest)
+    returns (GetRemoteParamAddressResponse);
 }
 
 message Channel {
@@ -47,4 +50,14 @@ message GetRemoteAddressResponse {
   string tensor_name = 2;
   Channel channel = 3;
   repeated MemoryRegion mr = 4;
+}
+
+message GetRemoteParamAddressRequest {
+  int32 rank = 1;
+}
+
+message GetRemoteParamAddressResponse {
+  int32 rank = 1;
+  Channel channel = 2;
+  repeated MemoryRegion mr = 3;
 }
