@@ -298,7 +298,7 @@ void RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
                                   const Tensor& tensor) {
   auto data = tensor.tensor_data();
   size_t buffer_size = (size_t) tensor.TotalBytes();
-  size_t buf_size_from_stringview = data.size();
+  //size_t buf_size_from_stringview = data.size();
   uint64_t src_addr = (uint64_t) data.begin();
   struct ibv_mr *mr = send_mrs_[name];
   uint32_t lkey = mr->lkey;

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package ptre;
+
+service Tcp {
+  rpc PushTensor(PushTensorRequest)
+    returns (PushTensorResponse);
+}
+
+message PushTensorRequest {
+  int32 src_rank = 1;
+  string name = 2;  // tensor name
+  bytes buf = 3;
+}
+
+message PushTensorResponse {
+  int32 dst_rank = 1;
+  string tensor_name = 2;
+  int32 status = 3;
+}

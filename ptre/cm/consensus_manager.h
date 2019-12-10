@@ -4,11 +4,13 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <string>
 
 #include "ptre/communication/rdma/rdma_manager.h"
 #include "tensorflow/core/framework/tensor.h"
 
 namespace ptre {
+using std::string;
 
 namespace {
 using tensorflow::Tensor;

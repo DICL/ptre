@@ -11,6 +11,7 @@
 namespace ptre {
 
 class RdmaServiceImpl final : public Rdma::Service {
+ public:
   grpc::Status GetRemoteAddress(grpc::ServerContext* context,
                                 const GetRemoteAddressRequest* request,
                                 GetRemoteAddressResponse* response) override;
@@ -20,8 +21,6 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteEnv(grpc::ServerContext* context,
                                 const GetRemoteEnvRequest* request,
                                 GetRemoteEnvResponse* response) override;
-
- public:
   void SetRdmaManager(RdmaManager* rdma_manager);
 
  private:
