@@ -30,15 +30,17 @@ void ConsensusManager::InitBufTensor(const std::string& name,
   send_tensors_.emplace(name, send_tensor);
   send_tensors_list_.push_back(send_tensor);
 
-  for (int i = 0; i < ptre_size_; i++) {
-    if (i == ptre_rank_) {
-      continue;
-    }
-    rdma_manager_->InitTensorMR(i, name, recv_tensor, send_tensor);
-  }
+  rdma_manager_->InitTensorMR(0, name, recv_tensor, send_tensor);
+  //for (int i = 0; i < ptre_size_; i++) {
+  //  if (i == ptre_rank_) {
+  //    continue;
+  //  }
+  //  rdma_manager_->InitTensorMR(i, name, recv_tensor, send_tensor);
+  //}
 }
 
 void ConsensusManager::InitBufParam() {
+  //is_new_incoming_ = new volatile bool(false);
   is_new_incoming_ = new bool(false);
   rdma_manager_->InitParamMR(is_new_incoming_, &flag_to_send_);
 }
@@ -78,6 +80,17 @@ void ConsensusManager::PushTensors(int dst_rank) {
   }
   flag_to_send_ = true;
   rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
+  int num_comps = send_tensors_.size() + 1;
+  rdma_manager_->Poll(num_comps);
+}
+
+void ConsensusManager::TcpPushTensors(int dst_rank) {
+  for (auto it : send_tensors_) {
+    const std::string& name = it.first;
+    Tensor* t = it.second;
+    //tcp_manager_->TcpSendTensor(dst_rank, name, *t);
+  }
+  //tcp_manager_->TcpSendIncomingFlag(dst_rank, true);
 }
 
 int ConsensusManager::GetRandomTarget() {
@@ -86,6 +99,14 @@ int ConsensusManager::GetRandomTarget() {
   int ret = ptre_rank_;
   while (ret == ptre_rank_) {
     ret = distribution(generator);
+  }
+  return ret;
+}
+
+int ConsensusManager::GetIncNeighbor() {
+  int ret = ptre_rank_ + 1;
+  if (ret >= ptre_size_) {
+    ret = 0;
   }
   return ret;
 }

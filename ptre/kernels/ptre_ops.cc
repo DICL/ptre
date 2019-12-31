@@ -1,29 +1,62 @@
 //#include "ptre/core/ptre_global.h"
 
+#define EIGEN_USE_THREADS
+
 #include <unistd.h>
 #include <thread>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <queue>
+#include <string>
 
+#include "ptre/kernels/ptre_ops.h"
 //#include "ptre/kernels/ptre_op_helpers.h"
+//#include "ptre/ptre_global.h"
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/grpc_client.h"
 #include "ptre/communication/rdma/rdma_manager.h"
+//#include "tensorflow/core/common_runtime/device.h"
 #include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/framework/register_types.h"
+//#include "tensorflow/core/framework/resource_mgr.h"
+#include "tensorflow/core/framework/resource_var.h"
+//#include "tensorflow/core/framework/tensor.h"
+//#include "tensorflow/core/lib/core/refcount.h"
 
 namespace tensorflow {
 
+using shape_inference::DimensionHandle;
+using shape_inference::InferenceContext;
+using shape_inference::ShapeHandle;
+
+static ShapeHandle ShapeOrHandleShape(InferenceContext* c, int input) {
+  auto* handle_data = c->input_handle_shapes_and_types(input);
+  if (handle_data != nullptr && !handle_data->empty() &&
+      (*handle_data)[0].dtype != DT_INVALID) {
+    return (*handle_data)[0].shape;
+  }
+  return c->input(input);
+}
+
+using std::string;
 using ::ptre::ConsensusManager;
 using ::ptre::RdmaManager;
 using ::ptre::RdmaServiceImpl;
 using ::ptre::GrpcClient;
 
+using CPUDevice = Eigen::ThreadPoolDevice;
+using GPUDevice = Eigen::GpuDevice;
+
 namespace {
+
 struct PtreGlobal {
+  PtreGlobal() {
+    std::cout << (void*) this << std::endl;
+  }
   ConsensusManager cm;
   RdmaManager* rdma_manager;
   //std::vector<Tensor*> remote_tensors;
@@ -39,6 +72,7 @@ struct PtreGlobal {
 
   int rank;
   int size;
+
   std::vector<std::string> grpc_hosts;
 
   ~PtreGlobal() {
@@ -70,7 +104,7 @@ void InitRemoteMR() {
 }
 
 void ProcessRequestQueue() {
-  std::lock_guard<std::mutex> l(ptre_global.mu);
+  //std::lock_guard<std::mutex> l(ptre_global.mu);
   auto& q = ptre_global.q;
   if (!ptre_global.q.empty()) {
     int dst_rank = q.front();
@@ -82,7 +116,7 @@ void ProcessRequestQueue() {
 
 void BackgroundThreadLoop() {
   /// TODO: 1. Init MR
-  while(true) {
+  while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     /// TODO: Fetch a push task from a task queue.
     ProcessRequestQueue();
@@ -99,10 +133,12 @@ void InitPtreOnce() {
 
 }
 
-void load_grpc_hosts() {
+void load_grpc_hosts(const string& grpc_hosts_file) {
   std::string in_line;
-  std::ifstream in("grpc_hosts");
-  while(std::getline(in, in_line)) {
+  //std::ifstream in("/home/wkim/experiments/grpc_hosts");
+  std::ifstream in(grpc_hosts_file);
+  while (std::getline(in, in_line)) {
+    if (in_line[0] == '#') continue;
     ptre_global.grpc_hosts.emplace_back(in_line);
   }
   in.close();
@@ -111,14 +147,14 @@ void load_grpc_hosts() {
   }
 }
 
-void InitComm(int size, int rank) {
+void InitComm(int size, int rank, const string& grpc_hosts_file) {
   /// First Initialization step
   ptre_global.size = size;
   ptre_global.rank = rank;
   ptre_global.cm.set_size(size);
   ptre_global.cm.set_rank(rank);
 
-  load_grpc_hosts();
+  load_grpc_hosts(grpc_hosts_file);
 
   std::cout << "Initializing RdmaManager" << std::endl;
   ptre_global.rdma_manager = new RdmaManager(size, rank);
@@ -126,8 +162,11 @@ void InitComm(int size, int rank) {
   std::cout << "Running grpc server" << std::endl;
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
   ptre_global.background_thread = std::thread(BackgroundThreadLoop);
+  usleep(3000000);
 }
+
 }  // namespace
+
 
 //namespace functor {
 //template <typename T>
@@ -141,19 +180,22 @@ void InitComm(int size, int rank) {
 
 REGISTER_OP("InitComm")
     .Attr("size: int")
-    .Attr("rank: int");
+    .Attr("rank: int")
+    .Attr("grpc_hosts_file: string = '/home/wkim/experiments/grpc_hosts'");
 class InitCommOp : public OpKernel {
  public:
   explicit InitCommOp(OpKernelConstruction* context) : OpKernel(context) {
     context->GetAttr<int>("size", &size_);
     context->GetAttr<int>("rank", &rank_);
+    context->GetAttr<string>("grpc_hosts_file", &grpc_hosts_file_);
   }
   void Compute(OpKernelContext* context) override {
-    InitComm(size_, rank_);
+    InitComm(size_, rank_, grpc_hosts_file_);
   }
  private:
   int size_;
   int rank_;
+  string grpc_hosts_file_;
 };
 REGISTER_KERNEL_BUILDER(Name("InitComm").Device(DEVICE_CPU),
                         InitCommOp);
@@ -287,14 +329,15 @@ class PushModelOp : public OpKernel {
     //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
     int num_inputs = context->num_inputs();
     //std::cout << "PushTensor: " << names_[0] << std::endl;
-    std::lock_guard<std::mutex> l(ptre_global.mu);
-    while (!ptre_global.q.empty()) {
-      ptre_global.q.pop();
-    }
+    //std::lock_guard<std::mutex> l(ptre_global.mu);
+    //while (!ptre_global.q.empty()) {
+    //  ptre_global.q.pop();
+    //}
     for (int i = 0; i < num_inputs; i++) {
       ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
     }
     int target_rank = ptre_global.cm.GetRandomTarget();
+    //int target_rank = ptre_global.cm.GetIncNeighbor();
     ptre_global.q.push(target_rank);
     //ptre_global.cm.SetPushReady();
     //std::vector<const Tensor*> inputs;
@@ -493,69 +536,6 @@ class DummySingleInputOp : public AsyncOpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("DummySingleInput").Device(DEVICE_CPU), DummySingleInputOp);
 
-/*
-REGISTER_OP("ApplyModelAveraging")
-    .Input("var: Ref(T)")
-    .Input("remote: T")
-    .Output("out: Ref(T)")
-    .Attr("T: numbertype")
-    .Attr("use_locking: bool = false")
-template <typename Device, typename T>
-class ApplyModelAveragingOp : public OpKernel {
- public:
-  explicit ApplyModelAveragingOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
-    OP_REQUIRES_OK(ctx, ctx->GetAttr("use_locking", &use_exclusive_lock_));
-  }
-
-  void Compute(OpKernelContext* ctx) override {
-    const bool sparse = false;
-    auto locks = MaybeLockVariableInputMutexesInOrder<Device, T>(
-        ctx, use_exclusive_lock_, sparse, {0});
-    Tensor var;
-    OP_REQUIRES_OK(ctx, GetInputTensorFromVariable<Device, T>(
-                            ctx, 0, use_exclusive_lock_, sparse, &var));
-
-    OP_REQUIRES(
-        ctx, var.IsInitialized(),
-        errors::FailedPrecondition(
-            "Attempting to use uninitialized variables: ", requested_input(0)));
-    const Tensor& remote = ctx->input(1);
-    OP_REQUIRES(
-        ctx, var.shape().IsSameSize(remote.shape()),
-        errors::InvalidArgument("var and remote do not have the same shape",
-                                var.shape().DebugString(), " ",
-                                remote.shape().DebugString()));
-
-    const Device& device = ctx->template eigen_device<Device>();
-    functor::ApplyModelAveraging<Device, T>()(
-        device, var.flat<T>(), remote.flat<T>());
-
-    MaybeForwardRefInputToRefOutput(ctx, 0, 0);
-  }
-
- private:
-  bool use_exclusive_lock_;
-};
-
-#define REGISTER_KERNELS(D, T)                                                \
-  REGISTER_KERNEL_BUILDER(                                                    \
-      Name("ApplyModelAveraging").Device(DEVICE_##D).TypeConstraint<T>("T"), \
-      ApplyModelAveragingOp<D##Device, T>);                                  \
-  REGISTER_KERNEL_BUILDER(Name("ResourceApplyModelAveraging")                \
-                              .Device(DEVICE_##D)                             \
-                              .HostMemory("var")                              \
-                              .TypeConstraint<T>("T"),                        \
-                          ApplyModelAveragingOp<D##Device, T>);
-#define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
-
-TF_CALL_half(REGISTER_CPU_KERNELS);
-TF_CALL_bfloat16(REGISTER_CPU_KERNELS);
-TF_CALL_float(REGISTER_CPU_KERNELS);
-TF_CALL_double(REGISTER_CPU_KERNELS);
-
-#undef REGISTER_CPU_KERNELS
-#undef REGISTER_KERNELS
-*/
 
 REGISTER_OP("ApplyModelAveraging")
     .Input("var: Ref(T)")
@@ -595,6 +575,7 @@ class IsNewIncomingOp : public OpKernel {
     Tensor* output;
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({}), &output));
     usleep(1);
+    //volatile bool* ret = ptre_global.cm.is_new_incoming_ptr();
     bool* ret = ptre_global.cm.is_new_incoming_ptr();
     //std::cout << "IsNewIncomingOp: *is_new_incoming_ptr = " << *ret << std::endl;
     std::copy(ret, ret + sizeof(bool), const_cast<char*>(output->tensor_data().begin()));
@@ -610,6 +591,7 @@ class MarkNoNewOp : public OpKernel {
   explicit MarkNoNewOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
   void Compute(OpKernelContext* ctx) {
     ptre_global.cm.MarkNoNew();
+    //volatile bool* ret = ptre_global.cm.is_new_incoming_ptr();
     bool* ret = ptre_global.cm.is_new_incoming_ptr();
     //std::cout << "MarkNoNewOp: *is_new_incoming_ptr = " << *ret << std::endl;
   }
@@ -617,4 +599,98 @@ class MarkNoNewOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(
     Name("MarkNoNew").Device(DEVICE_CPU), MarkNoNewOp);
 
+namespace functor {
+template <>
+struct Modelaverage<CPUDevice> {
+  void operator()(const CPUDevice& d, typename TTypes<float>::Flat var,
+                  typename TTypes<float>::ConstFlat other) {
+    var.device(d) = var.constant(float(0.5)) * (var + other);
+  }
+};
+
+}  // namespace functor
+
+static Status ModelaverageShapeFn(InferenceContext* c) {
+  ShapeHandle unused;
+  ShapeHandle s = ShapeOrHandleShape(c, 0);                  // var
+  if (c->num_outputs() > 0) {
+    c->set_output(0, s);
+  }
+  return Status::OK();
+}
+
+REGISTER_OP("ResourceModelaverage")
+  .Input("var: resource")
+  .Attr("var_name: string")
+  .SetShapeFn(ModelaverageShapeFn);
+template <typename Device>
+class ModelaverageOp : public OpKernel {
+ public:
+  explicit ModelaverageOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
+  }
+  void Compute(OpKernelContext* ctx) {
+    Tensor var;
+    core::RefCountPtr<Var> ref;
+    //TF_RETURN_IF_ERROR(LookupResource(ctx, HandleFromInput(ctx, 0), &ref));
+    std::cout << "Calling LookupResource()\n";
+    LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
+    std::cout << "Done LookupResource()\n";
+
+    //Tensor* varptr = ref->tensor();
+    std::cout << "Calling *ref->tensor()\n";
+    var = *ref->tensor();
+    std::cout << "Done *ref->tensor()\n";
+
+    std::cout << "Calling ctx->template eigen_device<Device>()\n";
+    const Device& d = ctx->template eigen_device<Device>();
+    std::cout << "Done ctx->template eigen_device<Device>()\n";
+    const Tensor other(ptre_global.cm.global_consensus(var_name_));
+    std::cout << "Got other tensor\n";
+    //var_flat.device(d) =
+    //    var_flat.constant(float(0.5)) * (var_flat + other_flat);
+    std::cout << "Entering functor::Modelaverage\n";
+    functor::Modelaverage<Device>()(d, var.flat<float>(), other.flat<float>());
+    std::cout << "Done functor::Modelaverage\n";
+  }
+
+ private:
+  string var_name_;
+};
+REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage")
+                            .Device(DEVICE_CPU)
+                            .HostMemory("var"),
+                        ModelaverageOp<CPUDevice>);
+#ifdef GOOGLE_CUDA
+namespace functor {
+template <>
+void Modelaverage<GPUDevice>::operator()(const GPUDevice& d,
+    typename TTypes<float>::Flat var,
+    typename TTypes<float>::ConstFlat other);
+extern template struct Modelaverage<GPUDevice>;
+}  // namespace functor
+REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage")
+                            .Device(DEVICE_GPU)
+                            .HostMemory("var"),
+                        ModelaverageOp<GPUDevice>);
+#endif  // GOOGLE_CUDA
+
 }  // namespace tensorflow
+
+
+extern "C" {
+
+int ptre_init(int size, int rank) {
+  tensorflow::InitComm(size, rank, "/home/wkim/experiments/grpc_hosts");
+}
+
+int ptre_size() {
+  return tensorflow::ptre_global.size;
+}
+
+int ptre_rank() {
+  return tensorflow::ptre_global.rank;
+}
+
+}
+

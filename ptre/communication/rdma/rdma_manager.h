@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include <thread>
+#include <iostream>
 
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/protobuf/rdma_service.pb.h"
@@ -14,6 +15,9 @@
 namespace ptre {
 
 namespace {
+using std::string;
+using std::cout;
+using std::endl;
 using tensorflow::Tensor;
 }  // namespace
 
@@ -37,6 +41,7 @@ class RdmaManager {
   void CreateQPs();
   int ConnectQP(int dst_rank);
   void ProcessCQ();
+  void Poll(int num_comps);
 /// message GetRemoteAddressResponse {
 ///   int32 rank = 1;
 ///   string tensor_name = 2;
@@ -57,6 +62,7 @@ class RdmaManager {
   RemoteMR GetRemoteParamMR();
   void RdmaWriteTensor(int dst_id, const std::string& name,
                        const Tensor& tensor);
+  //void PushTensor(int dst_id, const string& name, const Tensor& tensor);
   void RdmaWriteIncomingFlag(int dst_rank, bool* flag);
 
   int rank() { return ptre_rank_; }
@@ -85,10 +91,12 @@ class RdmaManager {
   //std::map<int, std::map<std::string, RemoteMR>> rmrs_;
   ibv_comp_channel* event_channel_;
   ibv_cq* cq_;
+  std::map<int, ibv_comp_channel*> event_channels_;
   std::map<int, ibv_cq*> cqs_;
   std::map<int, ibv_qp*> qps_;
   std::map<int, bool> connected_;
-  ibv_wc wc_[MAX_CONCURRENT_WRITES * 2];
+  //ibv_wc wc_[MAX_CONCURRENT_WRITES * 2];
+  ibv_wc wc_[QUEUE_DEPTH_DEFAULT * 2];
   //std::unordered_map<int, RdmaChannel> remotes_;
   //std::vector<Channel> channels_;
   //std::vector<MemoryRegion> mrs_;

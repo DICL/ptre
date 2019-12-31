@@ -17,7 +17,7 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank)
   }
   CreateCQs();
   CreateQPs();
-  polling_thread_ = std::thread([this] { ProcessCQ(); });
+  //polling_thread_ = std::thread([this] { ProcessCQ(); });
 }
 
 RdmaManager::~RdmaManager() {
@@ -58,7 +58,8 @@ void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
             ", lkey=" << mr->lkey << ", rkey=" << mr->rkey << std::endl;
 }
 
-void RdmaManager::InitParamMR(bool* is_new_incoming, bool* send_in_flag) {
+void RdmaManager::InitParamMR(bool* is_new_incoming,
+                              bool* send_in_flag) {
   size_t length;
   void* addr;
   int ibv_access_flags = (IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
@@ -235,13 +236,20 @@ void RdmaManager::ProcessCQ() {
       } else {
         std::cout << "work completion for opcode=" << wc_[i].opcode << std::endl;
       }
-      if (wc_[i].opcode == IBV_WC_RDMA_WRITE) {
+      //if (wc_[i].opcode == IBV_WC_RDMA_WRITE) {
+      //}
+      if (true) {
         RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(wc_[i].wr_id);
         delete wr_id;
       }
       //std::cout << "wc opcode=" << wc_[i].opcode << std::endl;
     }
   }
+}
+
+void RdmaManager::Poll(int num_comps) {
+  struct ibv_wc wcs[num_comps];
+  ptre_poll_cq(cq_, num_comps, wcs);
 }
 
 //void RdmaManager::InitTensorMRs(int dst_rank, const std::string& name,
@@ -314,6 +322,8 @@ void RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
   if (ret < 0) {
     std::cout << "post_write failed." << std::endl;
   }
+  //struct ibv_wc wc;
+  //ptre_poll_cq(cq_, 1, &wc);
 }
 
 void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
@@ -334,6 +344,8 @@ void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
   if (ret < 0) {
     std::cout << "post_write failed." << std::endl;
   }
+  //struct ibv_wc wc;
+  //ptre_poll_cq(cq_, 1, &wc);
 }
 
 }  // namespace ptre

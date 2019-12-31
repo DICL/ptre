@@ -3,12 +3,19 @@ cmake_minimum_required(VERSION 3.10)
 project(ptre)
 
 include_directories(.
-                    /home/wkim/.local/lib/python2.7/site-packages/tensorflow_core/include
                     /home/wkim/.local/include
-                    )
+                    /home/wkim/.local/lib/python2.7/site-packages/tensorflow_core/include
+                    /usr/local/cuda/include
+)
+
 link_directories(/home/wkim/.local/lib
                  /home/wkim/.local/lib/python2.7/site-packages/tensorflow_core
-                )
+                 /usr/local/cuda/lib64
+)
+
+#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+add_definitions(-DGOOGLE_CUDA=1)
 
 add_subdirectory(ptre)
 

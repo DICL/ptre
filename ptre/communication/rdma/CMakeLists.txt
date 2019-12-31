@@ -1,3 +1,5 @@
+#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+
 add_library          (rdma SHARED rdma.cc)
 target_link_libraries(rdma
                         ibverbs)

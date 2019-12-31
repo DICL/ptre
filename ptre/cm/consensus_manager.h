@@ -5,12 +5,16 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <iostream>
 
 #include "ptre/communication/rdma/rdma_manager.h"
+//#include "ptre/communication/tcp/tcp_manager.h"
 #include "tensorflow/core/framework/tensor.h"
 
 namespace ptre {
 using std::string;
+using std::cout;
+using std::endl;
 
 namespace {
 using tensorflow::Tensor;
@@ -27,10 +31,12 @@ class ConsensusManager {
 
   void CopyTensorSend(const std::string& name, const Tensor& tensor);
   void PushTensors(int dst_rank);
+  void TcpPushTensors(int dst_rank);
   void SetPushReady() { ready_to_push_ = true; }
   bool IsPushReady() { return ready_to_push_; }
   void UnsetPushReady() { ready_to_push_ = false; }
   int GetRandomTarget();
+  int GetIncNeighbor();
 
   const std::vector<Tensor*>& GetGlobalConsensusList();
   const std::vector<Tensor*>& GetSendTensorsList();
@@ -42,6 +48,7 @@ class ConsensusManager {
   void set_rank(int rank) { ptre_rank_ = rank; }
   int size() { return ptre_size_; }
   int rank() { return ptre_rank_; }
+  //volatile bool* is_new_incoming_ptr() { return is_new_incoming_; }
   bool* is_new_incoming_ptr() { return is_new_incoming_; }
   void MarkNoNew() { *is_new_incoming_ = false; }
   Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
@@ -56,6 +63,7 @@ class ConsensusManager {
   std::vector<Tensor*> send_tensors_list_;
   int num_vars_;
   bool is_initialized_ = false;
+  //volatile bool* is_new_incoming_ = nullptr;
   bool* is_new_incoming_ = nullptr;
   bool flag_to_send_ = true;
 

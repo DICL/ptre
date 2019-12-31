@@ -69,7 +69,8 @@ int post_write(size_t buffer_size, uint64_t src_addr,
   wr.sg_list = &list;
   wr.num_sge = 1;
   wr.opcode = IBV_WR_RDMA_WRITE;
-  //wr.send_flags = IBV_SEND_SIGNALED;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  //wr.send_flags = IBV_SEND_INLINE;
   //wr.imm_data = imm_data;
   wr.wr.rdma.remote_addr = remote_addr;
   wr.wr.rdma.rkey = rkey;

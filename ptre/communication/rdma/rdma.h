@@ -5,6 +5,7 @@
 #include <cstring>
 #include <string>
 #include <thread>
+#include <iostream>
 
 #include <infiniband/verbs.h>
 
@@ -14,6 +15,9 @@ namespace ptre {
 #define MAX_CONCURRENT_WRITES 1000
 #define TIMEOUT_DEFAULT 14
 #define RETRY_CNT_DEFAULT 7
+
+using std::cerr;
+using std::endl;
 
 struct RemoteTensorId {
   int dst_rank;
@@ -85,6 +89,23 @@ class RemoteTensorChannel {
 };
 
 int init_rdma_env(RdmaEnv& env);
+
+static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
+                                struct ibv_wc* wcs) {
+  int cnt = 0;
+  while (cnt < num_comps) {
+    struct ibv_wc& wc = wcs[cnt];
+    int new_comps = ibv_poll_cq(cq, num_comps - cnt, &wc);
+    if (new_comps > 0) {
+      if (wc.status < 0) {
+        std::cerr << "Bad wc status " << wc.status << endl;
+      }
+      RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(wc.wr_id);
+      delete wr_id;
+      cnt += new_comps;
+    }
+  }
+}
 
 int post_write(size_t buffer_size, uint64_t src_addr,
                uint32_t lkey, uint64_t remote_addr,
