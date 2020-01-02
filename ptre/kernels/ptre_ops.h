@@ -13,7 +13,9 @@ namespace functor {
 template <typename Device>
 struct Modelaverage {
   void operator()(const Device& d, typename TTypes<float>::Flat var,
+                  //const Tensor& other);
                   typename TTypes<float>::ConstFlat other);
+                  //typename TTypes<float>::Flat other);
 };
 
 }  // namespace functor

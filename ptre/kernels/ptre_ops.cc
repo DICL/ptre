@@ -603,12 +603,31 @@ namespace functor {
 template <>
 struct Modelaverage<CPUDevice> {
   void operator()(const CPUDevice& d, typename TTypes<float>::Flat var,
+                  //const Tensor& other) {
                   typename TTypes<float>::ConstFlat other) {
+                  //typename TTypes<float>::Flat other) {
+    //var.device(d) = var.constant(float(0.5)) * (var + other.flat<float>());
     var.device(d) = var.constant(float(0.5)) * (var + other);
   }
 };
 
 }  // namespace functor
+
+//REGISTER_OP("ResourceGetRemote")
+//  .Input("var: resource")
+//  .Attr("var_name: string")
+//  .Output("remote: resource")
+//template <typename Device>
+//class GetRemoteOp : public OpKernel {
+// public:
+//  explicit GetRemoteOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
+//    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
+//  }
+//  void Compute(OpKernelContext* ctx) {
+//  }
+// private:
+//  string var_name_;
+//};
 
 static Status ModelaverageShapeFn(InferenceContext* c) {
   ShapeHandle unused;
@@ -633,25 +652,23 @@ class ModelaverageOp : public OpKernel {
     Tensor var;
     core::RefCountPtr<Var> ref;
     //TF_RETURN_IF_ERROR(LookupResource(ctx, HandleFromInput(ctx, 0), &ref));
-    std::cout << "Calling LookupResource()\n";
     LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
-    std::cout << "Done LookupResource()\n";
 
-    //Tensor* varptr = ref->tensor();
-    std::cout << "Calling *ref->tensor()\n";
     var = *ref->tensor();
-    std::cout << "Done *ref->tensor()\n";
 
-    std::cout << "Calling ctx->template eigen_device<Device>()\n";
     const Device& d = ctx->template eigen_device<Device>();
-    std::cout << "Done ctx->template eigen_device<Device>()\n";
     const Tensor other(ptre_global.cm.global_consensus(var_name_));
-    std::cout << "Got other tensor\n";
+    //Tensor* device_other;
+    //ctx->allocate_temp(other.dtype(), other.shape(), device_other);
+    //auto device_ctx = ctx->input_device_context(0);
+    //device_ctx->CopyCPUTensorToDevice(&other,
+    //    static_cast<::tensorflow::Device*>(ctx->device()), device_other, [](){}, true);
+    //std::cout << "Got other tensor\n";
     //var_flat.device(d) =
     //    var_flat.constant(float(0.5)) * (var_flat + other_flat);
-    std::cout << "Entering functor::Modelaverage\n";
+    //std::cout << "Entering functor::Modelaverage\n";
     functor::Modelaverage<Device>()(d, var.flat<float>(), other.flat<float>());
-    std::cout << "Done functor::Modelaverage\n";
+    //std::cout << "Done functor::Modelaverage\n";
   }
 
  private:
@@ -666,6 +683,7 @@ namespace functor {
 template <>
 void Modelaverage<GPUDevice>::operator()(const GPUDevice& d,
     typename TTypes<float>::Flat var,
+    //typename TTypes<float>::Flat other);
     typename TTypes<float>::ConstFlat other);
 extern template struct Modelaverage<GPUDevice>;
 }  // namespace functor
