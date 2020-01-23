@@ -15,6 +15,7 @@ class GrpcClient {
  public:
   //GrpcClient(std::shared_ptr<::grpc::Channel> channel);
   GrpcClient(int src_rank, int dst_rank, const std::string& hostname);
+  ~GrpcClient();
   int GetRemoteAddress(const std::string& name);
   int GetRemoteParamAddress();
   int GetRemoteEnv();

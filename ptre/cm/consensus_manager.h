@@ -7,6 +7,7 @@
 #include <string>
 #include <iostream>
 
+#include "ptre/cm/peer_selector.h"
 #include "ptre/communication/rdma/rdma_manager.h"
 //#include "ptre/communication/tcp/tcp_manager.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -22,6 +23,7 @@ using tensorflow::Tensor;
 
 class ConsensusManager {
  public:
+  ~ConsensusManager();
   void InitGlobalConsensus(std::vector<const Tensor*>& vars);
   void InitBufTensor(const std::string& name, const Tensor& tensor);
   void InitBufParam();
@@ -37,6 +39,9 @@ class ConsensusManager {
   void UnsetPushReady() { ready_to_push_ = false; }
   int GetRandomTarget();
   int GetIncNeighbor();
+  int get_peer();
+
+  void InitPeerSelector(int strategy);
 
   const std::vector<Tensor*>& GetGlobalConsensusList();
   const std::vector<Tensor*>& GetSendTensorsList();
@@ -52,6 +57,7 @@ class ConsensusManager {
   bool* is_new_incoming_ptr() { return is_new_incoming_; }
   void MarkNoNew() { *is_new_incoming_ = false; }
   Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
+  Tensor* send_tensor(const string& name) { return send_tensors_[name]; }
 
  private:
   int ptre_size_;
@@ -67,10 +73,12 @@ class ConsensusManager {
   bool* is_new_incoming_ = nullptr;
   bool flag_to_send_ = true;
 
+  PeerSelectorInterface* peer_selector_ = nullptr;
+
   std::mutex mu_;
   std::vector<Tensor*> for_push_;
   bool ready_to_push_ = false;
-  RdmaManager* rdma_manager_;
+  RdmaManager* rdma_manager_ = nullptr;
 };
 
 }  // namespace ptre

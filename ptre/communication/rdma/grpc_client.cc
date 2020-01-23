@@ -26,6 +26,10 @@ GrpcClient::GrpcClient(int src_rank, int dst_rank, const std::string& hostname)
   stub_ = Rdma::NewStub(channel);
 }
 
+GrpcClient::~GrpcClient() {
+  stub_.reset();
+}
+
 void GrpcClient::SetRdmaManager(RdmaManager* rdma_manager) {
   rdma_manager_ = rdma_manager;
 }

@@ -18,6 +18,13 @@ struct Modelaverage {
                   //typename TTypes<float>::Flat other);
 };
 
+template <typename Device>
+struct CopyTensorToSendBuf {
+  void operator()(const Device& d,
+                  typename TTypes<float>::Flat src,
+                  typename TTypes<float>::Flat dst);
+};
+
 }  // namespace functor
 }  // namespace tensorflow
 #endif  // PTRE_KERNELS_PTRE_OPS_H_

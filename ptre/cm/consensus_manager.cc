@@ -4,6 +4,14 @@
 
 namespace ptre {
 
+ConsensusManager::~ConsensusManager() {
+  if (rdma_manager_ != nullptr) {
+    delete rdma_manager_;
+  }
+  if (peer_selector_ != nullptr) {
+    delete peer_selector_;
+  }
+}
 void ConsensusManager::InitGlobalConsensus(std::vector<const Tensor*>& vars) {
   int num_vars = vars.size();
   for (int i = 0; i < num_vars; i++) {
@@ -16,6 +24,12 @@ void ConsensusManager::InitGlobalConsensus(std::vector<const Tensor*>& vars) {
   }
   num_vars_ = num_vars;
   is_initialized_ = true;
+}
+
+void ConsensusManager::InitPeerSelector(int strategy) {
+  PeerSelectorFactory::NewPeerSelector(ptre_size_, ptre_rank_,
+                                       SelectionStrategy(strategy),
+                                       peer_selector_);
 }
 
 void ConsensusManager::InitBufTensor(const std::string& name,
@@ -109,6 +123,10 @@ int ConsensusManager::GetIncNeighbor() {
     ret = 0;
   }
   return ret;
+}
+
+int ConsensusManager::get_peer() {
+  peer_selector_->get_peer();
 }
 
 const Tensor& ConsensusManager::global_consensus(int index) {
