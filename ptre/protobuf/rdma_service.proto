@@ -11,6 +11,9 @@ service Rdma {
 
   rpc GetRemoteParamAddress(GetRemoteParamAddressRequest)
     returns (GetRemoteParamAddressResponse);
+
+  rpc CanPush(CanPushRequest)
+    returns (CanPushResponse);
 }
 
 message Channel {
@@ -60,4 +63,12 @@ message GetRemoteParamAddressResponse {
   int32 rank = 1;
   Channel channel = 2;
   repeated MemoryRegion mr = 3;
+}
+
+message CanPushRequest {
+  int32 rank = 1;
+}
+
+message CanPushResponse {
+  bool available = 1;
 }

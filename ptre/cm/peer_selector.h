@@ -5,14 +5,18 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <cmath>
 
 namespace ptre {
 
 using std::string;
 
 enum SelectionStrategy {
-  RANDOM,
-  ROUND_ROBIN,
+  RANDOM,          // 0
+  ROUND_ROBIN,     // 1
+  DHT_RANDOM,      // 2
+  DHT_ROUND_ROBIN, // 3
+  ADJACENT,        // 4
   PRIORITY_DIFF
 };
 
@@ -44,6 +48,32 @@ class RoundRobinPeerSelector : public PeerSelectorInterface {
   int prev_;
 };
 
+class DHTRandomPeerSelector : public PeerSelectorInterface {
+ public:
+  DHTRandomPeerSelector(int comm_size, int comm_rank);
+  int get_peer() override;
+
+ private:
+  int max_power_;
+};
+
+class DHTRoundRobinPeerSelector : public PeerSelectorInterface {
+ public:
+  DHTRoundRobinPeerSelector(int comm_size, int comm_rank);
+  int get_peer() override;
+
+ private:
+  int max_power_;
+  int prev_;
+};
+
+class NextPeerSelector : public PeerSelectorInterface {
+ public:
+  NextPeerSelector(int comm_size, int comm_rank)
+      : PeerSelectorInterface(comm_size, comm_rank) {}
+  int get_peer() override;
+};
+
 class DifferenceBasedPeerSelector : public PeerSelectorInterface {
  public:
   DifferenceBasedPeerSelector(int comm_size, int comm_rank);
@@ -60,7 +90,7 @@ class PeerSelectorFactory {
  public:
   static void NewPeerSelector(int comm_size, int comm_rank,
       SelectionStrategy strategy,
-      PeerSelectorInterface* out_selector);
+      PeerSelectorInterface* &out_selector);
 };
 
 }  // namespace ptre

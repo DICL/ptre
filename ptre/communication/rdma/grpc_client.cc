@@ -96,4 +96,10 @@ int GrpcClient::GetRemoteEnv() {
   }
 }
 
+//GrpcClient* GrpcClientCache::GetClient(int dst_rank) {
+//  if (cache_.find(rank) == cache_.end()) {
+//    auto client = new GrpcClient(rank_, dst_rank, 
+//        GrpcClient grpc_client(ptre_global.rank, i, grpc_hosts_[i]);
+//}
+
 }  // namespace ptre

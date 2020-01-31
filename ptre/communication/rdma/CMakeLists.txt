@@ -13,7 +13,9 @@ add_library          (rdma_grpc_server SHARED grpc_server.cc)
 target_link_libraries(rdma_grpc_server
                         :libtensorflow_framework.so.2
                         rdma_service_grpc_proto
-                        rdma_manager)
+                        rdma_manager
+                        consensus_manager
+                        )
 
 add_library          (rdma_grpc_client SHARED grpc_client.cc)
 target_link_libraries(rdma_grpc_client

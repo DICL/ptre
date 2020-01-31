@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <map>
 
 #include <grpcpp/grpcpp.h>
 
@@ -19,6 +20,7 @@ class GrpcClient {
   int GetRemoteAddress(const std::string& name);
   int GetRemoteParamAddress();
   int GetRemoteEnv();
+  int CanPush();
   void SetRdmaManager(RdmaManager* rdma_manager);
 
  private:
@@ -28,6 +30,16 @@ class GrpcClient {
   std::unique_ptr<Rdma::Stub> stub_;
   RdmaManager* rdma_manager_ = nullptr;
 };
+
+//class GrpcClientCache {
+// public:
+//  GrpcClientCache(int rank) : rank_(rank) {}
+//  GrpcClient* GetClient(int dst_rank);
+//
+// private:
+//  int rank_;
+//  std::map<int, GrpcClient*> cache_;
+//};
 
 }  // namespace ptre
 

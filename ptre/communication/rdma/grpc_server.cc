@@ -56,8 +56,25 @@ grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+grpc::Status RdmaServiceImpl::CanPush(grpc::ServerContext* context,
+                                      const CanPushRequest* request,
+                                      CanPushResponse* response) {
+  int src_rank = request->rank();
+  if (cm_->CanReceive(src_rank)) {
+    response->set_available(true);
+  } else {
+    response->set_available(false);
+  }
+
+  return grpc::Status::OK;
+}
+
 void RdmaServiceImpl::SetRdmaManager(RdmaManager* rdma_manager) {
   rdma_manager_ = rdma_manager;
+}
+
+void RdmaServiceImpl::SetConsensusManager(ConsensusManager* cm) {
+  cm_ = cm;
 }
 
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {

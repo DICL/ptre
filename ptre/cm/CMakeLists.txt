@@ -7,4 +7,7 @@ target_link_libraries(consensus_manager
                       rdma_manager
                       peer_selector
                       )
+
+add_executable(test_peer_selector test_peer_selector.cc)
+target_link_libraries(test_peer_selector peer_selector)
 #target_compile_definitions(consensus_manager PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)

@@ -58,6 +58,13 @@ class Rdma final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteParamAddressResponse>> PrepareAsyncGetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteParamAddressResponse>>(PrepareAsyncGetRemoteParamAddressRaw(context, request, cq));
     }
+    virtual ::grpc::Status CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::ptre::CanPushResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::CanPushResponse>> AsyncCanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::CanPushResponse>>(AsyncCanPushRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::CanPushResponse>> PrepareAsyncCanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::CanPushResponse>>(PrepareAsyncCanPushRaw(context, request, cq));
+    }
     class experimental_async_interface {
      public:
       virtual ~experimental_async_interface() {}
@@ -67,6 +74,8 @@ class Rdma final {
       virtual void GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CanPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)>) = 0;
     };
     virtual class experimental_async_interface* experimental_async() { return nullptr; }
   private:
@@ -76,6 +85,8 @@ class Rdma final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteAddressResponse>* PrepareAsyncGetRemoteAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteParamAddressResponse>* AsyncGetRemoteParamAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteParamAddressResponse>* PrepareAsyncGetRemoteParamAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::CanPushResponse>* AsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::CanPushResponse>* PrepareAsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -101,6 +112,13 @@ class Rdma final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteParamAddressResponse>> PrepareAsyncGetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteParamAddressResponse>>(PrepareAsyncGetRemoteParamAddressRaw(context, request, cq));
     }
+    ::grpc::Status CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::ptre::CanPushResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>> AsyncCanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>>(AsyncCanPushRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>> PrepareAsyncCanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>>(PrepareAsyncCanPushRaw(context, request, cq));
+    }
     class experimental_async final :
       public StubInterface::experimental_async_interface {
      public:
@@ -110,6 +128,8 @@ class Rdma final {
       void GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) override;
+      void CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)>) override;
+      void CanPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)>) override;
      private:
       friend class Stub;
       explicit experimental_async(Stub* stub): stub_(stub) { }
@@ -127,9 +147,12 @@ class Rdma final {
     ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressResponse>* PrepareAsyncGetRemoteAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteParamAddressResponse>* AsyncGetRemoteParamAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteParamAddressResponse>* PrepareAsyncGetRemoteParamAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>* AsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>* PrepareAsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetRemoteEnv_;
     const ::grpc::internal::RpcMethod rpcmethod_GetRemoteAddress_;
     const ::grpc::internal::RpcMethod rpcmethod_GetRemoteParamAddress_;
+    const ::grpc::internal::RpcMethod rpcmethod_CanPush_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -140,6 +163,7 @@ class Rdma final {
     virtual ::grpc::Status GetRemoteEnv(::grpc::ServerContext* context, const ::ptre::GetRemoteEnvRequest* request, ::ptre::GetRemoteEnvResponse* response);
     virtual ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response);
     virtual ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response);
+    virtual ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_GetRemoteEnv : public BaseClass {
@@ -201,7 +225,27 @@ class Rdma final {
       ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetRemoteEnv<WithAsyncMethod_GetRemoteAddress<WithAsyncMethod_GetRemoteParamAddress<Service > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_CanPush : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithAsyncMethod_CanPush() {
+      ::grpc::Service::MarkMethodAsync(3);
+    }
+    ~WithAsyncMethod_CanPush() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCanPush(::grpc::ServerContext* context, ::ptre::CanPushRequest* request, ::grpc::ServerAsyncResponseWriter< ::ptre::CanPushResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_GetRemoteEnv<WithAsyncMethod_GetRemoteAddress<WithAsyncMethod_GetRemoteParamAddress<WithAsyncMethod_CanPush<Service > > > > AsyncService;
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetRemoteEnv : public BaseClass {
    private:
@@ -277,7 +321,32 @@ class Rdma final {
     }
     virtual void GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
-  typedef ExperimentalWithCallbackMethod_GetRemoteEnv<ExperimentalWithCallbackMethod_GetRemoteAddress<ExperimentalWithCallbackMethod_GetRemoteParamAddress<Service > > > ExperimentalCallbackService;
+  template <class BaseClass>
+  class ExperimentalWithCallbackMethod_CanPush : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    ExperimentalWithCallbackMethod_CanPush() {
+      ::grpc::Service::experimental().MarkMethodCallback(3,
+        new ::grpc::internal::CallbackUnaryHandler< ::ptre::CanPushRequest, ::ptre::CanPushResponse>(
+          [this](::grpc::ServerContext* context,
+                 const ::ptre::CanPushRequest* request,
+                 ::ptre::CanPushResponse* response,
+                 ::grpc::experimental::ServerCallbackRpcController* controller) {
+                   return this->CanPush(context, request, response, controller);
+                 }));
+    }
+    ~ExperimentalWithCallbackMethod_CanPush() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual void CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+  };
+  typedef ExperimentalWithCallbackMethod_GetRemoteEnv<ExperimentalWithCallbackMethod_GetRemoteAddress<ExperimentalWithCallbackMethod_GetRemoteParamAddress<ExperimentalWithCallbackMethod_CanPush<Service > > > > ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetRemoteEnv : public BaseClass {
    private:
@@ -325,6 +394,23 @@ class Rdma final {
     }
     // disable synchronous version of this method
     ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_CanPush : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithGenericMethod_CanPush() {
+      ::grpc::Service::MarkMethodGeneric(3);
+    }
+    ~WithGenericMethod_CanPush() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -387,6 +473,26 @@ class Rdma final {
     }
     void RequestGetRemoteParamAddress(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_CanPush : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithRawMethod_CanPush() {
+      ::grpc::Service::MarkMethodRaw(3);
+    }
+    ~WithRawMethod_CanPush() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCanPush(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -465,6 +571,31 @@ class Rdma final {
     virtual void GetRemoteParamAddress(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
+  class ExperimentalWithRawCallbackMethod_CanPush : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    ExperimentalWithRawCallbackMethod_CanPush() {
+      ::grpc::Service::experimental().MarkMethodRawCallback(3,
+        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+          [this](::grpc::ServerContext* context,
+                 const ::grpc::ByteBuffer* request,
+                 ::grpc::ByteBuffer* response,
+                 ::grpc::experimental::ServerCallbackRpcController* controller) {
+                   this->CanPush(context, request, response, controller);
+                 }));
+    }
+    ~ExperimentalWithRawCallbackMethod_CanPush() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual void CanPush(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_GetRemoteEnv : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service *service) {}
@@ -524,9 +655,29 @@ class Rdma final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedGetRemoteParamAddress(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::ptre::GetRemoteParamAddressRequest,::ptre::GetRemoteParamAddressResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetRemoteEnv<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<Service > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_CanPush : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithStreamedUnaryMethod_CanPush() {
+      ::grpc::Service::MarkMethodStreamed(3,
+        new ::grpc::internal::StreamedUnaryHandler< ::ptre::CanPushRequest, ::ptre::CanPushResponse>(std::bind(&WithStreamedUnaryMethod_CanPush<BaseClass>::StreamedCanPush, this, std::placeholders::_1, std::placeholders::_2)));
+    }
+    ~WithStreamedUnaryMethod_CanPush() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedCanPush(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::ptre::CanPushRequest,::ptre::CanPushResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_GetRemoteEnv<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<WithStreamedUnaryMethod_CanPush<Service > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetRemoteEnv<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<Service > > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetRemoteEnv<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<WithStreamedUnaryMethod_CanPush<Service > > > > StreamedService;
 };
 
 }  // namespace ptre

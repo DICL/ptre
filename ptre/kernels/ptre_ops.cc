@@ -9,6 +9,9 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include <stdio.h>
+#include <typeinfo>
+#include <atomic>
 
 #include "ptre/kernels/ptre_ops.h"
 //#include "ptre/kernels/ptre_op_helpers.h"
@@ -64,6 +67,11 @@ struct PtreGlobal {
   //std::queue<PtreRequest> request_queue;
   std::queue<int> q;
 
+  // Grpc Server
+  std::unique_ptr<grpc::Server> grpc_server = nullptr;
+
+  std::atomic<bool> is_shutdown;
+
   // Background thread running PTRE communication.
   std::thread grpc_server_thread;
   std::thread background_thread;
@@ -74,12 +82,14 @@ struct PtreGlobal {
   int size;
 
   std::vector<std::string> grpc_hosts;
+  //GrpcClientCache grpc_client_cache;
 
   bool is_push_step = false;
   /// 0: None
   /// 1: New
   /// 2: Used
   int incoming_state = 0;
+  int incoming_peer;
 
   ~PtreGlobal() {
     if (background_thread.joinable()) {
@@ -97,13 +107,20 @@ static PtreGlobal ptre_global;
 void RunGrpcServer() {
   RdmaServiceImpl service;
   service.SetRdmaManager(ptre_global.rdma_manager);
+  service.SetConsensusManager(&ptre_global.cm);
   std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
-  auto server = builder.BuildAndStart();
+  ptre_global.grpc_server = builder.BuildAndStart();
   std::cout << "Grpc server listening on " << server_address << std::endl;
-  server->Wait();
+  ptre_global.grpc_server->Wait();
+}
+
+void ShutdownGrpcServer() {
+  if (ptre_global.grpc_server != nullptr) {
+    ptre_global.grpc_server->Shutdown();
+  }
 }
 
 void InitRemoteMR() {
@@ -122,7 +139,7 @@ void ProcessRequestQueue() {
 
 void BackgroundThreadLoop() {
   /// TODO: 1. Init MR
-  while (true) {
+  while (!ptre_global.is_shutdown) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     /// TODO: Fetch a push task from a task queue.
     ProcessRequestQueue();
@@ -166,6 +183,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   std::cout << "Initializing RdmaManager" << std::endl;
   ptre_global.rdma_manager = new RdmaManager(size, rank);
   ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
+  ptre_global.is_shutdown = false;
   ptre_global.background_thread = std::thread(BackgroundThreadLoop);
 }
 
@@ -270,6 +288,7 @@ class InitRemoteMrOp : public OpKernel {
         if (peer_flag[i]) {
           continue;
         }
+        //auto grpc_client = ptre_global.grpc_client_cache.GetClient(i);
         GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
         grpc_client.SetRdmaManager(ptre_global.rdma_manager);
         if (!ptre_global.rdma_manager->IsDlidSet(i)) {
@@ -799,6 +818,7 @@ void ptre_mark_no_new() {
 
 void ptre_enqueue_push() {
   //int target_rank = tensorflow::ptre_global.cm.GetRandomTarget();
+  //GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
   int target_rank = tensorflow::ptre_global.cm.get_peer();
   tensorflow::ptre_global.q.push(target_rank);
 }
@@ -809,6 +829,12 @@ void ptre_set_push() {
 
 void ptre_unset_push() {
   tensorflow::ptre_global.is_push_step = false;
+}
+
+void ptre_finalize() {
+  sleep(5);
+  tensorflow::ShutdownGrpcServer();
+  tensorflow::ptre_global.is_shutdown = true;
 }
 
 }

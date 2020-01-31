@@ -6,6 +6,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include "ptre/protobuf/rdma_service.grpc.pb.h"
+#include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/rdma_manager.h"
 
 namespace ptre {
@@ -16,15 +17,20 @@ class RdmaServiceImpl final : public Rdma::Service {
                                 const GetRemoteAddressRequest* request,
                                 GetRemoteAddressResponse* response) override;
   grpc::Status GetRemoteParamAddress(grpc::ServerContext* context,
-                                const GetRemoteParamAddressRequest* request,
-                                GetRemoteParamAddressResponse* response) override;
+                            const GetRemoteParamAddressRequest* request,
+                            GetRemoteParamAddressResponse* response) override;
   grpc::Status GetRemoteEnv(grpc::ServerContext* context,
                                 const GetRemoteEnvRequest* request,
                                 GetRemoteEnvResponse* response) override;
+  grpc::Status CanPush(grpc::ServerContext* context,
+      const CanPushRequest* request, CanPushResponse* response) override;
+
   void SetRdmaManager(RdmaManager* rdma_manager);
+  void SetConsensusManager(ConsensusManager* cm);
 
  private:
-  RdmaManager* rdma_manager_ = nullptr;
+  RdmaManager* rdma_manager_ = nullptr;  // not owned.
+  ConsensusManager* cm_ = nullptr;  // not owned.
 };
 
 class GrpcServer {

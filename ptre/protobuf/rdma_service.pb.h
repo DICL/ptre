@@ -47,7 +47,7 @@ struct TableStruct_rdma_5fservice_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[8]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[10]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -55,6 +55,12 @@ struct TableStruct_rdma_5fservice_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto;
 namespace ptre {
+class CanPushRequest;
+class CanPushRequestDefaultTypeInternal;
+extern CanPushRequestDefaultTypeInternal _CanPushRequest_default_instance_;
+class CanPushResponse;
+class CanPushResponseDefaultTypeInternal;
+extern CanPushResponseDefaultTypeInternal _CanPushResponse_default_instance_;
 class Channel;
 class ChannelDefaultTypeInternal;
 extern ChannelDefaultTypeInternal _Channel_default_instance_;
@@ -81,6 +87,8 @@ class MemoryRegionDefaultTypeInternal;
 extern MemoryRegionDefaultTypeInternal _MemoryRegion_default_instance_;
 }  // namespace ptre
 PROTOBUF_NAMESPACE_OPEN
+template<> ::ptre::CanPushRequest* Arena::CreateMaybeMessage<::ptre::CanPushRequest>(Arena*);
+template<> ::ptre::CanPushResponse* Arena::CreateMaybeMessage<::ptre::CanPushResponse>(Arena*);
 template<> ::ptre::Channel* Arena::CreateMaybeMessage<::ptre::Channel>(Arena*);
 template<> ::ptre::GetRemoteAddressRequest* Arena::CreateMaybeMessage<::ptre::GetRemoteAddressRequest>(Arena*);
 template<> ::ptre::GetRemoteAddressResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteAddressResponse>(Arena*);
@@ -1235,6 +1243,258 @@ class GetRemoteParamAddressResponse :
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
+// -------------------------------------------------------------------
+
+class CanPushRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.CanPushRequest) */ {
+ public:
+  CanPushRequest();
+  virtual ~CanPushRequest();
+
+  CanPushRequest(const CanPushRequest& from);
+  CanPushRequest(CanPushRequest&& from) noexcept
+    : CanPushRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline CanPushRequest& operator=(const CanPushRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CanPushRequest& operator=(CanPushRequest&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const CanPushRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const CanPushRequest* internal_default_instance() {
+    return reinterpret_cast<const CanPushRequest*>(
+               &_CanPushRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    8;
+
+  void Swap(CanPushRequest* other);
+  friend void swap(CanPushRequest& a, CanPushRequest& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline CanPushRequest* New() const final {
+    return CreateMaybeMessage<CanPushRequest>(nullptr);
+  }
+
+  CanPushRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<CanPushRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const CanPushRequest& from);
+  void MergeFrom(const CanPushRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CanPushRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.CanPushRequest";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // int32 rank = 1;
+  void clear_rank();
+  static const int kRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
+  void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.CanPushRequest)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::int32 rank_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CanPushResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.CanPushResponse) */ {
+ public:
+  CanPushResponse();
+  virtual ~CanPushResponse();
+
+  CanPushResponse(const CanPushResponse& from);
+  CanPushResponse(CanPushResponse&& from) noexcept
+    : CanPushResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline CanPushResponse& operator=(const CanPushResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CanPushResponse& operator=(CanPushResponse&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const CanPushResponse& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const CanPushResponse* internal_default_instance() {
+    return reinterpret_cast<const CanPushResponse*>(
+               &_CanPushResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    9;
+
+  void Swap(CanPushResponse* other);
+  friend void swap(CanPushResponse& a, CanPushResponse& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline CanPushResponse* New() const final {
+    return CreateMaybeMessage<CanPushResponse>(nullptr);
+  }
+
+  CanPushResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<CanPushResponse>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const CanPushResponse& from);
+  void MergeFrom(const CanPushResponse& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CanPushResponse* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.CanPushResponse";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // bool available = 1;
+  void clear_available();
+  static const int kAvailableFieldNumber = 1;
+  bool available() const;
+  void set_available(bool value);
+
+  // @@protoc_insertion_point(class_scope:ptre.CanPushResponse)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  bool available_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
 // ===================================================================
 
 
@@ -1776,9 +2036,49 @@ GetRemoteParamAddressResponse::mr() const {
   return mr_;
 }
 
+// -------------------------------------------------------------------
+
+// CanPushRequest
+
+// int32 rank = 1;
+inline void CanPushRequest::clear_rank() {
+  rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 CanPushRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.CanPushRequest.rank)
+  return rank_;
+}
+inline void CanPushRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.CanPushRequest.rank)
+}
+
+// -------------------------------------------------------------------
+
+// CanPushResponse
+
+// bool available = 1;
+inline void CanPushResponse::clear_available() {
+  available_ = false;
+}
+inline bool CanPushResponse::available() const {
+  // @@protoc_insertion_point(field_get:ptre.CanPushResponse.available)
+  return available_;
+}
+inline void CanPushResponse::set_available(bool value) {
+  
+  available_ = value;
+  // @@protoc_insertion_point(field_set:ptre.CanPushResponse.available)
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

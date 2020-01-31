@@ -22,6 +22,7 @@ static const char* Rdma_method_names[] = {
   "/ptre.Rdma/GetRemoteEnv",
   "/ptre.Rdma/GetRemoteAddress",
   "/ptre.Rdma/GetRemoteParamAddress",
+  "/ptre.Rdma/CanPush",
 };
 
 std::unique_ptr< Rdma::Stub> Rdma::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -34,6 +35,7 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   : channel_(channel), rpcmethod_GetRemoteEnv_(Rdma_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteAddress_(Rdma_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteParamAddress_(Rdma_method_names[2], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_CanPush_(Rdma_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Rdma::Stub::GetRemoteEnv(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest& request, ::ptre::GetRemoteEnvResponse* response) {
@@ -96,6 +98,26 @@ void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext
   return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteParamAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteParamAddress_, context, request, false);
 }
 
+::grpc::Status Rdma::Stub::CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::ptre::CanPushResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_CanPush_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CanPush_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::CanPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CanPush_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>* Rdma::Stub::AsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CanPushResponse>::Create(channel_.get(), cq, rpcmethod_CanPush_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>* Rdma::Stub::PrepareAsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CanPushResponse>::Create(channel_.get(), cq, rpcmethod_CanPush_, context, request, false);
+}
+
 Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[0],
@@ -112,6 +134,11 @@ Rdma::Service::Service() {
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetRemoteParamAddressRequest, ::ptre::GetRemoteParamAddressResponse>(
           std::mem_fn(&Rdma::Service::GetRemoteParamAddress), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[3],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::CanPushRequest, ::ptre::CanPushResponse>(
+          std::mem_fn(&Rdma::Service::CanPush), this)));
 }
 
 Rdma::Service::~Service() {
@@ -132,6 +159,13 @@ Rdma::Service::~Service() {
 }
 
 ::grpc::Status Rdma::Service::GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Rdma::Service::CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) {
   (void) context;
   (void) request;
   (void) response;

@@ -1,6 +1,8 @@
 #include "ptre/cm/consensus_manager.h"
 
+#include <iostream>
 #include <random>
+#include <stdlib.h>
 
 namespace ptre {
 
@@ -30,6 +32,11 @@ void ConsensusManager::InitPeerSelector(int strategy) {
   PeerSelectorFactory::NewPeerSelector(ptre_size_, ptre_rank_,
                                        SelectionStrategy(strategy),
                                        peer_selector_);
+  //for (int i = 0; i < ptre_size_ * 2; i++) {
+  //  std::cout << peer_selector_->get_peer() << std::endl;
+  //}
+  //usleep(5000000);
+  //exit(EXIT_FAILURE);
 }
 
 void ConsensusManager::InitBufTensor(const std::string& name,
@@ -54,7 +61,6 @@ void ConsensusManager::InitBufTensor(const std::string& name,
 }
 
 void ConsensusManager::InitBufParam() {
-  //is_new_incoming_ = new volatile bool(false);
   is_new_incoming_ = new bool(false);
   rdma_manager_->InitParamMR(is_new_incoming_, &flag_to_send_);
 }
@@ -105,6 +111,15 @@ void ConsensusManager::TcpPushTensors(int dst_rank) {
     //tcp_manager_->TcpSendTensor(dst_rank, name, *t);
   }
   //tcp_manager_->TcpSendIncomingFlag(dst_rank, true);
+}
+
+bool ConsensusManager::CanReceive(int src_rank) {
+  std::lock_guard<std::mutex> guard(rf_mu_);
+  if (receiving_from < 0) {
+    receiving_from = src_rank;
+    return true;
+  }
+  return false;
 }
 
 int ConsensusManager::GetRandomTarget() {
