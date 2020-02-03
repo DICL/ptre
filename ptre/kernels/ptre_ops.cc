@@ -640,20 +640,20 @@ REGISTER_KERNEL_BUILDER(
     Name("MarkNoNew").Device(DEVICE_CPU), MarkNoNewOp);
 
 namespace functor {
-template <>
-struct Modelaverage<CPUDevice> {
-  void operator()(const CPUDevice& d, typename TTypes<float>::Flat var,
-                  typename TTypes<float>::ConstFlat other) {
-    var.device(d) = var.constant(float(0.5)) * (var + other);
+template <typename T>
+struct Modelaverage<CPUDevice, T> {
+  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstFlat other) {
+    var.device(d) = var.constant(T(0.5)) * (var + other);
   }
 };
 
-template <>
-struct CopyTensorToSendBuf<CPUDevice> {
+template <typename T>
+struct CopyTensorToSendBuf<CPUDevice, T> {
   void operator()(const CPUDevice& d,
-                  typename TTypes<float>::Flat src,
-                  typename TTypes<float>::Flat dst) {
-    auto bytes = sizeof(float) * src.size();
+                  typename TTypes<T>::Flat src,
+                  typename TTypes<T>::Flat dst) {
+    auto bytes = sizeof(T) * src.size();
     memcpy(dst.data(), src.data(), bytes);
   }
 };
@@ -687,9 +687,10 @@ static Status ModelaverageShapeFn(InferenceContext* c) {
 
 REGISTER_OP("ResourceModelaverage")
   .Input("var: resource")
+  .Attr("T: numbertype")
   .Attr("var_name: string")
   .SetShapeFn(ModelaverageShapeFn);
-template <typename Device>
+template <typename Device, typename T>
 class ModelaverageOp : public OpKernel {
  public:
   explicit ModelaverageOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
@@ -709,37 +710,55 @@ class ModelaverageOp : public OpKernel {
 
     const Device& d = ctx->template eigen_device<Device>();
     const Tensor other(ptre_global.cm.global_consensus(var_name_));
-    functor::Modelaverage<Device>()(d, var.flat<float>(), other.flat<float>());
+    functor::Modelaverage<Device, T>()(d, var.flat<T>(), other.flat<T>());
     ptre_global.incoming_state = 2;  // Used
   }
 
  private:
   string var_name_;
 };
-REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage")
-                            .Device(DEVICE_CPU)
-                            .HostMemory("var"),
-                        ModelaverageOp<CPUDevice>);
-#ifdef GOOGLE_CUDA
+#define REGISTER_KERNELS(D, T)                                                \
+  REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage")                \
+                              .Device(DEVICE_##D)                             \
+                              .HostMemory("var")                              \
+                              .TypeConstraint<T>("T"),                        \
+                          ModelaverageOp<D##Device, T>);
+#define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
+
+TF_CALL_half(REGISTER_CPU_KERNELS);
+TF_CALL_bfloat16(REGISTER_CPU_KERNELS);
+TF_CALL_float(REGISTER_CPU_KERNELS);
+TF_CALL_double(REGISTER_CPU_KERNELS);
+
+#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+// Forward declarations of the functor specializations for GPU.
 namespace functor {
-template <>
-void Modelaverage<GPUDevice>::operator()(const GPUDevice& d,
-    typename TTypes<float>::Flat var,
-    //typename TTypes<float>::Flat other);
-    typename TTypes<float>::ConstFlat other);
-extern template struct Modelaverage<GPUDevice>;
+#define DECLARE_GPU_SPEC(T)                             \
+  template <>                                           \
+  void Modelaverage<GPUDevice, T>::operator()(  \
+      const GPUDevice& d, typename TTypes<T>::Flat var, \
+      typename TTypes<T>::ConstFlat other);             \
+  extern template struct Modelaverage<GPUDevice, T>;
+DECLARE_GPU_SPEC(Eigen::half);
+DECLARE_GPU_SPEC(float);
+DECLARE_GPU_SPEC(double);
+#undef DECLARE_GPU_SPEC
+
+REGISTER_KERNELS(GPU, Eigen::half);
+REGISTER_KERNELS(GPU, float);
+REGISTER_KERNELS(GPU, double);
 }  // namespace functor
-REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage")
-                            .Device(DEVICE_GPU)
-                            .HostMemory("var"),
-                        ModelaverageOp<GPUDevice>);
 #endif  // GOOGLE_CUDA
+
+#undef REGISTER_CPU_KERNELS
+#undef REGISTER_KERNELS
 
 
 REGISTER_OP("ResourcePushTensor")
   .Input("var: resource")
+  .Attr("T: numbertype")
   .Attr("var_name: string");
-template <typename Device>
+template <typename Device, typename T>
 class PushTensorOp : public OpKernel {
  public:
   explicit PushTensorOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
@@ -756,29 +775,47 @@ class PushTensorOp : public OpKernel {
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
     Tensor* send_tensor = ptre_global.cm.send_tensor(var_name_);
-    functor::CopyTensorToSendBuf<Device>()(d, var.flat<float>(),
-        send_tensor->flat<float>());
+    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(),
+        send_tensor->flat<T>());
   }
  private:
   string var_name_;
 };
-REGISTER_KERNEL_BUILDER(Name("ResourcePushTensor")
-                            .Device(DEVICE_CPU)
-                            .HostMemory("var"),
-                        PushTensorOp<CPUDevice>);
-#ifdef GOOGLE_CUDA
+#define REGISTER_KERNELS(D, T)                                                \
+  REGISTER_KERNEL_BUILDER(Name("ResourcePushTensor")                \
+                              .Device(DEVICE_##D)                             \
+                              .HostMemory("var")                              \
+                              .TypeConstraint<T>("T"),                        \
+                          PushTensorOp<D##Device, T>);
+#define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
+
+TF_CALL_half(REGISTER_CPU_KERNELS);
+TF_CALL_bfloat16(REGISTER_CPU_KERNELS);
+TF_CALL_float(REGISTER_CPU_KERNELS);
+TF_CALL_double(REGISTER_CPU_KERNELS);
+
+#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+// Forward declarations of the functor specializations for GPU.
 namespace functor {
-template <>
-void CopyTensorToSendBuf<GPUDevice>::operator()(const GPUDevice& d,
-                  typename TTypes<float>::Flat src,
-                  typename TTypes<float>::Flat dst);
-extern template struct CopyTensorToSendBuf<GPUDevice>;
+#define DECLARE_GPU_SPEC(T)                             \
+  template <>                                           \
+  void CopyTensorToSendBuf<GPUDevice, T>::operator()(  \
+      const GPUDevice& d, typename TTypes<T>::Flat src, \
+      typename TTypes<T>::Flat dst);             \
+  extern template struct CopyTensorToSendBuf<GPUDevice, T>;
+DECLARE_GPU_SPEC(Eigen::half);
+DECLARE_GPU_SPEC(float);
+DECLARE_GPU_SPEC(double);
+#undef DECLARE_GPU_SPEC
+
+REGISTER_KERNELS(GPU, Eigen::half);
+REGISTER_KERNELS(GPU, float);
+REGISTER_KERNELS(GPU, double);
 }  // namespace functor
-REGISTER_KERNEL_BUILDER(Name("ResourcePushTensor")
-                            .Device(DEVICE_GPU)
-                            .HostMemory("var"),
-                        PushTensorOp<GPUDevice>);
 #endif  // GOOGLE_CUDA
+
+#undef REGISTER_CPU_KERNELS
+#undef REGISTER_KERNELS
 
 }  // namespace tensorflow
 

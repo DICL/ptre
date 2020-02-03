@@ -6,23 +6,19 @@
 #include "tensorflow/core/platform/types.h"
 
 namespace tensorflow {
-//using CPUDevice = Eigen::ThreadPoolDevice;
-//using GPUDevice = Eigen::GpuDevice;
 
 namespace functor {
-template <typename Device>
+template <typename Device, typename T>
 struct Modelaverage {
-  void operator()(const Device& d, typename TTypes<float>::Flat var,
-                  //const Tensor& other);
-                  typename TTypes<float>::ConstFlat other);
-                  //typename TTypes<float>::Flat other);
+  void operator()(const Device& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstFlat other);
 };
 
-template <typename Device>
+template <typename Device, typename T>
 struct CopyTensorToSendBuf {
   void operator()(const Device& d,
-                  typename TTypes<float>::Flat src,
-                  typename TTypes<float>::Flat dst);
+                  typename TTypes<T>::Flat src,
+                  typename TTypes<T>::Flat dst);
 };
 
 }  // namespace functor
