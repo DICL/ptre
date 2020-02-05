@@ -16,6 +16,8 @@ void PeerSelectorFactory::NewPeerSelector(int comm_size, int comm_rank,
     out_selector = new DHTRoundRobinPeerSelector(comm_size, comm_rank);
   } else if (strategy == ADJACENT) {
     out_selector = new NextPeerSelector(comm_size, comm_rank);
+  } else if (strategy == MOVING_DHT_RR) {
+    out_selector = new MovingDHTRoundRobinSelector(comm_size, comm_rank);
   } else if (strategy == PRIORITY_DIFF) {
     out_selector = new DifferenceBasedPeerSelector(comm_size, comm_rank);
   } else {
@@ -85,6 +87,30 @@ int NextPeerSelector::get_peer() {
   int ret = (comm_rank_ + 1) % comm_size_;
   return ret;
 }
+
+MovingDHTRoundRobinSelector::MovingDHTRoundRobinSelector(int size, int rank)
+    : DHTRoundRobinPeerSelector(size, rank), delta_(0) {}
+
+void MovingDHTRoundRobinSelector::increase_delta() {
+  int max_delta = comm_size_ - (comm_size_ / 2);
+  delta_ = (delta_ + 1) % max_delta;
+}
+
+int MovingDHTRoundRobinSelector::get_peer() {
+  int ret = comm_rank_;
+  while (ret == comm_rank_) {
+    int power = prev_ + 1;
+    int div = pow(2, power);
+    ret = (comm_rank_ + comm_size_ / div + delta_) % comm_size_;
+    prev_ = (prev_ + 1) % max_power_;
+  }
+  select_cnt_++;
+  if (select_cnt_ % max_power_ == 0) {
+    increase_delta();
+  }
+  return ret;
+}
+
 
 DifferenceBasedPeerSelector::DifferenceBasedPeerSelector(
     int comm_size, int comm_rank) : PeerSelectorInterface(comm_size, comm_rank) {

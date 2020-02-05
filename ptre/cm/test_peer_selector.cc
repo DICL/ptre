@@ -5,22 +5,36 @@ using ptre::PeerSelectorInterface;
 using ptre::PeerSelectorFactory;
 using ptre::SelectionStrategy;
 
-int main() {
-  int size = 45;
-  int rank = 0;
+using std::cout;
+using std::endl;
+
+int main(int argc, char* argv[]) {
+  if (argc < 4) {
+    cout << "Usage: " << argv[0] << " size rank strategy" << endl;
+    return 1;
+  }
+  int size = atoi(argv[1]);
+  int rank = atoi(argv[2]);
+  int strategy = atoi(argv[3]);
   PeerSelectorInterface* selector_list[size];
-  for (int rank = 0; rank < 45; rank++ ) {
-    PeerSelectorInterface*& selector = selector_list[rank];
-    PeerSelectorFactory::NewPeerSelector(size, rank,
-                                         SelectionStrategy(4),
+  for (int i = 0; i < size; i++) {
+    PeerSelectorInterface*& selector = selector_list[i];
+    PeerSelectorFactory::NewPeerSelector(size, i,
+                                         SelectionStrategy(strategy),
                                          selector);
   }
-  for (int i = 0; i < 10; i++) {
-    for (int rank = 0; rank < 45; rank++ ) {
-      PeerSelectorInterface* selector = selector_list[rank];
-      std::cout << selector->get_peer() << " ";
+  int count[size] = {};
+  PeerSelectorInterface* selector = selector_list[rank];
+  for (int i = 0; i < 30; i++) {
+    for (int j = 0; j < 10; j++) {
+      int peer = selector->get_peer();
+      cout << peer << " ";
     }
-    std::cout << std::endl;
+    cout << endl;
+    //((ptre::MovingDHTRoundRobinSelector*) selector)->increase_delta();
+  }
+  for (int i = 0; i < size; i++) {
+    delete selector_list[i];
   }
   return 0;
 }

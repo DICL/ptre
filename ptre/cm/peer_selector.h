@@ -17,16 +17,18 @@ enum SelectionStrategy {
   DHT_RANDOM,      // 2
   DHT_ROUND_ROBIN, // 3
   ADJACENT,        // 4
+  MOVING_DHT_RR,   // 5
   PRIORITY_DIFF
 };
 
 class PeerSelectorInterface {
  public:
   PeerSelectorInterface(int comm_size, int comm_rank)
-      : comm_size_(comm_size), comm_rank_(comm_rank) {}
+      : comm_size_(comm_size), comm_rank_(comm_rank), select_cnt_(0) {}
   virtual int get_peer() = 0;
 
  protected:
+  uint64_t select_cnt_;
   int comm_size_;
   int comm_rank_;
 };
@@ -62,7 +64,7 @@ class DHTRoundRobinPeerSelector : public PeerSelectorInterface {
   DHTRoundRobinPeerSelector(int comm_size, int comm_rank);
   int get_peer() override;
 
- private:
+ protected:
   int max_power_;
   int prev_;
 };
@@ -73,6 +75,17 @@ class NextPeerSelector : public PeerSelectorInterface {
       : PeerSelectorInterface(comm_size, comm_rank) {}
   int get_peer() override;
 };
+
+class MovingDHTRoundRobinSelector : public DHTRoundRobinPeerSelector {
+ public:
+  MovingDHTRoundRobinSelector(int size, int rank);
+  void increase_delta();
+  int get_peer() override;
+
+ protected:
+  int delta_;
+};
+
 
 class DifferenceBasedPeerSelector : public PeerSelectorInterface {
  public:

@@ -639,6 +639,10 @@ class MarkNoNewOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(
     Name("MarkNoNew").Device(DEVICE_CPU), MarkNoNewOp);
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
 namespace functor {
 template <typename T>
 struct Modelaverage<CPUDevice, T> {
@@ -657,20 +661,23 @@ struct CopyTensorToSendBuf<CPUDevice, T> {
     memcpy(dst.data(), src.data(), bytes);
   }
 };
-
 }  // namespace functor
 
-//REGISTER_OP("ResourceGetRemote")
+//REGISTER_OP("ResourceGetGlobalConsensus")
 //  .Input("var: resource")
+//  .Attr("T: numbertype")
 //  .Attr("var_name: string")
-//  .Output("remote: resource")
-//template <typename Device>
+//  .Output("gcon: resource")
+//template <typename Device, typename T>
 //class GetRemoteOp : public OpKernel {
 // public:
 //  explicit GetRemoteOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
 //    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
 //  }
 //  void Compute(OpKernelContext* ctx) {
+//    Tensor* output;
+//    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, var.shape(), &output));
+//    const Tensor other(ptre_global.cm.global_consensus(var_name_));
 //  }
 // private:
 //  string var_name_;
@@ -711,17 +718,18 @@ class ModelaverageOp : public OpKernel {
     const Device& d = ctx->template eigen_device<Device>();
     const Tensor other(ptre_global.cm.global_consensus(var_name_));
     functor::Modelaverage<Device, T>()(d, var.flat<T>(), other.flat<T>());
+
     ptre_global.incoming_state = 2;  // Used
   }
 
  private:
   string var_name_;
 };
-#define REGISTER_KERNELS(D, T)                                                \
-  REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage")                \
-                              .Device(DEVICE_##D)                             \
-                              .HostMemory("var")                              \
-                              .TypeConstraint<T>("T"),                        \
+#define REGISTER_KERNELS(D, T)                         \
+  REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage") \
+                              .Device(DEVICE_##D)      \
+                              .HostMemory("var")       \
+                              .TypeConstraint<T>("T"), \
                           ModelaverageOp<D##Device, T>);
 #define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
 
@@ -735,7 +743,7 @@ TF_CALL_double(REGISTER_CPU_KERNELS);
 namespace functor {
 #define DECLARE_GPU_SPEC(T)                             \
   template <>                                           \
-  void Modelaverage<GPUDevice, T>::operator()(  \
+  void Modelaverage<GPUDevice, T>::operator()(          \
       const GPUDevice& d, typename TTypes<T>::Flat var, \
       typename TTypes<T>::ConstFlat other);             \
   extern template struct Modelaverage<GPUDevice, T>;
@@ -781,11 +789,11 @@ class PushTensorOp : public OpKernel {
  private:
   string var_name_;
 };
-#define REGISTER_KERNELS(D, T)                                                \
-  REGISTER_KERNEL_BUILDER(Name("ResourcePushTensor")                \
-                              .Device(DEVICE_##D)                             \
-                              .HostMemory("var")                              \
-                              .TypeConstraint<T>("T"),                        \
+#define REGISTER_KERNELS(D, T)                         \
+  REGISTER_KERNEL_BUILDER(Name("ResourcePushTensor")   \
+                              .Device(DEVICE_##D)      \
+                              .HostMemory("var")       \
+                              .TypeConstraint<T>("T"), \
                           PushTensorOp<D##Device, T>);
 #define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
 
@@ -799,9 +807,9 @@ TF_CALL_double(REGISTER_CPU_KERNELS);
 namespace functor {
 #define DECLARE_GPU_SPEC(T)                             \
   template <>                                           \
-  void CopyTensorToSendBuf<GPUDevice, T>::operator()(  \
+  void CopyTensorToSendBuf<GPUDevice, T>::operator()(   \
       const GPUDevice& d, typename TTypes<T>::Flat src, \
-      typename TTypes<T>::Flat dst);             \
+      typename TTypes<T>::Flat dst);                    \
   extern template struct CopyTensorToSendBuf<GPUDevice, T>;
 DECLARE_GPU_SPEC(Eigen::half);
 DECLARE_GPU_SPEC(float);
@@ -868,8 +876,8 @@ void ptre_unset_push() {
   tensorflow::ptre_global.is_push_step = false;
 }
 
-void ptre_finalize() {
-  sleep(5);
+void ptre_finalize(unsigned int wait_time) {
+  sleep(wait_time);
   tensorflow::ShutdownGrpcServer();
   tensorflow::ptre_global.is_shutdown = true;
 }

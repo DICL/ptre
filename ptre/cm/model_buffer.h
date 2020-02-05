@@ -1,6 +1,0 @@
-#ifndef PTRE_CM_MODEL_BUFFER_H_
-#define PTRE_CM_MODEL_BUFFER_H_
-
-
-
-#endif  // PTRE_CM_MODEL_BUFFER_H_
