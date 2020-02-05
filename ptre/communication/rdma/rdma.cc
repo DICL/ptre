@@ -83,6 +83,37 @@ int post_write(size_t buffer_size, uint64_t src_addr,
   return ret;
 }
 
+int post_fetch_and_add(size_t buffer_size, uint64_t src_addr,
+               uint32_t lkey, uint64_t remote_addr,
+               uint32_t rkey, uint64_t wr_id,
+               struct ibv_qp *qp) {
+  int ret = 0;
+
+  struct ibv_sge list;
+  list.addr = src_addr;
+  list.length = buffer_size;
+  list.lkey = lkey;
+
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.wr_id = wr_id;
+  wr.sg_list = &list;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_ATOMIC_FETCH_AND_ADD;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  //wr.send_flags = IBV_SEND_INLINE;
+  //wr.imm_data = imm_data;
+  wr.wr.rdma.remote_addr = remote_addr;
+  wr.wr.rdma.rkey = rkey;
+
+  struct ibv_send_wr* bad_wr;
+  ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret < 0) {
+    std::cout << "Failed to ibv_post_send" << std::endl;
+  }
+  return ret;
+}
+
 RdmaTensorChannel::RdmaTensorChannel(const RdmaEnv* env,
                                      const RemoteTensorId& id)
     : env_(env), id_(id) {

@@ -647,8 +647,9 @@ namespace functor {
 template <typename T>
 struct Modelaverage<CPUDevice, T> {
   void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstScalar m,
                   typename TTypes<T>::ConstFlat other) {
-    var.device(d) = var.constant(T(0.5)) * (var + other);
+    var.device(d) = (var + other) / m();
   }
 };
 
@@ -717,7 +718,10 @@ class ModelaverageOp : public OpKernel {
 
     const Device& d = ctx->template eigen_device<Device>();
     const Tensor other(ptre_global.cm.global_consensus(var_name_));
-    functor::Modelaverage<Device, T>()(d, var.flat<T>(), other.flat<T>());
+    Tensor m_(DT_FLOAT, TensorShape({}));
+    m_.flat<float>()(0) = 2.0;
+    const Tensor m(m_);
+    functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(), other.flat<T>());
 
     ptre_global.incoming_state = 2;  // Used
   }
@@ -745,6 +749,7 @@ namespace functor {
   template <>                                           \
   void Modelaverage<GPUDevice, T>::operator()(          \
       const GPUDevice& d, typename TTypes<T>::Flat var, \
+      typename TTypes<T>::ConstScalar m,                \
       typename TTypes<T>::ConstFlat other);             \
   extern template struct Modelaverage<GPUDevice, T>;
 DECLARE_GPU_SPEC(Eigen::half);

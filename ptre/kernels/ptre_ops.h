@@ -11,6 +11,7 @@ namespace functor {
 template <typename Device, typename T>
 struct Modelaverage {
   void operator()(const Device& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstScalar m,
                   typename TTypes<T>::ConstFlat other);
 };
 

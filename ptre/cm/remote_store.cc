@@ -5,7 +5,15 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_util.h"
 
-namespace tensorflow {
+namespace ptre {
+
+void AveragingThreadLoop() {
+  while (!is_terminate_) {
+    if (recv_ing_cnt_ > 0 && recv_done_cnt_ == recv_done_cnt_) {
+
+    }
+  }
+}
 
 static Allocator* get_default_cpu_allocator() {
   static Allocator* default_cpu_allocator =
@@ -20,6 +28,7 @@ static Allocator* get_default_cpu_allocator() {
 //}
 
 RemoteStore::RemoteStore() {
+  is_terminate_ = false;
 }
 
 RemoteStore::~RemoteStore() {
@@ -65,4 +74,4 @@ string RemoteStore::DebugString(const std::string& name, int max_entries) {
 //  }
 //}
 
-}  // namespace tensorflow
+}  // namespace ptre

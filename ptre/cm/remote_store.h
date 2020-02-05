@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_PTRE_CM_REMOTE_STORE_H_
-#define TENSORFLOW_PTRE_CM_REMOTE_STORE_H_
+#ifndef PTRE_CM_REMOTE_STORE_H_
+#define PTRE_CM_REMOTE_STORE_H_
 
 #include <vector>
 #include <unordered_map>
@@ -7,14 +7,13 @@
 
 #include "tensorflow/core/framework/tensor.h"
 
-namespace tensorflow {
+namespace ptre {
 
-class Tensor;
+namespace {
+using tensorflow::Tensor;
+}  // namespace
 
 class RemoteStore {
-  friend class Tensor;
-  friend class TensorBuffer;
-
  public:
   RemoteStore();
   ~RemoteStore();
@@ -30,8 +29,11 @@ class RemoteStore {
   std::vector<Tensor*> vars_;
   std::map<std::string, Tensor*> name_to_var_;
   std::vector<Tensor*> global_consensus_;
+  bool is_terminate_;
+  int recv_ing_cnt_;
+  int recv_done_cnt_;
 };
 
-}  // namespace tensorflow
+}  // namespace ptre
 
-#endif  // TENSORFLOW_PTRE_CM_REMOTE_STORE_H_
+#endif  // PTRE_CM_REMOTE_STORE_H_
