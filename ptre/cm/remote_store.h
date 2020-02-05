@@ -29,6 +29,7 @@ class RemoteStore {
  private:
   std::vector<Tensor*> vars_;
   std::map<std::string, Tensor*> name_to_var_;
+  std::vector<Tensor*> global_consensus_;
 };
 
 }  // namespace tensorflow
