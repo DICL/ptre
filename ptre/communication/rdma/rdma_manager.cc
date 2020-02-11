@@ -6,8 +6,8 @@
 
 namespace ptre {
 
-RdmaManager::RdmaManager(int ptre_size, int ptre_rank)
-    : ptre_size_(ptre_size), ptre_rank_(ptre_rank) {
+RdmaManager::RdmaManager(int ptre_size, int ptre_rank, bool add)
+    : ptre_size_(ptre_size), ptre_rank_(ptre_rank), atomic_add_(add) {
   int ret = 0;
   ret = init_rdma_env(rdma_env_);
   if (ret < 0) {
@@ -348,4 +348,36 @@ void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
   //ptre_poll_cq(cq_, 1, &wc);
 }
 
+bool RdmaManager::AttemptPush(int dst_rank) {
+  //auto client = grpc_client_cache_->GetClient(dst_rank);
+  //bool ret = client->AttemptPush();
+  //return ret;
+}
+
+int RdmaManager::PushTensor(int dst_rank, string name, const Tensor& tensor) {
+  auto data = tensor.tensor_data();
+  size_t buffer_size = (size_t) tensor.TotalBytes();
+  uint64_t src_addr = (uint64_t) data.begin();
+  struct ibv_mr *mr = send_mrs_[name];
+  uint32_t lkey = mr->lkey;
+
+  RemoteMR rmr = rmrs_[RemoteTensorId{ dst_rank, name }];
+  uint64_t remote_addr = rmr.remote_addr;
+  uint32_t rkey = rmr.rkey;
+  struct ibv_qp *qp = qps_[dst_rank];
+  uint64_t wr_id = (uint64_t) new RdmaWriteID(RDMA_WRITE_ID_TENSOR_WRITE,
+                                              nullptr);
+  int ret = -1;
+  if (atomic_add_) {
+    ret = post_fetch_and_add(buffer_size, src_addr, lkey, remote_addr, rkey,
+                             wr_id, qp);
+  } else {
+    ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id, qp);
+  }
+  if (ret < 0) {
+    std::cout << "post_write failed." << std::endl;
+  }
+}
+int RdmaManager::AckPushDone(int dst_rank) {
+}
 }  // namespace ptre

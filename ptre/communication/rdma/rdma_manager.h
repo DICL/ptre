@@ -29,7 +29,7 @@ using tensorflow::Tensor;
 /// create qp
 class RdmaManager {
  public:
-  RdmaManager(int ptre_size, int ptre_rank);
+  RdmaManager(int ptre_size, int ptre_rank, bool add);
   ~RdmaManager();
   /// The input tensor's buffer must be fixed.
   void InitTensorMR(int dst_id, const std::string& name,
@@ -64,6 +64,10 @@ class RdmaManager {
                        const Tensor& tensor);
   //void PushTensor(int dst_id, const string& name, const Tensor& tensor);
   void RdmaWriteIncomingFlag(int dst_rank, bool* flag);
+
+  bool AttemptPush(int dst_rank);
+  int PushTensor(int dst_rank, string name, const Tensor& tensor);
+  int AckPushDone(int dst_rank);
 
   int rank() { return ptre_rank_; }
   ibv_cq* cq() { return cq_; }
@@ -100,6 +104,7 @@ class RdmaManager {
   //std::unordered_map<int, RdmaChannel> remotes_;
   //std::vector<Channel> channels_;
   //std::vector<MemoryRegion> mrs_;
+  bool atomic_add_ = false;
 };
 
 }  // namespace ptre

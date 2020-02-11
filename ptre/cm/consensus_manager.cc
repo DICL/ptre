@@ -92,6 +92,21 @@ void ConsensusManager::CopyTensorSend(const std::string& name,
             const_cast<char*>(send_data));
 }
 
+void ConsensusManager::PushModel(int dst_rank) {
+  bool can_push = rdma_manager_->AttemptPush(dst_rank);
+  if (!can_push) {
+    return;
+  }
+
+  for (auto it : send_tensors_) {
+    const std::string& name = it.first;
+    Tensor* t = it.second;
+    rdma_manager_->PushTensor(dst_rank, name, *t);  // num_comps + 1
+  }
+
+  rdma_manager_->AckPushDone(dst_rank);
+}
+
 void ConsensusManager::PushTensors(int dst_rank) {
   for (auto it : send_tensors_) {
     const std::string& name = it.first;

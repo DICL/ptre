@@ -97,11 +97,14 @@ static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
     struct ibv_wc& wc = wcs[cnt];
     int new_comps = ibv_poll_cq(cq, num_comps - cnt, &wc);
     if (new_comps > 0) {
-      if (wc.status < 0) {
-        std::cerr << "Bad wc status " << wc.status << endl;
+      for (int i = 0; i < new_comps; i++) {
+        struct ibv_wc& curr_wc = wcs[cnt + i];
+        if (curr_wc.status < 0) {
+          std::cerr << "Bad wc status " << curr_wc.status << endl;
+        }
+        RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(curr_wc.wr_id);
+        delete wr_id;
       }
-      RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(wc.wr_id);
-      delete wr_id;
       cnt += new_comps;
     }
   }
@@ -111,6 +114,10 @@ int post_write(size_t buffer_size, uint64_t src_addr,
                uint32_t lkey, uint64_t remote_addr,
                uint32_t rkey, uint64_t wr_id,
                ibv_qp* qp);
+int post_fetch_and_add(size_t buffer_size, uint64_t src_addr,
+               uint32_t lkey, uint64_t remote_addr,
+               uint32_t rkey, uint64_t wr_id,
+               struct ibv_qp *qp);
 }  // namespace ptre
 
 #endif  // PTRE_COMMUNICATION_RDMA_RDMA_H_

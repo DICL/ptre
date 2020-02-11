@@ -27,6 +27,7 @@
 #include "tensorflow/core/framework/register_types.h"
 //#include "tensorflow/core/framework/resource_mgr.h"
 #include "tensorflow/core/framework/resource_var.h"
+#include "tensorflow/core/framework/types.h"
 //#include "tensorflow/core/framework/tensor.h"
 //#include "tensorflow/core/lib/core/refcount.h"
 
@@ -181,7 +182,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   load_grpc_hosts(grpc_hosts_file);
 
   std::cout << "Initializing RdmaManager" << std::endl;
-  ptre_global.rdma_manager = new RdmaManager(size, rank);
+  ptre_global.rdma_manager = new RdmaManager(size, rank, false);
   ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
   ptre_global.is_shutdown = false;
   ptre_global.background_thread = std::thread(BackgroundThreadLoop);
@@ -718,8 +719,8 @@ class ModelaverageOp : public OpKernel {
 
     const Device& d = ctx->template eigen_device<Device>();
     const Tensor other(ptre_global.cm.global_consensus(var_name_));
-    Tensor m_(DT_FLOAT, TensorShape({}));
-    m_.flat<float>()(0) = 2.0;
+    Tensor m_(DataTypeToEnum<T>::v(), TensorShape({}));
+    m_.flat<T>()(0) = T(2.0);
     const Tensor m(m_);
     functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(), other.flat<T>());
 

@@ -32,6 +32,7 @@ class ConsensusManager {
   void EnqueuePushList(std::vector<const Tensor*>& vars);
 
   void CopyTensorSend(const std::string& name, const Tensor& tensor);
+  void PushModel(int dst_rank);
   void PushTensors(int dst_rank);
   void TcpPushTensors(int dst_rank);
   void SetPushReady() { ready_to_push_ = true; }
