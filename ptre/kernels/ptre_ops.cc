@@ -30,6 +30,7 @@
 #include "tensorflow/core/framework/types.h"
 //#include "tensorflow/core/framework/tensor.h"
 //#include "tensorflow/core/lib/core/refcount.h"
+#include "ptre/communication/grpc/grpc_client_cache.h"
 
 namespace tensorflow {
 
@@ -51,6 +52,7 @@ using ::ptre::ConsensusManager;
 using ::ptre::RdmaManager;
 using ::ptre::RdmaServiceImpl;
 using ::ptre::GrpcClient;
+using ::ptre::GrpcClientCache;
 
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
@@ -66,6 +68,7 @@ struct PtreGlobal {
   //std::vector<Tensor*> remote_tensors;
   std::mutex mu;
   //std::queue<PtreRequest> request_queue;
+  std::mutex q_mu;
   std::queue<int> q;
 
   // Grpc Server
@@ -83,7 +86,7 @@ struct PtreGlobal {
   int size;
 
   std::vector<std::string> grpc_hosts;
-  //GrpcClientCache grpc_client_cache;
+  std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
   bool is_push_step = false;
   /// 0: None
@@ -91,6 +94,8 @@ struct PtreGlobal {
   /// 2: Used
   int incoming_state = 0;
   int incoming_peer;
+
+  bool barrier_variable = false;
 
   ~PtreGlobal() {
     if (background_thread.joinable()) {
@@ -109,6 +114,7 @@ void RunGrpcServer() {
   RdmaServiceImpl service;
   service.SetRdmaManager(ptre_global.rdma_manager);
   service.SetConsensusManager(&ptre_global.cm);
+  service.SetBarrierVariable(&ptre_global.barrier_variable);
   std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
@@ -130,10 +136,15 @@ void InitRemoteMR() {
 void ProcessRequestQueue() {
   //std::lock_guard<std::mutex> l(ptre_global.mu);
   auto& q = ptre_global.q;
+  auto& mu = ptre_global.q_mu;
+  int dst_rank = -1;
+  mu.lock();
   if (!ptre_global.q.empty()) {
-    int dst_rank = q.front();
+    dst_rank = q.front();
     q.pop();
-    //std::cout << std::endl << "PushTensors to target=" << dst_rank << std::endl;
+  }
+  mu.unlock();
+  if (dst_rank >= 0) {
     ptre_global.cm.PushTensors(dst_rank);
   }
 }
@@ -180,6 +191,9 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   // InitPeerSelector
 
   load_grpc_hosts(grpc_hosts_file);
+
+  ptre_global.grpc_client_cache = std::make_shared<GrpcClientCache>(rank,
+      ptre_global.grpc_hosts);
 
   std::cout << "Initializing RdmaManager" << std::endl;
   ptre_global.rdma_manager = new RdmaManager(size, rank, false);
@@ -289,11 +303,13 @@ class InitRemoteMrOp : public OpKernel {
         if (peer_flag[i]) {
           continue;
         }
-        //auto grpc_client = ptre_global.grpc_client_cache.GetClient(i);
-        GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
-        grpc_client.SetRdmaManager(ptre_global.rdma_manager);
+        //std::unique_ptr<GrpcClient> grpc_client;
+        GrpcClient* grpc_client;
+        ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
+        //GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
+        grpc_client->SetRdmaManager(ptre_global.rdma_manager);
         if (!ptre_global.rdma_manager->IsDlidSet(i)) {
-          int ret = grpc_client.GetRemoteEnv();
+          int ret = grpc_client->GetRemoteEnv();
           if (ret < 0) {
             done_flag = 0;
             continue;
@@ -304,7 +320,7 @@ class InitRemoteMrOp : public OpKernel {
           if (ptre_global.rdma_manager->IsRemoteMRSet(i, names_[j])) {
             continue;
           }
-          int ret = grpc_client.GetRemoteAddress(names_[j]);
+          int ret = grpc_client->GetRemoteAddress(names_[j]);
           if (ret < 0) {
             client_status = -1;
             break;
@@ -315,7 +331,7 @@ class InitRemoteMrOp : public OpKernel {
           continue;
         }
         if (!ptre_global.rdma_manager->IsRemoteParamMRSet(i)) {
-          int ret = grpc_client.GetRemoteParamAddress();
+          int ret = grpc_client->GetRemoteParamAddress();
           if (ret < 0) {
             done_flag = 0;
             continue;
@@ -392,6 +408,48 @@ class PushModelOp : public OpKernel {
   std::vector<std::string> names_;
 };
 REGISTER_KERNEL_BUILDER(Name("PushModel").Device(DEVICE_CPU), PushModelOp);
+
+REGISTER_OP("BroadcastModel")
+    .Attr("T: {float32}")
+    .Attr("NumTensors: int")
+    .Attr("names: list(string)")
+    .Input("vars: NumTensors * T");
+class BroadcastModelOp : public OpKernel {
+ public:
+  explicit BroadcastModelOp(OpKernelConstruction* context) : OpKernel(context) {
+    context->GetAttr("names", &names_);
+  }
+  void Compute(OpKernelContext* context) override {
+    std::cout << "Broadcasting model" << std::endl;
+    int num_inputs = context->num_inputs();
+    for (int i = 0; i < num_inputs; i++) {
+      ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
+    }
+    auto& mu = ptre_global.q_mu;
+    for (int target_rank = 0; target_rank < ptre_global.size; target_rank++) {
+      //std::cout << "Queuing for target" << target_rank << std::endl;
+      if (target_rank == ptre_global.rank) {
+        continue;
+      }
+      mu.lock();
+      ptre_global.q.push(target_rank);
+      mu.unlock();
+    }
+
+    //std::cout << "Wait for send done." << std::endl;
+    bool cond = false;
+    while (!cond) {
+      mu.lock();
+      //std::cout << "Queue size=" << ptre_global.q.size() << std::endl;
+      cond = ptre_global.q.empty();
+      mu.unlock();
+    }
+  }
+
+ private:
+  std::vector<std::string> names_;
+};
+REGISTER_KERNEL_BUILDER(Name("BroadcastModel").Device(DEVICE_CPU), BroadcastModelOp);
 
 REGISTER_OP("GetRemoteVariable")
     .Attr("index: int = -1")
@@ -529,54 +587,6 @@ REGISTER_KERNEL_BUILDER(Name("AverageModelWithRemote").Device(DEVICE_CPU),
 
 //REGISTER_OP("Incoming")
 //    .
-REGISTER_OP("DummyListInput")
-    .Attr("T: {float32}")
-    .Attr("NumTensors: int")
-    .Input("vars: NumTensors * T");
-class DummyListInputOp : public AsyncOpKernel {
- public:
-  explicit DummyListInputOp(OpKernelConstruction* context)
-      : AsyncOpKernel(context) {}
-  void ComputeAsync(OpKernelContext* context, DoneCallback done) override {
-    //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
-    int num_inputs = context->num_inputs();
-    //std::lock_guard<std::mutex> l(ptre_global.mu);
-    //while (!ptre_global.q.empty()) {
-    //  ptre_global.q.pop();
-    //}
-    //for (int i = 0; i < num_inputs; i++) {
-    //  ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
-    //}
-    int target_rank = ptre_global.cm.GetRandomTarget();
-    //ptre_global.q.push(target_rank);
-    done();
-  }
-};
-REGISTER_KERNEL_BUILDER(Name("DummyListInput").Device(DEVICE_CPU), DummyListInputOp);
-
-REGISTER_OP("DummySingleInput")
-    .Input("var: float32");
-class DummySingleInputOp : public AsyncOpKernel {
- public:
-  explicit DummySingleInputOp(OpKernelConstruction* context)
-      : AsyncOpKernel(context) {}
-  void ComputeAsync(OpKernelContext* context, DoneCallback done) override {
-    //std::cout << (void*) context->input(0).tensor_data().begin() << std::endl;
-    //int num_inputs = context->num_inputs();
-    //std::lock_guard<std::mutex> l(ptre_global.mu);
-    //while (!ptre_global.q.empty()) {
-    //  ptre_global.q.pop();
-    //}
-    //for (int i = 0; i < num_inputs; i++) {
-    //  ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
-    //}
-    int target_rank = ptre_global.cm.GetRandomTarget();
-    //ptre_global.q.push(target_rank);
-    done();
-  }
-};
-REGISTER_KERNEL_BUILDER(Name("DummySingleInput").Device(DEVICE_CPU), DummySingleInputOp);
-
 
 REGISTER_OP("ApplyModelAveraging")
     .Input("var: Ref(T)")
@@ -871,7 +881,10 @@ void ptre_enqueue_push() {
   //int target_rank = tensorflow::ptre_global.cm.GetRandomTarget();
   //GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
   int target_rank = tensorflow::ptre_global.cm.get_peer();
+  auto& mu = tensorflow::ptre_global.q_mu;
+  mu.lock();
   tensorflow::ptre_global.q.push(target_rank);
+  mu.unlock();
 }
 
 void ptre_set_push() {
@@ -886,6 +899,33 @@ void ptre_finalize(unsigned int wait_time) {
   sleep(wait_time);
   tensorflow::ShutdownGrpcServer();
   tensorflow::ptre_global.is_shutdown = true;
+}
+
+void ptre_synchronization_barrier() {
+  // One time use only
+  //std::cout << "Entered Barrier" << std::endl;
+  using tensorflow::ptre_global;
+  ptre_global.barrier_variable = true;
+  bool peer_flag[ptre_global.size] = {};
+  peer_flag[ptre_global.rank] = true;
+  bool global_flag = false;
+  while (!global_flag) {
+    //std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    global_flag = true;
+    for (int i = 0; i < ptre_global.size; i++) {
+      if (peer_flag[i]) {
+        continue;
+      }
+      tensorflow::GrpcClient* grpc_client;
+      ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
+      bool ret = grpc_client->Barrier();
+      //std::cout << "[RANK:" << ptre_global.rank << "] Is rank " << i << " entered?=" << ret << std::endl;
+      if (!ret) {
+        global_flag = false;
+      }
+      peer_flag[i] = ret;
+    }
+  }
 }
 
 }

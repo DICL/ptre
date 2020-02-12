@@ -1,6 +1,7 @@
 #include "ptre/communication/rdma/grpc_server.h"
 
 #include <string>
+#include <iostream>
 
 namespace ptre {
 
@@ -56,9 +57,9 @@ grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-grpc::Status RdmaServiceImpl::CanPush(grpc::ServerContext* context,
-                                      const CanPushRequest* request,
-                                      CanPushResponse* response) {
+grpc::Status RdmaServiceImpl::AttemptToPushModel(grpc::ServerContext* context,
+                                      const AttemptToPushModelRequest* request,
+                                      AttemptToPushModelResponse* response) {
   int src_rank = request->rank();
   if (cm_->CanReceive(src_rank)) {
     response->set_available(true);
@@ -66,6 +67,15 @@ grpc::Status RdmaServiceImpl::CanPush(grpc::ServerContext* context,
     response->set_available(false);
   }
 
+  return grpc::Status::OK;
+}
+
+grpc::Status RdmaServiceImpl::Barrier(grpc::ServerContext* context,
+                                      const BarrierRequest* request,
+                                      BarrierResponse* response) {
+  int this_rank = cm_->rank();
+  //std::cout << "[RANK:" << this_rank << "] Server::Barrier: is_entered?=" << *barrier_variable_ << std::endl;
+  response->set_entered(*barrier_variable_);
   return grpc::Status::OK;
 }
 
@@ -77,6 +87,9 @@ void RdmaServiceImpl::SetConsensusManager(ConsensusManager* cm) {
   cm_ = cm;
 }
 
+void RdmaServiceImpl::SetBarrierVariable(bool* barrier_variable) {
+    barrier_variable_ = barrier_variable;
+}
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
 //  rdma_manager_ = rdma_manager;
 //}

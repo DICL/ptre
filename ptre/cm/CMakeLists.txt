@@ -6,6 +6,7 @@ target_link_libraries(consensus_manager
                       :libtensorflow_framework.so.2
                       rdma_manager
                       peer_selector
+                      grpc_client_cache
                       )
 
 add_executable(test_peer_selector test_peer_selector.cc)

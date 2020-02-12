@@ -277,15 +277,15 @@ bool RdmaManager::IsRemoteParamMRSet(int rank) {
 void RdmaManager::SetRemoteParamMR(int rank, uint64_t remote_addr,
                                    uint32_t rkey) {
   rpmrs_.emplace(rank, RemoteMR { remote_addr, rkey });
-  std::cout << "RemoteMR is set for rank=" << rank << ", name=is_new_incoming" <<
-            ", remote_addr=" << (void*) remote_addr << ", rkey=" << rkey << std::endl;
+  //std::cout << "RemoteMR is set for rank=" << rank << ", name=is_new_incoming" <<
+  //          ", remote_addr=" << (void*) remote_addr << ", rkey=" << rkey << std::endl;
 }
 
 void RdmaManager::SetRemoteMR(int rank, const std::string& name,
                               uint64_t remote_addr, uint32_t rkey) {
   rmrs_.emplace(RemoteTensorId{ rank, name }, RemoteMR { remote_addr, rkey });
-  std::cout << "RemoteMR is set for rank=" << rank << ", name=" << name <<
-            ", remote_addr=" << (void*) remote_addr << ", rkey=" << rkey << std::endl;
+  //std::cout << "RemoteMR is set for rank=" << rank << ", name=" << name <<
+  //          ", remote_addr=" << (void*) remote_addr << ", rkey=" << rkey << std::endl;
 }
 
 RemoteMR RdmaManager::GetRemoteMR(const std::string& name) {
@@ -349,7 +349,7 @@ void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
 }
 
 bool RdmaManager::AttemptPush(int dst_rank) {
-  //auto client = grpc_client_cache_->GetClient(dst_rank);
+  //GrpcClient* client = grpc_client_cache_->GetClient(dst_rank, &client);
   //bool ret = client->AttemptPush();
   //return ret;
 }

@@ -22,13 +22,19 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteEnv(grpc::ServerContext* context,
                                 const GetRemoteEnvRequest* request,
                                 GetRemoteEnvResponse* response) override;
-  grpc::Status CanPush(grpc::ServerContext* context,
-      const CanPushRequest* request, CanPushResponse* response) override;
+  grpc::Status AttemptToPushModel(grpc::ServerContext* context,
+      const AttemptToPushModelRequest* request,
+      AttemptToPushModelResponse* response) override;
+  grpc::Status Barrier(grpc::ServerContext* context,
+      const BarrierRequest* request,
+      BarrierResponse* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);
+  void SetBarrierVariable(bool* barrier_variable);
 
  private:
+  bool* barrier_variable_ = nullptr;
   RdmaManager* rdma_manager_ = nullptr;  // not owned.
   ConsensusManager* cm_ = nullptr;  // not owned.
 };

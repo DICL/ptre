@@ -22,7 +22,9 @@ static const char* Rdma_method_names[] = {
   "/ptre.Rdma/GetRemoteEnv",
   "/ptre.Rdma/GetRemoteAddress",
   "/ptre.Rdma/GetRemoteParamAddress",
-  "/ptre.Rdma/CanPush",
+  "/ptre.Rdma/AttemptToPushModel",
+  "/ptre.Rdma/AckPushModelDone",
+  "/ptre.Rdma/Barrier",
 };
 
 std::unique_ptr< Rdma::Stub> Rdma::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -35,7 +37,9 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   : channel_(channel), rpcmethod_GetRemoteEnv_(Rdma_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteAddress_(Rdma_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteParamAddress_(Rdma_method_names[2], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_CanPush_(Rdma_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_AttemptToPushModel_(Rdma_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_AckPushModelDone_(Rdma_method_names[4], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_Barrier_(Rdma_method_names[5], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Rdma::Stub::GetRemoteEnv(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest& request, ::ptre::GetRemoteEnvResponse* response) {
@@ -98,24 +102,64 @@ void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext
   return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteParamAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteParamAddress_, context, request, false);
 }
 
-::grpc::Status Rdma::Stub::CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::ptre::CanPushResponse* response) {
-  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_CanPush_, context, request, response);
+::grpc::Status Rdma::Stub::AttemptToPushModel(::grpc::ClientContext* context, const ::ptre::AttemptToPushModelRequest& request, ::ptre::AttemptToPushModelResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_AttemptToPushModel_, context, request, response);
 }
 
-void Rdma::Stub::experimental_async::CanPush(::grpc::ClientContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CanPush_, context, request, response, std::move(f));
+void Rdma::Stub::experimental_async::AttemptToPushModel(::grpc::ClientContext* context, const ::ptre::AttemptToPushModelRequest* request, ::ptre::AttemptToPushModelResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptToPushModel_, context, request, response, std::move(f));
 }
 
-void Rdma::Stub::experimental_async::CanPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CanPushResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CanPush_, context, request, response, std::move(f));
+void Rdma::Stub::experimental_async::AttemptToPushModel(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptToPushModelResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptToPushModel_, context, request, response, std::move(f));
 }
 
-::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>* Rdma::Stub::AsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CanPushResponse>::Create(channel_.get(), cq, rpcmethod_CanPush_, context, request, true);
+::grpc::ClientAsyncResponseReader< ::ptre::AttemptToPushModelResponse>* Rdma::Stub::AsyncAttemptToPushModelRaw(::grpc::ClientContext* context, const ::ptre::AttemptToPushModelRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptToPushModelResponse>::Create(channel_.get(), cq, rpcmethod_AttemptToPushModel_, context, request, true);
 }
 
-::grpc::ClientAsyncResponseReader< ::ptre::CanPushResponse>* Rdma::Stub::PrepareAsyncCanPushRaw(::grpc::ClientContext* context, const ::ptre::CanPushRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CanPushResponse>::Create(channel_.get(), cq, rpcmethod_CanPush_, context, request, false);
+::grpc::ClientAsyncResponseReader< ::ptre::AttemptToPushModelResponse>* Rdma::Stub::PrepareAsyncAttemptToPushModelRaw(::grpc::ClientContext* context, const ::ptre::AttemptToPushModelRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptToPushModelResponse>::Create(channel_.get(), cq, rpcmethod_AttemptToPushModel_, context, request, false);
+}
+
+::grpc::Status Rdma::Stub::AckPushModelDone(::grpc::ClientContext* context, const ::ptre::AckPushModelDoneRequest& request, ::ptre::AckPushModelDoneResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_AckPushModelDone_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::AckPushModelDone(::grpc::ClientContext* context, const ::ptre::AckPushModelDoneRequest* request, ::ptre::AckPushModelDoneResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AckPushModelDone_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::AckPushModelDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AckPushModelDoneResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AckPushModelDone_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::AckPushModelDoneResponse>* Rdma::Stub::AsyncAckPushModelDoneRaw(::grpc::ClientContext* context, const ::ptre::AckPushModelDoneRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AckPushModelDoneResponse>::Create(channel_.get(), cq, rpcmethod_AckPushModelDone_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::AckPushModelDoneResponse>* Rdma::Stub::PrepareAsyncAckPushModelDoneRaw(::grpc::ClientContext* context, const ::ptre::AckPushModelDoneRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AckPushModelDoneResponse>::Create(channel_.get(), cq, rpcmethod_AckPushModelDone_, context, request, false);
+}
+
+::grpc::Status Rdma::Stub::Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::ptre::BarrierResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_Barrier_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::BarrierResponse>* Rdma::Stub::AsyncBarrierRaw(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::BarrierResponse>* Rdma::Stub::PrepareAsyncBarrierRaw(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, false);
 }
 
 Rdma::Service::Service() {
@@ -137,8 +181,18 @@ Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[3],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::CanPushRequest, ::ptre::CanPushResponse>(
-          std::mem_fn(&Rdma::Service::CanPush), this)));
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::AttemptToPushModelRequest, ::ptre::AttemptToPushModelResponse>(
+          std::mem_fn(&Rdma::Service::AttemptToPushModel), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[4],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::AckPushModelDoneRequest, ::ptre::AckPushModelDoneResponse>(
+          std::mem_fn(&Rdma::Service::AckPushModelDone), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[5],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::BarrierRequest, ::ptre::BarrierResponse>(
+          std::mem_fn(&Rdma::Service::Barrier), this)));
 }
 
 Rdma::Service::~Service() {
@@ -165,7 +219,21 @@ Rdma::Service::~Service() {
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status Rdma::Service::CanPush(::grpc::ServerContext* context, const ::ptre::CanPushRequest* request, ::ptre::CanPushResponse* response) {
+::grpc::Status Rdma::Service::AttemptToPushModel(::grpc::ServerContext* context, const ::ptre::AttemptToPushModelRequest* request, ::ptre::AttemptToPushModelResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Rdma::Service::AckPushModelDone(::grpc::ServerContext* context, const ::ptre::AckPushModelDoneRequest* request, ::ptre::AckPushModelDoneResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Rdma::Service::Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) {
   (void) context;
   (void) request;
   (void) response;

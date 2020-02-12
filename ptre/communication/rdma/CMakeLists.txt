@@ -7,7 +7,8 @@ target_link_libraries(rdma
 add_library          (rdma_manager SHARED rdma_manager.cc)
 target_link_libraries(rdma_manager
                         :libtensorflow_framework.so.2
-                        rdma)
+                        rdma
+                        )
 
 add_library          (rdma_grpc_server SHARED grpc_server.cc)
 target_link_libraries(rdma_grpc_server

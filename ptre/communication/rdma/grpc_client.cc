@@ -96,6 +96,22 @@ int GrpcClient::GetRemoteEnv() {
   }
 }
 
+bool GrpcClient::Barrier() {
+  BarrierRequest request;
+  BarrierResponse response;
+
+  ClientContext context;
+  grpc::Status status = stub_->Barrier(&context, request, &response);
+
+	if (status.ok()) {
+    return response.entered();
+  } else {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return false;
+  }
+}
+
 //GrpcClient* GrpcClientCache::GetClient(int dst_rank) {
 //  if (cache_.find(rank) == cache_.end()) {
 //    auto client = new GrpcClient(rank_, dst_rank, 

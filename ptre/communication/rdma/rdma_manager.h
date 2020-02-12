@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "ptre/communication/rdma/rdma.h"
+//#include "ptre/communication/grpc/grpc_client_cache.h"
 #include "ptre/protobuf/rdma_service.pb.h"
 
 #include "tensorflow/core/framework/tensor.h"
@@ -105,6 +106,7 @@ class RdmaManager {
   //std::vector<Channel> channels_;
   //std::vector<MemoryRegion> mrs_;
   bool atomic_add_ = false;
+  //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 };
 
 }  // namespace ptre

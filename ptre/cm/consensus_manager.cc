@@ -129,9 +129,29 @@ void ConsensusManager::TcpPushTensors(int dst_rank) {
 }
 
 bool ConsensusManager::CanReceive(int src_rank) {
-  std::lock_guard<std::mutex> guard(rf_mu_);
-  if (receiving_from < 0) {
-    receiving_from = src_rank;
+  std::lock_guard<std::mutex> guard(rcv_mu_);
+  if (rcv_open_) {
+    rcv_ing_cnt_++;
+    return true;
+  }
+  return false;
+}
+
+int ConsensusManager::OpenReceive() {
+  std::lock_guard<std::mutex> guard(rcv_mu_);
+  rcv_open_ = true;
+  return 0;
+}
+
+int ConsensusManager::CloseReceive() {
+  std::lock_guard<std::mutex> guard(rcv_mu_);
+  rcv_open_ = false;
+  return 0;
+}
+
+bool ConsensusManager::IsReceiveDone() {
+  std::lock_guard<std::mutex> guard(rcv_mu_);
+  if (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_) {
     return true;
   }
   return false;

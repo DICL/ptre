@@ -9,6 +9,7 @@
 
 #include "ptre/cm/peer_selector.h"
 #include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/grpc/grpc_client_cache.h"
 //#include "ptre/communication/tcp/tcp_manager.h"
 #include "tensorflow/core/framework/tensor.h"
 
@@ -60,6 +61,10 @@ class ConsensusManager {
   Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
   Tensor* send_tensor(const string& name) { return send_tensors_[name]; }
 
+  int OpenReceive();
+  int CloseReceive();
+  bool IsReceiveDone();
+
  private:
   int ptre_size_;
   int ptre_rank_;
@@ -72,6 +77,12 @@ class ConsensusManager {
   bool is_initialized_ = false;
   bool* is_new_incoming_ = nullptr;
   bool flag_to_send_ = true;
+
+  std::mutex rcv_mu_;
+  bool rcv_open_ = true;
+  int rcv_ing_cnt_;
+  int rcv_done_cnt_;
+
   std::mutex rf_mu_;
   int receiving_from = -1;
   int received_from = -1;
@@ -82,6 +93,7 @@ class ConsensusManager {
   std::vector<Tensor*> for_push_;
   bool ready_to_push_ = false;
   RdmaManager* rdma_manager_ = nullptr;
+  //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 };
 
 }  // namespace ptre
