@@ -106,6 +106,8 @@ struct PtreGlobal {
       grpc_server_thread.join();
     }
   }
+
+  int num_push = 1;
 };
 
 static PtreGlobal ptre_global;
@@ -133,8 +135,7 @@ void ShutdownGrpcServer() {
 void InitRemoteMR() {
 }
 
-void ProcessRequestQueue() {
-  //std::lock_guard<std::mutex> l(ptre_global.mu);
+void ProcessRequestQueueInternal1() {
   auto& q = ptre_global.q;
   auto& mu = ptre_global.q_mu;
   int dst_rank = -1;
@@ -149,11 +150,41 @@ void ProcessRequestQueue() {
   }
 }
 
+void ProcessRequestQueueInternalAtomicAdd() {
+  auto& q = ptre_global.q;
+  auto& mu = ptre_global.q_mu;
+  int dst_rank = -1;
+  mu.lock();
+  if (!ptre_global.q.empty()) {
+    dst_rank = q.front();
+    q.pop();
+  }
+  mu.unlock();
+  if (dst_rank >= 0) {
+    // TODO: 1. Attemp
+    GrpcClient* grpc_client;
+    ptre_global.grpc_client_cache->GetClient(dst_rank, &grpc_client);
+    bool can_push = grpc_client->AttemptPush();
+    // 2. Push
+    if (can_push) {
+      ptre_global.cm.PushTensors2(dst_rank);
+    // TODO: 3. Ack Push done
+      grpc_client->AckPushDone();
+    }
+  }
+}
+
+void ProcessRequestQueue() {
+  if (ptre_global.num_push == 1) {
+    ProcessRequestQueueInternal1();
+  } else {
+    ProcessRequestQueueInternalAtomicAdd();
+  }
+}
+
 void BackgroundThreadLoop() {
-  /// TODO: 1. Init MR
   while (!ptre_global.is_shutdown) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    /// TODO: Fetch a push task from a task queue.
     ProcessRequestQueue();
   }
 }
@@ -716,6 +747,7 @@ class ModelaverageOp : public OpKernel {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
   }
   void Compute(OpKernelContext* ctx) {
+    int num_incomings = ptre_global.cm.GetNumIncomingsOrWait();
     bool* ret = ptre_global.cm.is_new_incoming_ptr();
     if (!*ret) {
       return;
@@ -730,7 +762,7 @@ class ModelaverageOp : public OpKernel {
     const Device& d = ctx->template eigen_device<Device>();
     const Tensor other(ptre_global.cm.global_consensus(var_name_));
     Tensor m_(DataTypeToEnum<T>::v(), TensorShape({}));
-    m_.flat<T>()(0) = T(2.0);
+    m_.flat<T>()(0) = T(num_incomings + 1);
     const Tensor m(m_);
     functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(), other.flat<T>());
 
@@ -878,13 +910,34 @@ void ptre_mark_no_new() {
 }
 
 void ptre_enqueue_push() {
+  using tensorflow::ptre_global;
   //int target_rank = tensorflow::ptre_global.cm.GetRandomTarget();
   //GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
-  int target_rank = tensorflow::ptre_global.cm.get_peer();
   auto& mu = tensorflow::ptre_global.q_mu;
+  /// clear the queue
   mu.lock();
-  tensorflow::ptre_global.q.push(target_rank);
+  while (!ptre_global.q.empty()) {
+    ptre_global.q.pop();
+  }
+  //mu.unlock();
+  int n = ptre_global.num_push;
+  int targets[n];
+  int ret = ptre_global.cm.get_peers(n, targets);
+  //mu.lock();
+  for (int i = 0; i < ret; i++) {
+    ptre_global.q.push(targets[i]);
+  }
   mu.unlock();
+  //for (int i = 0; i < ptre_global.num_push; i++) {
+  //  int target_rank = tensorflow::ptre_global.cm.get_peer();
+  //  mu.lock();
+  //  tensorflow::ptre_global.q.push(target_rank);
+  //  mu.unlock();
+  //}
+}
+
+void ptre_set_num_push(int num_push) {
+  tensorflow::ptre_global.num_push = num_push;
 }
 
 void ptre_set_push() {
@@ -929,4 +982,3 @@ void ptre_synchronization_barrier() {
 }
 
 }
-

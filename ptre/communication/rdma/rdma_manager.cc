@@ -303,7 +303,7 @@ RemoteMR RdmaManager::GetRemoteParamMR() {
 }
 
 void RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
-                                  const Tensor& tensor) {
+                                  const Tensor& tensor, bool atomic_add) {
   auto data = tensor.tensor_data();
   size_t buffer_size = (size_t) tensor.TotalBytes();
   //size_t buf_size_from_stringview = data.size();
@@ -317,8 +317,13 @@ void RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
   struct ibv_qp *qp = qps_[dst_rank];
   uint64_t wr_id = (uint64_t) new RdmaWriteID(RDMA_WRITE_ID_TENSOR_WRITE,
                                               nullptr);
-  int ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id,
-                       qp);
+  int ret = -1;
+  if (atomic_add) {
+    ret = post_fetch_and_add(buffer_size, src_addr, lkey, remote_addr, rkey,
+                             wr_id, qp);
+  } else {
+    ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id, qp);
+  }
   if (ret < 0) {
     std::cout << "post_write failed." << std::endl;
   }

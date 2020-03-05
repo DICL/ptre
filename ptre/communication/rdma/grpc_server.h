@@ -22,9 +22,12 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteEnv(grpc::ServerContext* context,
                                 const GetRemoteEnvRequest* request,
                                 GetRemoteEnvResponse* response) override;
-  grpc::Status AttemptToPushModel(grpc::ServerContext* context,
-      const AttemptToPushModelRequest* request,
-      AttemptToPushModelResponse* response) override;
+  grpc::Status AttemptPush(grpc::ServerContext* context,
+      const AttemptPushRequest* request,
+      AttemptPushResponse* response) override;
+  grpc::Status AckPushDone(grpc::ServerContext* context,
+      const AckPushDoneRequest* request,
+      AckPushDoneResponse* response) override;
   grpc::Status Barrier(grpc::ServerContext* context,
       const BarrierRequest* request,
       BarrierResponse* response) override;

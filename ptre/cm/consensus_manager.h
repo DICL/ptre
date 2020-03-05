@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <condition_variable>
 #include <string>
 #include <iostream>
 
@@ -35,14 +36,15 @@ class ConsensusManager {
   void CopyTensorSend(const std::string& name, const Tensor& tensor);
   void PushModel(int dst_rank);
   void PushTensors(int dst_rank);
+  void PushTensors2(int dst_rank);
   void TcpPushTensors(int dst_rank);
   void SetPushReady() { ready_to_push_ = true; }
   bool IsPushReady() { return ready_to_push_; }
   void UnsetPushReady() { ready_to_push_ = false; }
-  bool CanReceive(int src_rank);
   int GetRandomTarget();
   int GetIncNeighbor();
   int get_peer();
+  int get_peers(int num_peer, int* peers);
 
   void InitPeerSelector(int strategy);
 
@@ -61,9 +63,13 @@ class ConsensusManager {
   Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
   Tensor* send_tensor(const string& name) { return send_tensors_[name]; }
 
+  bool CanReceive(int src_rank);
+  int FinalizeRecv(int src_rank);
+
   int OpenReceive();
   int CloseReceive();
   bool IsReceiveDone();
+  int GetNumIncomingsOrWait();
 
  private:
   int ptre_size_;
@@ -79,9 +85,15 @@ class ConsensusManager {
   bool flag_to_send_ = true;
 
   std::mutex rcv_mu_;
+  std::condition_variable rcv_cv_;
   bool rcv_open_ = true;
   int rcv_ing_cnt_;
   int rcv_done_cnt_;
+  enum {
+    RECV_IN_PROGRESS,
+    RECV_DONE
+  };
+  std::map<int, int> rcv_status_;
 
   std::mutex rf_mu_;
   int receiving_from = -1;

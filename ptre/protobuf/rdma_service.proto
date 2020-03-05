@@ -12,11 +12,11 @@ service Rdma {
   rpc GetRemoteParamAddress(GetRemoteParamAddressRequest)
     returns (GetRemoteParamAddressResponse);
 
-  rpc AttemptToPushModel(AttemptToPushModelRequest)
-    returns (AttemptToPushModelResponse);
+  rpc AttemptPush(AttemptPushRequest)
+    returns (AttemptPushResponse);
 
-  rpc AckPushModelDone(AckPushModelDoneRequest)
-    returns (AckPushModelDoneResponse);
+  rpc AckPushDone(AckPushDoneRequest)
+    returns (AckPushDoneResponse);
 
   rpc Barrier(BarrierRequest)
     returns (BarrierResponse);
@@ -71,19 +71,19 @@ message GetRemoteParamAddressResponse {
   repeated MemoryRegion mr = 3;
 }
 
-message AttemptToPushModelRequest {
+message AttemptPushRequest {
   int32 rank = 1;
 }
 
-message AttemptToPushModelResponse {
+message AttemptPushResponse {
   bool available = 1;
 }
 
-message AckPushModelDoneRequest {
+message AckPushDoneRequest {
   int32 rank = 1;
 }
 
-message AckPushModelDoneResponse {
+message AckPushDoneResponse {
 }
 
 message BarrierRequest {

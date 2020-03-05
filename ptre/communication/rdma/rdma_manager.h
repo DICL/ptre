@@ -62,7 +62,7 @@ class RdmaManager {
   RemoteMR GetRemoteMR(const std::string& name);
   RemoteMR GetRemoteParamMR();
   void RdmaWriteTensor(int dst_id, const std::string& name,
-                       const Tensor& tensor);
+                       const Tensor& tensor, bool atomic_add);
   //void PushTensor(int dst_id, const string& name, const Tensor& tensor);
   void RdmaWriteIncomingFlag(int dst_rank, bool* flag);
 

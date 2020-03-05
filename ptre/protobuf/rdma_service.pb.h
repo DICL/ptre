@@ -55,18 +55,18 @@ struct TableStruct_rdma_5fservice_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto;
 namespace ptre {
-class AckPushModelDoneRequest;
-class AckPushModelDoneRequestDefaultTypeInternal;
-extern AckPushModelDoneRequestDefaultTypeInternal _AckPushModelDoneRequest_default_instance_;
-class AckPushModelDoneResponse;
-class AckPushModelDoneResponseDefaultTypeInternal;
-extern AckPushModelDoneResponseDefaultTypeInternal _AckPushModelDoneResponse_default_instance_;
-class AttemptToPushModelRequest;
-class AttemptToPushModelRequestDefaultTypeInternal;
-extern AttemptToPushModelRequestDefaultTypeInternal _AttemptToPushModelRequest_default_instance_;
-class AttemptToPushModelResponse;
-class AttemptToPushModelResponseDefaultTypeInternal;
-extern AttemptToPushModelResponseDefaultTypeInternal _AttemptToPushModelResponse_default_instance_;
+class AckPushDoneRequest;
+class AckPushDoneRequestDefaultTypeInternal;
+extern AckPushDoneRequestDefaultTypeInternal _AckPushDoneRequest_default_instance_;
+class AckPushDoneResponse;
+class AckPushDoneResponseDefaultTypeInternal;
+extern AckPushDoneResponseDefaultTypeInternal _AckPushDoneResponse_default_instance_;
+class AttemptPushRequest;
+class AttemptPushRequestDefaultTypeInternal;
+extern AttemptPushRequestDefaultTypeInternal _AttemptPushRequest_default_instance_;
+class AttemptPushResponse;
+class AttemptPushResponseDefaultTypeInternal;
+extern AttemptPushResponseDefaultTypeInternal _AttemptPushResponse_default_instance_;
 class BarrierRequest;
 class BarrierRequestDefaultTypeInternal;
 extern BarrierRequestDefaultTypeInternal _BarrierRequest_default_instance_;
@@ -99,10 +99,10 @@ class MemoryRegionDefaultTypeInternal;
 extern MemoryRegionDefaultTypeInternal _MemoryRegion_default_instance_;
 }  // namespace ptre
 PROTOBUF_NAMESPACE_OPEN
-template<> ::ptre::AckPushModelDoneRequest* Arena::CreateMaybeMessage<::ptre::AckPushModelDoneRequest>(Arena*);
-template<> ::ptre::AckPushModelDoneResponse* Arena::CreateMaybeMessage<::ptre::AckPushModelDoneResponse>(Arena*);
-template<> ::ptre::AttemptToPushModelRequest* Arena::CreateMaybeMessage<::ptre::AttemptToPushModelRequest>(Arena*);
-template<> ::ptre::AttemptToPushModelResponse* Arena::CreateMaybeMessage<::ptre::AttemptToPushModelResponse>(Arena*);
+template<> ::ptre::AckPushDoneRequest* Arena::CreateMaybeMessage<::ptre::AckPushDoneRequest>(Arena*);
+template<> ::ptre::AckPushDoneResponse* Arena::CreateMaybeMessage<::ptre::AckPushDoneResponse>(Arena*);
+template<> ::ptre::AttemptPushRequest* Arena::CreateMaybeMessage<::ptre::AttemptPushRequest>(Arena*);
+template<> ::ptre::AttemptPushResponse* Arena::CreateMaybeMessage<::ptre::AttemptPushResponse>(Arena*);
 template<> ::ptre::BarrierRequest* Arena::CreateMaybeMessage<::ptre::BarrierRequest>(Arena*);
 template<> ::ptre::BarrierResponse* Arena::CreateMaybeMessage<::ptre::BarrierResponse>(Arena*);
 template<> ::ptre::Channel* Arena::CreateMaybeMessage<::ptre::Channel>(Arena*);
@@ -1261,23 +1261,23 @@ class GetRemoteParamAddressResponse :
 };
 // -------------------------------------------------------------------
 
-class AttemptToPushModelRequest :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AttemptToPushModelRequest) */ {
+class AttemptPushRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AttemptPushRequest) */ {
  public:
-  AttemptToPushModelRequest();
-  virtual ~AttemptToPushModelRequest();
+  AttemptPushRequest();
+  virtual ~AttemptPushRequest();
 
-  AttemptToPushModelRequest(const AttemptToPushModelRequest& from);
-  AttemptToPushModelRequest(AttemptToPushModelRequest&& from) noexcept
-    : AttemptToPushModelRequest() {
+  AttemptPushRequest(const AttemptPushRequest& from);
+  AttemptPushRequest(AttemptPushRequest&& from) noexcept
+    : AttemptPushRequest() {
     *this = ::std::move(from);
   }
 
-  inline AttemptToPushModelRequest& operator=(const AttemptToPushModelRequest& from) {
+  inline AttemptPushRequest& operator=(const AttemptPushRequest& from) {
     CopyFrom(from);
     return *this;
   }
-  inline AttemptToPushModelRequest& operator=(AttemptToPushModelRequest&& from) noexcept {
+  inline AttemptPushRequest& operator=(AttemptPushRequest&& from) noexcept {
     if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1295,34 +1295,34 @@ class AttemptToPushModelRequest :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const AttemptToPushModelRequest& default_instance();
+  static const AttemptPushRequest& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const AttemptToPushModelRequest* internal_default_instance() {
-    return reinterpret_cast<const AttemptToPushModelRequest*>(
-               &_AttemptToPushModelRequest_default_instance_);
+  static inline const AttemptPushRequest* internal_default_instance() {
+    return reinterpret_cast<const AttemptPushRequest*>(
+               &_AttemptPushRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     8;
 
-  void Swap(AttemptToPushModelRequest* other);
-  friend void swap(AttemptToPushModelRequest& a, AttemptToPushModelRequest& b) {
+  void Swap(AttemptPushRequest* other);
+  friend void swap(AttemptPushRequest& a, AttemptPushRequest& b) {
     a.Swap(&b);
   }
 
   // implements Message ----------------------------------------------
 
-  inline AttemptToPushModelRequest* New() const final {
-    return CreateMaybeMessage<AttemptToPushModelRequest>(nullptr);
+  inline AttemptPushRequest* New() const final {
+    return CreateMaybeMessage<AttemptPushRequest>(nullptr);
   }
 
-  AttemptToPushModelRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<AttemptToPushModelRequest>(arena);
+  AttemptPushRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AttemptPushRequest>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const AttemptToPushModelRequest& from);
-  void MergeFrom(const AttemptToPushModelRequest& from);
+  void CopyFrom(const AttemptPushRequest& from);
+  void MergeFrom(const AttemptPushRequest& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1343,10 +1343,10 @@ class AttemptToPushModelRequest :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(AttemptToPushModelRequest* other);
+  void InternalSwap(AttemptPushRequest* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ptre.AttemptToPushModelRequest";
+    return "ptre.AttemptPushRequest";
   }
   private:
   inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
@@ -1376,7 +1376,7 @@ class AttemptToPushModelRequest :
   ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
   void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
 
-  // @@protoc_insertion_point(class_scope:ptre.AttemptToPushModelRequest)
+  // @@protoc_insertion_point(class_scope:ptre.AttemptPushRequest)
  private:
   class HasBitSetters;
 
@@ -1387,23 +1387,23 @@ class AttemptToPushModelRequest :
 };
 // -------------------------------------------------------------------
 
-class AttemptToPushModelResponse :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AttemptToPushModelResponse) */ {
+class AttemptPushResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AttemptPushResponse) */ {
  public:
-  AttemptToPushModelResponse();
-  virtual ~AttemptToPushModelResponse();
+  AttemptPushResponse();
+  virtual ~AttemptPushResponse();
 
-  AttemptToPushModelResponse(const AttemptToPushModelResponse& from);
-  AttemptToPushModelResponse(AttemptToPushModelResponse&& from) noexcept
-    : AttemptToPushModelResponse() {
+  AttemptPushResponse(const AttemptPushResponse& from);
+  AttemptPushResponse(AttemptPushResponse&& from) noexcept
+    : AttemptPushResponse() {
     *this = ::std::move(from);
   }
 
-  inline AttemptToPushModelResponse& operator=(const AttemptToPushModelResponse& from) {
+  inline AttemptPushResponse& operator=(const AttemptPushResponse& from) {
     CopyFrom(from);
     return *this;
   }
-  inline AttemptToPushModelResponse& operator=(AttemptToPushModelResponse&& from) noexcept {
+  inline AttemptPushResponse& operator=(AttemptPushResponse&& from) noexcept {
     if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1421,34 +1421,34 @@ class AttemptToPushModelResponse :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const AttemptToPushModelResponse& default_instance();
+  static const AttemptPushResponse& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const AttemptToPushModelResponse* internal_default_instance() {
-    return reinterpret_cast<const AttemptToPushModelResponse*>(
-               &_AttemptToPushModelResponse_default_instance_);
+  static inline const AttemptPushResponse* internal_default_instance() {
+    return reinterpret_cast<const AttemptPushResponse*>(
+               &_AttemptPushResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     9;
 
-  void Swap(AttemptToPushModelResponse* other);
-  friend void swap(AttemptToPushModelResponse& a, AttemptToPushModelResponse& b) {
+  void Swap(AttemptPushResponse* other);
+  friend void swap(AttemptPushResponse& a, AttemptPushResponse& b) {
     a.Swap(&b);
   }
 
   // implements Message ----------------------------------------------
 
-  inline AttemptToPushModelResponse* New() const final {
-    return CreateMaybeMessage<AttemptToPushModelResponse>(nullptr);
+  inline AttemptPushResponse* New() const final {
+    return CreateMaybeMessage<AttemptPushResponse>(nullptr);
   }
 
-  AttemptToPushModelResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<AttemptToPushModelResponse>(arena);
+  AttemptPushResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AttemptPushResponse>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const AttemptToPushModelResponse& from);
-  void MergeFrom(const AttemptToPushModelResponse& from);
+  void CopyFrom(const AttemptPushResponse& from);
+  void MergeFrom(const AttemptPushResponse& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1469,10 +1469,10 @@ class AttemptToPushModelResponse :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(AttemptToPushModelResponse* other);
+  void InternalSwap(AttemptPushResponse* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ptre.AttemptToPushModelResponse";
+    return "ptre.AttemptPushResponse";
   }
   private:
   inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
@@ -1502,7 +1502,7 @@ class AttemptToPushModelResponse :
   bool available() const;
   void set_available(bool value);
 
-  // @@protoc_insertion_point(class_scope:ptre.AttemptToPushModelResponse)
+  // @@protoc_insertion_point(class_scope:ptre.AttemptPushResponse)
  private:
   class HasBitSetters;
 
@@ -1513,23 +1513,23 @@ class AttemptToPushModelResponse :
 };
 // -------------------------------------------------------------------
 
-class AckPushModelDoneRequest :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AckPushModelDoneRequest) */ {
+class AckPushDoneRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AckPushDoneRequest) */ {
  public:
-  AckPushModelDoneRequest();
-  virtual ~AckPushModelDoneRequest();
+  AckPushDoneRequest();
+  virtual ~AckPushDoneRequest();
 
-  AckPushModelDoneRequest(const AckPushModelDoneRequest& from);
-  AckPushModelDoneRequest(AckPushModelDoneRequest&& from) noexcept
-    : AckPushModelDoneRequest() {
+  AckPushDoneRequest(const AckPushDoneRequest& from);
+  AckPushDoneRequest(AckPushDoneRequest&& from) noexcept
+    : AckPushDoneRequest() {
     *this = ::std::move(from);
   }
 
-  inline AckPushModelDoneRequest& operator=(const AckPushModelDoneRequest& from) {
+  inline AckPushDoneRequest& operator=(const AckPushDoneRequest& from) {
     CopyFrom(from);
     return *this;
   }
-  inline AckPushModelDoneRequest& operator=(AckPushModelDoneRequest&& from) noexcept {
+  inline AckPushDoneRequest& operator=(AckPushDoneRequest&& from) noexcept {
     if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1547,34 +1547,34 @@ class AckPushModelDoneRequest :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const AckPushModelDoneRequest& default_instance();
+  static const AckPushDoneRequest& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const AckPushModelDoneRequest* internal_default_instance() {
-    return reinterpret_cast<const AckPushModelDoneRequest*>(
-               &_AckPushModelDoneRequest_default_instance_);
+  static inline const AckPushDoneRequest* internal_default_instance() {
+    return reinterpret_cast<const AckPushDoneRequest*>(
+               &_AckPushDoneRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     10;
 
-  void Swap(AckPushModelDoneRequest* other);
-  friend void swap(AckPushModelDoneRequest& a, AckPushModelDoneRequest& b) {
+  void Swap(AckPushDoneRequest* other);
+  friend void swap(AckPushDoneRequest& a, AckPushDoneRequest& b) {
     a.Swap(&b);
   }
 
   // implements Message ----------------------------------------------
 
-  inline AckPushModelDoneRequest* New() const final {
-    return CreateMaybeMessage<AckPushModelDoneRequest>(nullptr);
+  inline AckPushDoneRequest* New() const final {
+    return CreateMaybeMessage<AckPushDoneRequest>(nullptr);
   }
 
-  AckPushModelDoneRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<AckPushModelDoneRequest>(arena);
+  AckPushDoneRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AckPushDoneRequest>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const AckPushModelDoneRequest& from);
-  void MergeFrom(const AckPushModelDoneRequest& from);
+  void CopyFrom(const AckPushDoneRequest& from);
+  void MergeFrom(const AckPushDoneRequest& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1595,10 +1595,10 @@ class AckPushModelDoneRequest :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(AckPushModelDoneRequest* other);
+  void InternalSwap(AckPushDoneRequest* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ptre.AckPushModelDoneRequest";
+    return "ptre.AckPushDoneRequest";
   }
   private:
   inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
@@ -1628,7 +1628,7 @@ class AckPushModelDoneRequest :
   ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
   void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
 
-  // @@protoc_insertion_point(class_scope:ptre.AckPushModelDoneRequest)
+  // @@protoc_insertion_point(class_scope:ptre.AckPushDoneRequest)
  private:
   class HasBitSetters;
 
@@ -1639,23 +1639,23 @@ class AckPushModelDoneRequest :
 };
 // -------------------------------------------------------------------
 
-class AckPushModelDoneResponse :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AckPushModelDoneResponse) */ {
+class AckPushDoneResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AckPushDoneResponse) */ {
  public:
-  AckPushModelDoneResponse();
-  virtual ~AckPushModelDoneResponse();
+  AckPushDoneResponse();
+  virtual ~AckPushDoneResponse();
 
-  AckPushModelDoneResponse(const AckPushModelDoneResponse& from);
-  AckPushModelDoneResponse(AckPushModelDoneResponse&& from) noexcept
-    : AckPushModelDoneResponse() {
+  AckPushDoneResponse(const AckPushDoneResponse& from);
+  AckPushDoneResponse(AckPushDoneResponse&& from) noexcept
+    : AckPushDoneResponse() {
     *this = ::std::move(from);
   }
 
-  inline AckPushModelDoneResponse& operator=(const AckPushModelDoneResponse& from) {
+  inline AckPushDoneResponse& operator=(const AckPushDoneResponse& from) {
     CopyFrom(from);
     return *this;
   }
-  inline AckPushModelDoneResponse& operator=(AckPushModelDoneResponse&& from) noexcept {
+  inline AckPushDoneResponse& operator=(AckPushDoneResponse&& from) noexcept {
     if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1673,34 +1673,34 @@ class AckPushModelDoneResponse :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const AckPushModelDoneResponse& default_instance();
+  static const AckPushDoneResponse& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const AckPushModelDoneResponse* internal_default_instance() {
-    return reinterpret_cast<const AckPushModelDoneResponse*>(
-               &_AckPushModelDoneResponse_default_instance_);
+  static inline const AckPushDoneResponse* internal_default_instance() {
+    return reinterpret_cast<const AckPushDoneResponse*>(
+               &_AckPushDoneResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     11;
 
-  void Swap(AckPushModelDoneResponse* other);
-  friend void swap(AckPushModelDoneResponse& a, AckPushModelDoneResponse& b) {
+  void Swap(AckPushDoneResponse* other);
+  friend void swap(AckPushDoneResponse& a, AckPushDoneResponse& b) {
     a.Swap(&b);
   }
 
   // implements Message ----------------------------------------------
 
-  inline AckPushModelDoneResponse* New() const final {
-    return CreateMaybeMessage<AckPushModelDoneResponse>(nullptr);
+  inline AckPushDoneResponse* New() const final {
+    return CreateMaybeMessage<AckPushDoneResponse>(nullptr);
   }
 
-  AckPushModelDoneResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<AckPushModelDoneResponse>(arena);
+  AckPushDoneResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AckPushDoneResponse>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const AckPushModelDoneResponse& from);
-  void MergeFrom(const AckPushModelDoneResponse& from);
+  void CopyFrom(const AckPushDoneResponse& from);
+  void MergeFrom(const AckPushDoneResponse& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1721,10 +1721,10 @@ class AckPushModelDoneResponse :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(AckPushModelDoneResponse* other);
+  void InternalSwap(AckPushDoneResponse* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ptre.AckPushModelDoneResponse";
+    return "ptre.AckPushDoneResponse";
   }
   private:
   inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
@@ -1748,7 +1748,7 @@ class AckPushModelDoneResponse :
 
   // accessors -------------------------------------------------------
 
-  // @@protoc_insertion_point(class_scope:ptre.AckPushModelDoneResponse)
+  // @@protoc_insertion_point(class_scope:ptre.AckPushDoneResponse)
  private:
   class HasBitSetters;
 
@@ -2544,61 +2544,61 @@ GetRemoteParamAddressResponse::mr() const {
 
 // -------------------------------------------------------------------
 
-// AttemptToPushModelRequest
+// AttemptPushRequest
 
 // int32 rank = 1;
-inline void AttemptToPushModelRequest::clear_rank() {
+inline void AttemptPushRequest::clear_rank() {
   rank_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 AttemptToPushModelRequest::rank() const {
-  // @@protoc_insertion_point(field_get:ptre.AttemptToPushModelRequest.rank)
+inline ::PROTOBUF_NAMESPACE_ID::int32 AttemptPushRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.AttemptPushRequest.rank)
   return rank_;
 }
-inline void AttemptToPushModelRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void AttemptPushRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
   rank_ = value;
-  // @@protoc_insertion_point(field_set:ptre.AttemptToPushModelRequest.rank)
+  // @@protoc_insertion_point(field_set:ptre.AttemptPushRequest.rank)
 }
 
 // -------------------------------------------------------------------
 
-// AttemptToPushModelResponse
+// AttemptPushResponse
 
 // bool available = 1;
-inline void AttemptToPushModelResponse::clear_available() {
+inline void AttemptPushResponse::clear_available() {
   available_ = false;
 }
-inline bool AttemptToPushModelResponse::available() const {
-  // @@protoc_insertion_point(field_get:ptre.AttemptToPushModelResponse.available)
+inline bool AttemptPushResponse::available() const {
+  // @@protoc_insertion_point(field_get:ptre.AttemptPushResponse.available)
   return available_;
 }
-inline void AttemptToPushModelResponse::set_available(bool value) {
+inline void AttemptPushResponse::set_available(bool value) {
   
   available_ = value;
-  // @@protoc_insertion_point(field_set:ptre.AttemptToPushModelResponse.available)
+  // @@protoc_insertion_point(field_set:ptre.AttemptPushResponse.available)
 }
 
 // -------------------------------------------------------------------
 
-// AckPushModelDoneRequest
+// AckPushDoneRequest
 
 // int32 rank = 1;
-inline void AckPushModelDoneRequest::clear_rank() {
+inline void AckPushDoneRequest::clear_rank() {
   rank_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 AckPushModelDoneRequest::rank() const {
-  // @@protoc_insertion_point(field_get:ptre.AckPushModelDoneRequest.rank)
+inline ::PROTOBUF_NAMESPACE_ID::int32 AckPushDoneRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.AckPushDoneRequest.rank)
   return rank_;
 }
-inline void AckPushModelDoneRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void AckPushDoneRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
   rank_ = value;
-  // @@protoc_insertion_point(field_set:ptre.AckPushModelDoneRequest.rank)
+  // @@protoc_insertion_point(field_set:ptre.AckPushDoneRequest.rank)
 }
 
 // -------------------------------------------------------------------
 
-// AckPushModelDoneResponse
+// AckPushDoneResponse
 
 // -------------------------------------------------------------------
 

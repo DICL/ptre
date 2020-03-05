@@ -57,9 +57,9 @@ grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-grpc::Status RdmaServiceImpl::AttemptToPushModel(grpc::ServerContext* context,
-                                      const AttemptToPushModelRequest* request,
-                                      AttemptToPushModelResponse* response) {
+grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,
+                                      const AttemptPushRequest* request,
+                                      AttemptPushResponse* response) {
   int src_rank = request->rank();
   if (cm_->CanReceive(src_rank)) {
     response->set_available(true);
@@ -67,6 +67,14 @@ grpc::Status RdmaServiceImpl::AttemptToPushModel(grpc::ServerContext* context,
     response->set_available(false);
   }
 
+  return grpc::Status::OK;
+}
+
+grpc::Status RdmaServiceImpl::AckPushDone(grpc::ServerContext* context,
+                                      const AckPushDoneRequest* request,
+                                      AckPushDoneResponse* response) {
+  int src_rank = request->rank();
+  cm_->FinalizeRecv(src_rank);
   return grpc::Status::OK;
 }
 

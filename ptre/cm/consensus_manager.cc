@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <random>
+#include <set>
+#include <chrono>
 #include <stdlib.h>
 
 namespace ptre {
@@ -111,10 +113,22 @@ void ConsensusManager::PushTensors(int dst_rank) {
   for (auto it : send_tensors_) {
     const std::string& name = it.first;
     Tensor* t = it.second;
-    rdma_manager_->RdmaWriteTensor(dst_rank, name, *t);
+    rdma_manager_->RdmaWriteTensor(dst_rank, name, *t, false);
   }
   flag_to_send_ = true;
   rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
+  int num_comps = send_tensors_.size() + 1;
+  rdma_manager_->Poll(num_comps);
+}
+
+void ConsensusManager::PushTensors2(int dst_rank) {
+  for (auto it : send_tensors_) {
+    const std::string& name = it.first;
+    Tensor* t = it.second;
+    rdma_manager_->RdmaWriteTensor(dst_rank, name, *t, true);
+  }
+  //flag_to_send_ = true;
+  //rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
   int num_comps = send_tensors_.size() + 1;
   rdma_manager_->Poll(num_comps);
 }
@@ -131,21 +145,40 @@ void ConsensusManager::TcpPushTensors(int dst_rank) {
 bool ConsensusManager::CanReceive(int src_rank) {
   std::lock_guard<std::mutex> guard(rcv_mu_);
   if (rcv_open_) {
+    auto ret = rcv_status_.emplace(src_rank, RECV_IN_PROGRESS);
+    if (!ret.second) {
+      return false;
+    }
     rcv_ing_cnt_++;
     return true;
   }
   return false;
 }
 
+int ConsensusManager::FinalizeRecv(int src_rank) {
+  //std::lock_guard<std::mutex> guard(rcv_mu_);
+  rcv_mu_.lock();
+  rcv_status_.erase(src_rank);
+  rcv_done_cnt_++;
+  rcv_mu_.unlock();
+  rcv_cv_.notify_all();
+  return 0;
+}
+
 int ConsensusManager::OpenReceive() {
+  // TODO: INIT RECV BUF AND RCV COUNTERS BEFORE OPEN!
   std::lock_guard<std::mutex> guard(rcv_mu_);
   rcv_open_ = true;
   return 0;
 }
 
 int ConsensusManager::CloseReceive() {
-  std::lock_guard<std::mutex> guard(rcv_mu_);
+  // TODO: DO NOT OPEN AGAIN BEFORE REDUCE FINISHES.
+  //std::lock_guard<std::mutex> guard(rcv_mu_);
+  rcv_mu_.lock();
   rcv_open_ = false;
+  rcv_mu_.unlock();
+  rcv_cv_.notify_all();
   return 0;
 }
 
@@ -155,6 +188,17 @@ bool ConsensusManager::IsReceiveDone() {
     return true;
   }
   return false;
+}
+
+int ConsensusManager::GetNumIncomingsOrWait() {
+  CloseReceive();
+  std::unique_lock<std::mutex> lk(rcv_mu_);
+  rcv_cv_.wait(lk, [&] {
+        return (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
+      });
+  lk.unlock();
+  // TODO: Must return zero and don't average if counts don't match.
+  return rcv_done_cnt_;
 }
 
 int ConsensusManager::GetRandomTarget() {
@@ -177,6 +221,28 @@ int ConsensusManager::GetIncNeighbor() {
 
 int ConsensusManager::get_peer() {
   peer_selector_->get_peer();
+  return 1;
+}
+
+int ConsensusManager::get_peers(int num_peer, int* peers) {
+  std::set<int> checker;
+  int cnt = 0;
+  auto start = std::chrono::system_clock::now();
+  while (cnt < num_peer) {
+    int peer = peer_selector_->get_peer();
+    auto ret = checker.emplace(peer);
+    if (!ret.second) {
+      continue;
+    } else {
+      peers[cnt] = peer;
+      cnt++;
+    }
+    std::chrono::duration<float> dur = std::chrono::system_clock::now() - start;
+    if (dur.count() > 1) {
+      break;
+    }
+  }
+  return cnt;
 }
 
 const Tensor& ConsensusManager::global_consensus(int index) {
