@@ -40,17 +40,19 @@ struct RdmaEnv {
   //std::thread polling_thread;
 };
 
-enum RdmaWriteIDType {
+enum RdmaWrIdType {
   RDMA_WRITE_ID_TENSOR_WRITE,
-  RDMA_WRITE_ID_INCOMING_FLAG_WRITE
+  RDMA_WRITE_ID_INCOMING_FLAG_WRITE,
+  RDMA_WR_ID_READ_TWO,
+  RDMA_WR_ID_CAS_TWO
 };
 
-class RdmaWriteID {
+class RdmaWrId {
  public:
-  RdmaWriteID(RdmaWriteIDType write_type, void* write_context)
+  RdmaWrId(RdmaWrIdType write_type, void* write_context)
       : write_type(write_type), write_context(write_context) {}
 
-  RdmaWriteIDType write_type;
+  RdmaWrIdType write_type;
   void* write_context;
 };
 
@@ -102,7 +104,9 @@ static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
         if (curr_wc.status < 0) {
           std::cerr << "Bad wc status " << curr_wc.status << endl;
         }
-        RdmaWriteID* wr_id = reinterpret_cast<RdmaWriteID*>(curr_wc.wr_id);
+        RdmaWrId* wr_id = reinterpret_cast<RdmaWrId*>(curr_wc.wr_id);
+        //std::cout << "WorkCompletion (RdmaWrIdType=" << wr_id->write_type
+        //    << ")\n";
         delete wr_id;
       }
       cnt += new_comps;
@@ -115,6 +119,23 @@ int post_write(size_t buffer_size, uint64_t src_addr,
                uint32_t rkey, uint64_t wr_id,
                ibv_qp* qp);
 int post_fetch_and_add(size_t buffer_size, uint64_t src_addr,
+               uint32_t lkey, uint64_t remote_addr,
+               uint32_t rkey, uint64_t wr_id,
+               struct ibv_qp *qp);
+int post_atomic_cmp_and_swp(size_t buffer_size,
+    uint64_t local_addr,
+    uint32_t lkey,
+    uint64_t remote_addr,
+               uint32_t rkey,
+               struct ibv_send_wr& wr,
+               uint64_t wr_id,
+               struct ibv_qp *qp, uint64_t compare_add, uint64_t swap);
+int post_atomic_add(size_t buffer_size, uint64_t src_addr,
+               uint32_t lkey, uint64_t remote_addr,
+               uint32_t rkey, uint64_t wr_id,
+               struct ibv_qp *qp,
+               uint64_t compare_add, uint64_t swap);
+int post_read(size_t buffer_size, uint64_t local_addr,
                uint32_t lkey, uint64_t remote_addr,
                uint32_t rkey, uint64_t wr_id,
                struct ibv_qp *qp);

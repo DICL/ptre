@@ -73,6 +73,7 @@ grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,
 grpc::Status RdmaServiceImpl::AckPushDone(grpc::ServerContext* context,
                                       const AckPushDoneRequest* request,
                                       AckPushDoneResponse* response) {
+  //std::cout << "\nServer got AckPushDone\n";
   int src_rank = request->rank();
   cm_->FinalizeRecv(src_rank);
   return grpc::Status::OK;

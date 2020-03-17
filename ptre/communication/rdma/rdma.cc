@@ -10,13 +10,13 @@ int init_rdma_env(RdmaEnv& env) {
   env.dev_list = ibv_get_device_list(nullptr);
   env.context = ibv_open_device(*env.dev_list);
   env.pd = ibv_alloc_pd(env.context);
-  
+
   ret = ibv_query_port(env.context, IB_PORT, &env.port_attr);
   if (ret < 0) {
     std::cout << "ibv_query_port failed. ret=" << ret << std::endl;
     return ret;
   } else {
-    std::cout << "ibv_query_port done." << std::endl;
+    //std::cout << "ibv_query_port done." << std::endl;
   }
 
   /// Local address
@@ -24,7 +24,7 @@ int init_rdma_env(RdmaEnv& env) {
     //union ibv_gid gid;
     int r = ibv_query_gid(env.context, IB_PORT, 0, &env.gid);
     if (r < 0) std::cout << "Failed to ibv_query_gid\n";
-    else std::cout << "GID: " << env.gid.global.subnet_prefix << ", " << env.gid.global.interface_id << std::endl;
+    //else std::cout << "GID: " << env.gid.global.subnet_prefix << ", " << env.gid.global.interface_id << std::endl;
   }
 
   ret = ibv_query_device(env.context, &env.dev_attr);
@@ -32,7 +32,7 @@ int init_rdma_env(RdmaEnv& env) {
     std::cout << "ibv_query_device failed. ret=" << ret << std::endl;
     return ret;
   } else {
-    std::cout << "ibv_query_device done." << std::endl;
+    //std::cout << "ibv_query_device done." << std::endl;
   }
 
   return ret;
@@ -103,8 +103,110 @@ int post_fetch_and_add(size_t buffer_size, uint64_t src_addr,
   wr.send_flags = IBV_SEND_SIGNALED;
   //wr.send_flags = IBV_SEND_INLINE;
   //wr.imm_data = imm_data;
+  wr.wr.atomic.remote_addr = remote_addr;
+  wr.wr.atomic.compare_add = 1;
+  wr.wr.atomic.rkey = rkey;
+
+  struct ibv_send_wr* bad_wr;
+  ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret < 0) {
+    std::cout << "Failed to ibv_post_send" << std::endl;
+  }
+  return ret;
+}
+
+int post_atomic_cmp_and_swp(size_t buffer_size, uint64_t local_addr,
+               uint32_t lkey,
+               uint64_t remote_addr,
+               uint32_t rkey,
+               struct ibv_send_wr& wr,
+               uint64_t wr_id,
+               struct ibv_qp *qp, uint64_t compare_add, uint64_t swap) {
+  int ret = 0;
+
+  struct ibv_sge list;
+  memset(&list, 0, sizeof(struct ibv_sge));
+  list.addr = local_addr;
+  list.length = buffer_size;
+  list.lkey = lkey;
+
+  wr.wr_id = wr_id;
+  wr.sg_list = &list;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_ATOMIC_CMP_AND_SWP;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  //wr.send_flags = IBV_SEND_INLINE;
+  //wr.imm_data = imm_data;
+  wr.wr.atomic.remote_addr = remote_addr;
+  wr.wr.atomic.compare_add = compare_add;
+  wr.wr.atomic.swap = swap;
+  wr.wr.atomic.rkey = rkey;
+
+  struct ibv_send_wr* bad_wr;
+  ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret < 0) {
+    std::cout << "Failed to ibv_post_send" << std::endl;
+  }
+  return ret;
+}
+
+int post_read(size_t buffer_size, uint64_t local_addr,
+               uint32_t lkey, uint64_t remote_addr,
+               uint32_t rkey, uint64_t wr_id,
+               struct ibv_qp *qp) {
+  int ret = 0;
+
+  struct ibv_sge list;
+  memset(&list, 0, sizeof(struct ibv_sge));
+  list.addr = local_addr;
+  list.length = buffer_size;
+  list.lkey = lkey;
+
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.wr_id = wr_id;
+  wr.sg_list = &list;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_RDMA_READ;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  //wr.send_flags = IBV_SEND_INLINE;
+  //wr.imm_data = imm_data;
   wr.wr.rdma.remote_addr = remote_addr;
   wr.wr.rdma.rkey = rkey;
+
+  struct ibv_send_wr* bad_wr;
+  ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret < 0) {
+    std::cout << "Failed to ibv_post_send" << std::endl;
+  }
+  return ret;
+}
+
+int post_atomic_add(size_t buffer_size, uint64_t src_addr,
+               uint32_t lkey, uint64_t remote_addr,
+               uint32_t rkey, uint64_t wr_id,
+               struct ibv_qp *qp,
+               uint64_t compare_add, uint64_t swap) {
+  int ret = 0;
+
+  struct ibv_sge list;
+  list.addr = src_addr;
+  list.length = buffer_size;
+  list.lkey = lkey;
+
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.wr_id = wr_id;
+  wr.sg_list = &list;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_ATOMIC_CMP_AND_SWP;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  //wr.send_flags = IBV_SEND_INLINE;
+  //wr.imm_data = imm_data;
+  wr.wr.atomic.remote_addr = remote_addr;
+  wr.wr.atomic.compare_add = compare_add;
+  wr.wr.atomic.swap = swap;
+  wr.wr.atomic.rkey = rkey;
 
   struct ibv_send_wr* bad_wr;
   ret = ibv_post_send(qp, &wr, &bad_wr);

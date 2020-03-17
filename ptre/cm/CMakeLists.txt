@@ -7,6 +7,7 @@ target_link_libraries(consensus_manager
                       rdma_manager
                       peer_selector
                       grpc_client_cache
+                      glog
                       )
 
 add_executable(test_peer_selector test_peer_selector.cc)

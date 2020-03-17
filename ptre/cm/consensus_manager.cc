@@ -4,7 +4,13 @@
 #include <random>
 #include <set>
 #include <chrono>
+#include <cstring>
 #include <stdlib.h>
+#include <algorithm>
+
+#include <glog/logging.h>
+
+#define DDLOG DLOG(INFO) << "RANK:" << ptre_rank_ << " "
 
 namespace ptre {
 
@@ -52,6 +58,7 @@ void ConsensusManager::InitBufTensor(const std::string& name,
   Tensor* send_tensor = new Tensor(tensor.dtype(), tensor.shape());
   send_tensors_.emplace(name, send_tensor);
   send_tensors_list_.push_back(send_tensor);
+  tensor_names_.push_back(name);
 
   rdma_manager_->InitTensorMR(0, name, recv_tensor, send_tensor);
   //for (int i = 0; i < ptre_size_; i++) {
@@ -118,7 +125,9 @@ void ConsensusManager::PushTensors(int dst_rank) {
   flag_to_send_ = true;
   rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
   int num_comps = send_tensors_.size() + 1;
+  //LOG(INFO) << "Polling " << num_comps;
   rdma_manager_->Poll(num_comps);
+  //LOG(INFO) << "Polling done.";
 }
 
 void ConsensusManager::PushTensors2(int dst_rank) {
@@ -127,10 +136,50 @@ void ConsensusManager::PushTensors2(int dst_rank) {
     Tensor* t = it.second;
     rdma_manager_->RdmaWriteTensor(dst_rank, name, *t, true);
   }
+  //std::cout << "\n[RANK=" << ptre_rank_ << "]: RdmaWriteTensor Done.\n";
   //flag_to_send_ = true;
   //rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
-  int num_comps = send_tensors_.size() + 1;
+  int num_comps = send_tensors_.size();
   rdma_manager_->Poll(num_comps);
+  //std::cout << "\n[RANK=" << ptre_rank_ << "]: Poll Done.\n";
+}
+
+void ConsensusManager::PushTensorsV3(int dst_rank) {
+  send_mu_.lock();
+  send_status_ = SEND_IN_PROGRESS;
+  send_mu_.unlock();
+  if (0) {
+    for (auto it : send_tensors_) {
+      const std::string& name = it.first;
+      Tensor* t = it.second;
+      rdma_manager_->PushTensorAtomicAddBatch(dst_rank, name, *t);
+    }
+  } else {
+    //for (auto& name : actual_comm_tensors_) {
+    //  if (ptre_rank_ == 0) {
+    //    Tensor* t = send_tensors_[name];
+    //    std::cout << t->NumElements() << std::endl;
+    //  }
+    //}
+    for (auto& name : actual_comm_tensors_) {
+      //DDLOG << name;
+      //if (1) {
+      //if (name.compare("block1_conv1/kernel:0") == 0) {
+      //if (name.compare("block4_conv2/kernel:0") == 0) {
+      if (name.rfind("block4", 0) == 0) {
+        Tensor* t = send_tensors_[name];
+        try {
+          rdma_manager_->PushTensorAtomicAddBatch(dst_rank, name, *t);
+        } catch (std::exception& e) {
+          std::cerr << "Exception caught : " << e.what() << std::endl;
+        }
+      }
+    }
+  }
+  send_mu_.lock();
+  send_status_ = SEND_IDLE;
+  send_cv_.notify_all();
+  send_mu_.unlock();
 }
 
 void ConsensusManager::TcpPushTensors(int dst_rank) {
@@ -150,6 +199,7 @@ bool ConsensusManager::CanReceive(int src_rank) {
       return false;
     }
     rcv_ing_cnt_++;
+    //std::cout << "\n[RANK=" << ptre_rank_ << "]: rcv_ing_cnt=" << rcv_ing_cnt_ << std::endl;
     return true;
   }
   return false;
@@ -160,9 +210,18 @@ int ConsensusManager::FinalizeRecv(int src_rank) {
   rcv_mu_.lock();
   rcv_status_.erase(src_rank);
   rcv_done_cnt_++;
-  rcv_mu_.unlock();
+  //std::cout << "\n[RANK=" << ptre_rank_ << "]: Got Ack from rank=" << src_rank << ", rcv_done_cnt=" << rcv_done_cnt_ << "/" << rcv_ing_cnt_ << ", open=" << rcv_open_ << std::endl;
   rcv_cv_.notify_all();
+  rcv_mu_.unlock();
   return 0;
+}
+
+int ConsensusManager::InitRecvBuf() {
+  for (auto& it : recv_tensors_) {
+    Tensor* t = it.second;
+    int size = t->tensor_data().size();
+    memset(const_cast<char*>(t->tensor_data().data()), 0, size);
+  }
 }
 
 int ConsensusManager::OpenReceive() {
@@ -177,8 +236,8 @@ int ConsensusManager::CloseReceive() {
   //std::lock_guard<std::mutex> guard(rcv_mu_);
   rcv_mu_.lock();
   rcv_open_ = false;
-  rcv_mu_.unlock();
   rcv_cv_.notify_all();
+  rcv_mu_.unlock();
   return 0;
 }
 
@@ -190,15 +249,65 @@ bool ConsensusManager::IsReceiveDone() {
   return false;
 }
 
-int ConsensusManager::GetNumIncomingsOrWait() {
+int ConsensusManager::WaitAndGetNumIncomings() {
+  //LOG(INFO) << "RANK:" << ptre_rank_ << " CloseReceive";
   CloseReceive();
   std::unique_lock<std::mutex> lk(rcv_mu_);
   rcv_cv_.wait(lk, [&] {
+        //LOG(INFO) << "RANK:" << ptre_rank_ << " rcv_ing_cnt=" << rcv_ing_cnt_ << " rcv_done_cnt=" << rcv_done_cnt_;
         return (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
+        //return (rcv_ing_cnt_ == rcv_done_cnt_);
       });
   lk.unlock();
   // TODO: Must return zero and don't average if counts don't match.
   return rcv_done_cnt_;
+}
+
+int ConsensusManager::CountReduceAndOpenRecv(std::string& name) {
+  rcv_mu_.lock();
+  reduce_cnt_++;
+  //LOG(INFO) << "RANK:" << ptre_rank_ << " reduce_cnt=" << reduce_cnt_;
+  if (is_init_num_rcv_tensors_) {
+    if (reduce_cnt_ == num_rcv_tensors_) {
+      /// Open Receive
+      rcv_ing_cnt_ = 0;
+      rcv_done_cnt_ = 0;
+      InitRecvBuf();
+      //LOG(INFO) << "RANK:" << ptre_rank_ << " Open Receive";
+      rcv_open_ = true;
+      reduce_cnt_ = 0;
+    }
+  } else {
+    actual_comm_tensors_.push_back(name);
+    num_rcv_tensors_ = reduce_cnt_;
+  }
+  rcv_mu_.unlock();
+  return 0;
+}
+
+int ConsensusManager::InitNumRecvTensors() {
+  rcv_mu_.lock();
+  is_init_num_rcv_tensors_ = true;
+  std::cout << "RANK:" << ptre_rank_ << " NUM_RECV_TENSORS = " << num_rcv_tensors_ << std::endl;
+  /// Open Receive
+  rcv_ing_cnt_ = 0;
+  rcv_done_cnt_ = 0;
+  InitRecvBuf();
+  rcv_open_ = true;
+  reduce_cnt_ = 0;
+
+  std::vector<std::string> tmp_vec;
+  for (auto& name : actual_comm_tensors_) {
+    tmp_vec.push_back(name);
+  }
+  actual_comm_tensors_.clear();
+  for (auto& name : tensor_names_) {
+    if (std::find(tmp_vec.begin(), tmp_vec.end(), name) != tmp_vec.end()) {
+      actual_comm_tensors_.push_back(name);
+    }
+  }
+  rcv_mu_.unlock();
+  return 0;
 }
 
 int ConsensusManager::GetRandomTarget() {

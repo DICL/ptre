@@ -13,6 +13,8 @@
 #include <typeinfo>
 #include <atomic>
 
+//#include <glog/logging.h>
+
 #include "ptre/kernels/ptre_ops.h"
 //#include "ptre/kernels/ptre_op_helpers.h"
 //#include "ptre/ptre_global.h"
@@ -96,6 +98,7 @@ struct PtreGlobal {
   int incoming_peer;
 
   bool barrier_variable = false;
+  bool is_broadcast_done = false;
 
   ~PtreGlobal() {
     if (background_thread.joinable()) {
@@ -147,6 +150,9 @@ void ProcessRequestQueueInternal1() {
   mu.unlock();
   if (dst_rank >= 0) {
     ptre_global.cm.PushTensors(dst_rank);
+    GrpcClient* grpc_client;
+    ptre_global.grpc_client_cache->GetClient(dst_rank, &grpc_client);
+    grpc_client->AckPushDone();
   }
 }
 
@@ -164,17 +170,24 @@ void ProcessRequestQueueInternalAtomicAdd() {
     // TODO: 1. Attemp
     GrpcClient* grpc_client;
     ptre_global.grpc_client_cache->GetClient(dst_rank, &grpc_client);
-    bool can_push = grpc_client->AttemptPush();
+    //bool can_push = grpc_client->AttemptPush();
+    bool can_push = true;
     // 2. Push
     if (can_push) {
-      ptre_global.cm.PushTensors2(dst_rank);
+      //std::cout << "\n[RANK=" << ptre_global.rank << "]: PushTensors2()\n";
+      ptre_global.cm.PushTensorsV3(dst_rank);
     // TODO: 3. Ack Push done
+      //std::cout << "\n[RANK=" << ptre_global.rank << "]: AckPushDone()\n";
       grpc_client->AckPushDone();
     }
   }
 }
 
 void ProcessRequestQueue() {
+  if (!ptre_global.is_broadcast_done) {
+    ProcessRequestQueueInternal1();
+    return;
+  }
   if (ptre_global.num_push == 1) {
     ProcessRequestQueueInternal1();
   } else {
@@ -475,6 +488,7 @@ class BroadcastModelOp : public OpKernel {
       cond = ptre_global.q.empty();
       mu.unlock();
     }
+    //ptre_global.is_broadcast_done = true;
   }
 
  private:
@@ -747,26 +761,37 @@ class ModelaverageOp : public OpKernel {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
   }
   void Compute(OpKernelContext* ctx) {
-    int num_incomings = ptre_global.cm.GetNumIncomingsOrWait();
-    bool* ret = ptre_global.cm.is_new_incoming_ptr();
-    if (!*ret) {
-      return;
-    }
-    Tensor var;
     core::RefCountPtr<Var> ref;
-    //TF_RETURN_IF_ERROR(LookupResource(ctx, HandleFromInput(ctx, 0), &ref));
     LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
-
+    Tensor var;
     var = *ref->tensor();
 
-    const Device& d = ctx->template eigen_device<Device>();
-    const Tensor other(ptre_global.cm.global_consensus(var_name_));
-    Tensor m_(DataTypeToEnum<T>::v(), TensorShape({}));
-    m_.flat<T>()(0) = T(num_incomings + 1);
-    const Tensor m(m_);
-    functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(), other.flat<T>());
-
+    bool do_reduce = true;
+    int num_incomings = 1;
+    if (1) {
+      num_incomings = ptre_global.cm.WaitAndGetNumIncomings();
+      if (num_incomings == 0) {
+        do_reduce = false;
+      }
+    } else {
+      bool* ret = ptre_global.cm.is_new_incoming_ptr();
+      if (!*ret) {
+        do_reduce = false;
+      }
+    }
+    if (do_reduce) {
+      const Device& d = ctx->template eigen_device<Device>();
+      const Tensor other(ptre_global.cm.global_consensus(var_name_));
+      Tensor m_(DataTypeToEnum<T>::v(), TensorShape({}));
+      m_.flat<T>()(0) = T(num_incomings + 1);
+      const Tensor m(m_);
+      functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
+          other.flat<T>());
+    }
     ptre_global.incoming_state = 2;  // Used
+    //LOG(INFO) << "CountReduceAndOpenRecv() Entering.";
+    ptre_global.cm.CountReduceAndOpenRecv(var_name_);
+    //LOG(INFO) << "CountReduceAndOpenRecv() Done.";
   }
 
  private:
@@ -831,6 +856,12 @@ class PushTensorOp : public OpKernel {
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
     Tensor* send_tensor = ptre_global.cm.send_tensor(var_name_);
+    // TODO: Make it more correct! (locking)
+    std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
+    ptre_global.cm.send_cv_.wait(lk, [&] {
+        return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
+        });
+    lk.unlock();
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(),
         send_tensor->flat<T>());
   }
@@ -879,7 +910,8 @@ REGISTER_KERNELS(GPU, double);
 extern "C" {
 
 int ptre_init(int size, int rank, char* grpc_hosts_file,
-              int selection_strategy) {
+              int selection_strategy, int num_push) {
+  tensorflow::ptre_global.num_push = num_push;
   tensorflow::InitComm(size, rank, grpc_hosts_file);
   tensorflow::ptre_global.cm.InitPeerSelector(selection_strategy);
 }
@@ -923,9 +955,25 @@ void ptre_enqueue_push() {
   int n = ptre_global.num_push;
   int targets[n];
   int ret = ptre_global.cm.get_peers(n, targets);
+  //std::cout << "\n[RANK=" << ptre_global.rank << "]: targets=";
+  //for (int i = 0; i < ret; i++) {
+  //  std::cout << targets[i];
+  //  if (i == ret - 1) {
+  //    std::cout << "\n";
+  //  } else {
+  //    std::cout << ", ";
+  //  }
+  //}
   //mu.lock();
   for (int i = 0; i < ret; i++) {
-    ptre_global.q.push(targets[i]);
+    tensorflow::GrpcClient* grpc_client;
+    ptre_global.grpc_client_cache->GetClient(targets[i], &grpc_client);
+    bool can_push = grpc_client->AttemptPush();
+    //LOG(INFO) << "RANK:" << ptre_global.rank << " can_push=" << can_push << " for rank=" << targets[i];
+    //can_push = true;
+    if (can_push) {
+      ptre_global.q.push(targets[i]);
+    }
   }
   mu.unlock();
   //for (int i = 0; i < ptre_global.num_push; i++) {
@@ -956,8 +1004,8 @@ void ptre_finalize(unsigned int wait_time) {
 
 void ptre_synchronization_barrier() {
   // One time use only
-  //std::cout << "Entered Barrier" << std::endl;
   using tensorflow::ptre_global;
+  LOG(INFO) << "RANK:" << ptre_global.rank << " Entered Barrier";
   ptre_global.barrier_variable = true;
   bool peer_flag[ptre_global.size] = {};
   peer_flag[ptre_global.rank] = true;
@@ -979,6 +1027,13 @@ void ptre_synchronization_barrier() {
       peer_flag[i] = ret;
     }
   }
+  ptre_global.is_broadcast_done = true;
+  ptre_global.cm.set_rcv_done_cnt(0);
+}
+
+void ptre_init_num_rcv_tensors() {
+  LOG(INFO) << "Init num_rcv_tensors";
+  tensorflow::ptre_global.cm.InitNumRecvTensors();
 }
 
 }

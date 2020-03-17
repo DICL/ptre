@@ -30,5 +30,6 @@ target_link_libraries(ptre_ops
                       rdma_grpc_server
                       rdma_grpc_client
                       grpc_client_cache
+                      glog
 )
 #target_compile_definitions(ptre_ops PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)

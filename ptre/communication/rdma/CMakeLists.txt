@@ -21,7 +21,14 @@ target_link_libraries(rdma_grpc_server
 add_library          (rdma_grpc_client SHARED grpc_client.cc)
 target_link_libraries(rdma_grpc_client
                         rdma_service_grpc_proto
-                        rdma_manager)
+                        rdma_manager
+                        glog)
+
+add_library (rdma_task SHARED rdma_task.cc)
+target_link_libraries(rdma_task rdma)
+
+add_library (rdma_worker SHARED rdma_worker.cc)
+target_link_libraries(rdma_worker rdma_task)
 
 add_executable       (grpc_server_test grpc_server_test.cc)
 target_link_libraries(grpc_server_test

@@ -20,7 +20,7 @@ std::string grpc_target(int dst_rank) {
 GrpcClient::GrpcClient(int src_rank, int dst_rank, const std::string& hostname)
     : src_rank_(src_rank), dst_rank_(dst_rank), hostname_(hostname) {
   //std::string target(grpc_target(dst_rank_));
-  std::cout << "target: " << hostname << std::endl;
+  //std::cout << "target: " << hostname << std::endl;
   std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(hostname,
       grpc::InsecureChannelCredentials());
   stub_ = Rdma::NewStub(channel);
@@ -117,6 +117,7 @@ int GrpcClient::AckPushDone() {
   ClientContext context;
   request.set_rank(src_rank_);
   grpc::Status status = stub_->AckPushDone(&context, request, &response);
+  //std::cout << "\n Client AckPushDone\n";
 }
 
 bool GrpcClient::Barrier() {

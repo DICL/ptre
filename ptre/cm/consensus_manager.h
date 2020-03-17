@@ -37,6 +37,7 @@ class ConsensusManager {
   void PushModel(int dst_rank);
   void PushTensors(int dst_rank);
   void PushTensors2(int dst_rank);
+  void PushTensorsV3(int dst_rank);
   void TcpPushTensors(int dst_rank);
   void SetPushReady() { ready_to_push_ = true; }
   bool IsPushReady() { return ready_to_push_; }
@@ -66,10 +67,23 @@ class ConsensusManager {
   bool CanReceive(int src_rank);
   int FinalizeRecv(int src_rank);
 
+  int InitRecvBuf();
   int OpenReceive();
   int CloseReceive();
   bool IsReceiveDone();
-  int GetNumIncomingsOrWait();
+  int WaitAndGetNumIncomings();
+  int CountReduceAndOpenRecv(std::string& name);
+  int InitNumRecvTensors();
+
+  void set_rcv_done_cnt(int cnt) { rcv_done_cnt_ = cnt; }
+
+  std::mutex send_mu_;
+  std::condition_variable send_cv_;
+  enum {
+    SEND_IDLE,
+    SEND_IN_PROGRESS
+  };
+  int send_status_ = SEND_IDLE;
 
  private:
   int ptre_size_;
@@ -79,6 +93,8 @@ class ConsensusManager {
   std::map<std::string, Tensor*> recv_tensors_;
   std::map<std::string, Tensor*> send_tensors_;
   std::vector<Tensor*> send_tensors_list_;
+  std::vector<std::string> tensor_names_;
+  std::vector<std::string> actual_comm_tensors_;
   int num_vars_;
   bool is_initialized_ = false;
   bool* is_new_incoming_ = nullptr;
@@ -86,14 +102,18 @@ class ConsensusManager {
 
   std::mutex rcv_mu_;
   std::condition_variable rcv_cv_;
-  bool rcv_open_ = true;
-  int rcv_ing_cnt_;
-  int rcv_done_cnt_;
+  bool rcv_open_ = false;
+  int rcv_ing_cnt_ = 0;  // num peers
+  int rcv_done_cnt_ = 0;  // num peers
   enum {
     RECV_IN_PROGRESS,
     RECV_DONE
   };
   std::map<int, int> rcv_status_;
+  int num_rcv_tensors_;
+  bool is_init_num_rcv_tensors_ = false;
+  int reduce_cnt_ = 0;  // num tensors
+  int non_reduce_cnt_ = 0;
 
   std::mutex rf_mu_;
   int receiving_from = -1;
