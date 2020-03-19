@@ -7,3 +7,9 @@ target_link_libraries(cas_test rdma_manager
                       rdma_grpc_server
                       rdma_grpc_client
                       )
+
+add_executable(agg_test agg_test.cc)
+target_link_libraries(agg_test 
+  pthread
+  :libtensorflow_framework.so.2
+  tensor_aggregator)

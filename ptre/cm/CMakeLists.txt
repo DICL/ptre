@@ -10,6 +10,11 @@ target_link_libraries(consensus_manager
                       glog
                       )
 
+add_library(tensor_aggregator SHARED tensor_aggregator.cc)
+target_link_libraries(tensor_aggregator
+  pthread
+)
+
 add_executable(test_peer_selector test_peer_selector.cc)
 target_link_libraries(test_peer_selector peer_selector)
 #target_compile_definitions(consensus_manager PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)
