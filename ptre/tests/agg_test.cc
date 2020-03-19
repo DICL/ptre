@@ -56,6 +56,9 @@ int main() {
   while (buf->state != ptre::StatefulAggBuf::kRecvReady);
   std::cout << tensors[0]->DebugString() << std::endl;
 
+  std::cout << agg.buf_ptr(0) << std::endl;
+  std::cout << agg.buf_ptr("0") << std::endl;
+
   agg.Terminate();
 
   return 0;
