@@ -19,6 +19,12 @@ float* TensorAggregator::buf_ptr(const string& name) {
   return agg_buf_ptr(it->second)->flat->data();
 }
 
+size_t TensorAggregator::buf_length(const string& name) {
+  int i = name_to_index_[name];
+  auto& buf_flat = buf_flats_[i];
+  return buf_flat.size() * sizeof(float);
+}
+
 StatefulAggBuf* TensorAggregator::agg_buf_ptr(int i) {
   return target_buf_pairs_[i].second;
 }

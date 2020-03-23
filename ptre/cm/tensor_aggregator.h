@@ -54,6 +54,7 @@ class TensorAggregator {
   // Element Access Functions
   float* buf_ptr(int i);
   float* buf_ptr(const string& name);
+  size_t buf_length(const string& name);
   StatefulAggBuf* agg_buf_ptr(int i);
 
  protected:

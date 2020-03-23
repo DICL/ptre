@@ -30,6 +30,11 @@ target_link_libraries(rdma_task rdma)
 add_library (rdma_worker SHARED rdma_worker.cc)
 target_link_libraries(rdma_worker rdma_task)
 
+add_library (rdma_agg_writer SHARED rdma_agg_writer.cc)
+target_link_libraries(rdma_agg_writer
+  rdma
+  tensor_aggregator)
+
 add_executable       (grpc_server_test grpc_server_test.cc)
 target_link_libraries(grpc_server_test
                         pthread

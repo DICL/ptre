@@ -44,7 +44,8 @@ enum RdmaWrIdType {
   RDMA_WRITE_ID_TENSOR_WRITE,
   RDMA_WRITE_ID_INCOMING_FLAG_WRITE,
   RDMA_WR_ID_READ_TWO,
-  RDMA_WR_ID_CAS_TWO
+  RDMA_WR_ID_CAS_TWO,
+  RDMA_WR_ID_CAS_TENSOR_AGG_STATE
 };
 
 class RdmaWrId {
@@ -60,6 +61,12 @@ struct RemoteMR {
   uint64_t remote_addr;
   uint32_t rkey;
 };
+
+//struct RdmaTensorBuf {
+//  void* buf;
+//  size_t length;
+//  uint64_t state;
+//};
 
 //struct SRdmaTensorChannel {
 //  ibv_qp* qp;
