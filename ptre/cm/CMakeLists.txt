@@ -1,4 +1,8 @@
 add_library(peer_selector SHARED peer_selector.cc)
+target_link_libraries(peer_selector
+                      :libtensorflow_framework.so.2
+                      )
+
 
 #add_library(remote_store SHARED remote_store.cc)
 add_library(consensus_manager SHARED consensus_manager.cc)
@@ -7,7 +11,6 @@ target_link_libraries(consensus_manager
                       rdma_manager
                       peer_selector
                       grpc_client_cache
-                      glog
                       )
 
 add_library(tensor_aggregator SHARED tensor_aggregator.cc)

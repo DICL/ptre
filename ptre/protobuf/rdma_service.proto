@@ -20,6 +20,9 @@ service Rdma {
 
   rpc Barrier(BarrierRequest)
     returns (BarrierResponse);
+
+  rpc GetRemoteAddressV2(GetRemoteAddressV2Request)
+    returns (GetRemoteAddressV2Response);
 }
 
 message Channel {
@@ -90,4 +93,27 @@ message BarrierRequest {
 }
 message BarrierResponse {
   bool entered = 1;
+}
+
+enum BufType {
+  BUF_TYPE_RAW = 0;
+  BUF_TYPE_RECV_BUF = 1;
+  BUF_TYPE_SEND_BUF = 2;
+  BUF_TYPE_AGG_BUF_STATE = 3;
+  BUF_TYPE_AGG_BUF = 4;
+  BUF_TYPE_FLAG_RECV = 5;
+  BUF_TYPE_FLAG_SEND = 6;
+}
+
+message GetRemoteAddressV2Request {
+  int32 rank = 1;
+  BufType type = 2;
+  string name = 3;
+}
+
+message GetRemoteAddressV2Response {
+  int32 rank = 1;
+  BufType type = 2;
+  string name = 3;
+  repeated MemoryRegion mr = 4;
 }

@@ -74,6 +74,14 @@ class BarrierResponseDefaultTypeInternal {
  public:
   ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<BarrierResponse> _instance;
 } _BarrierResponse_default_instance_;
+class GetRemoteAddressV2RequestDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetRemoteAddressV2Request> _instance;
+} _GetRemoteAddressV2Request_default_instance_;
+class GetRemoteAddressV2ResponseDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetRemoteAddressV2Response> _instance;
+} _GetRemoteAddressV2Response_default_instance_;
 }  // namespace ptre
 static void InitDefaultsscc_info_AckPushDoneRequest_rdma_5fservice_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -203,6 +211,35 @@ static void InitDefaultsscc_info_GetRemoteAddressResponse_rdma_5fservice_2eproto
       &scc_info_Channel_rdma_5fservice_2eproto.base,
       &scc_info_MemoryRegion_rdma_5fservice_2eproto.base,}};
 
+static void InitDefaultsscc_info_GetRemoteAddressV2Request_rdma_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::ptre::_GetRemoteAddressV2Request_default_instance_;
+    new (ptr) ::ptre::GetRemoteAddressV2Request();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::ptre::GetRemoteAddressV2Request::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_GetRemoteAddressV2Request_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_GetRemoteAddressV2Request_rdma_5fservice_2eproto}, {}};
+
+static void InitDefaultsscc_info_GetRemoteAddressV2Response_rdma_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::ptre::_GetRemoteAddressV2Response_default_instance_;
+    new (ptr) ::ptre::GetRemoteAddressV2Response();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::ptre::GetRemoteAddressV2Response::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<1> scc_info_GetRemoteAddressV2Response_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 1, InitDefaultsscc_info_GetRemoteAddressV2Response_rdma_5fservice_2eproto}, {
+      &scc_info_MemoryRegion_rdma_5fservice_2eproto.base,}};
+
 static void InitDefaultsscc_info_GetRemoteEnvRequest_rdma_5fservice_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -275,8 +312,8 @@ static void InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto() {
 ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_MemoryRegion_rdma_5fservice_2eproto =
     {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto}, {}};
 
-static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_rdma_5fservice_2eproto[14];
-static constexpr ::PROTOBUF_NAMESPACE_ID::EnumDescriptor const** file_level_enum_descriptors_rdma_5fservice_2eproto = nullptr;
+static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_rdma_5fservice_2eproto[16];
+static const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* file_level_enum_descriptors_rdma_5fservice_2eproto[1];
 static constexpr ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor const** file_level_service_descriptors_rdma_5fservice_2eproto = nullptr;
 
 const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
@@ -377,6 +414,23 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::ptre::BarrierResponse, entered_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Request, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Request, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Request, type_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Request, name_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Response, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Response, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Response, type_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Response, name_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetRemoteAddressV2Response, mr_),
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, sizeof(::ptre::Channel)},
@@ -393,6 +447,8 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 81, -1, sizeof(::ptre::AckPushDoneResponse)},
   { 86, -1, sizeof(::ptre::BarrierRequest)},
   { 91, -1, sizeof(::ptre::BarrierResponse)},
+  { 97, -1, sizeof(::ptre::GetRemoteAddressV2Request)},
+  { 105, -1, sizeof(::ptre::GetRemoteAddressV2Response)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -410,6 +466,8 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_AckPushDoneResponse_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_BarrierRequest_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_BarrierResponse_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteAddressV2Request_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteAddressV2Response_default_instance_),
 };
 
 const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
@@ -433,22 +491,34 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "ponse\022\021\n\tavailable\030\001 \001(\010\"\"\n\022AckPushDoneR"
   "equest\022\014\n\004rank\030\001 \001(\005\"\025\n\023AckPushDoneRespo"
   "nse\"\020\n\016BarrierRequest\"\"\n\017BarrierResponse"
-  "\022\017\n\007entered\030\001 \001(\0102\302\003\n\004Rdma\022E\n\014GetRemoteE"
-  "nv\022\031.ptre.GetRemoteEnvRequest\032\032.ptre.Get"
-  "RemoteEnvResponse\022Q\n\020GetRemoteAddress\022\035."
-  "ptre.GetRemoteAddressRequest\032\036.ptre.GetR"
-  "emoteAddressResponse\022`\n\025GetRemoteParamAd"
-  "dress\022\".ptre.GetRemoteParamAddressReques"
-  "t\032#.ptre.GetRemoteParamAddressResponse\022B"
-  "\n\013AttemptPush\022\030.ptre.AttemptPushRequest\032"
-  "\031.ptre.AttemptPushResponse\022B\n\013AckPushDon"
-  "e\022\030.ptre.AckPushDoneRequest\032\031.ptre.AckPu"
-  "shDoneResponse\0226\n\007Barrier\022\024.ptre.Barrier"
-  "Request\032\025.ptre.BarrierResponseb\006proto3"
+  "\022\017\n\007entered\030\001 \001(\010\"T\n\031GetRemoteAddressV2R"
+  "equest\022\014\n\004rank\030\001 \001(\005\022\033\n\004type\030\002 \001(\0162\r.ptr"
+  "e.BufType\022\014\n\004name\030\003 \001(\t\"u\n\032GetRemoteAddr"
+  "essV2Response\022\014\n\004rank\030\001 \001(\005\022\033\n\004type\030\002 \001("
+  "\0162\r.ptre.BufType\022\014\n\004name\030\003 \001(\t\022\036\n\002mr\030\004 \003"
+  "(\0132\022.ptre.MemoryRegion*\253\001\n\007BufType\022\020\n\014BU"
+  "F_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_RECV_BUF\020\001\022\025\n\021B"
+  "UF_TYPE_SEND_BUF\020\002\022\032\n\026BUF_TYPE_AGG_BUF_S"
+  "TATE\020\003\022\024\n\020BUF_TYPE_AGG_BUF\020\004\022\026\n\022BUF_TYPE"
+  "_FLAG_RECV\020\005\022\026\n\022BUF_TYPE_FLAG_SEND\020\0062\233\004\n"
+  "\004Rdma\022E\n\014GetRemoteEnv\022\031.ptre.GetRemoteEn"
+  "vRequest\032\032.ptre.GetRemoteEnvResponse\022Q\n\020"
+  "GetRemoteAddress\022\035.ptre.GetRemoteAddress"
+  "Request\032\036.ptre.GetRemoteAddressResponse\022"
+  "`\n\025GetRemoteParamAddress\022\".ptre.GetRemot"
+  "eParamAddressRequest\032#.ptre.GetRemotePar"
+  "amAddressResponse\022B\n\013AttemptPush\022\030.ptre."
+  "AttemptPushRequest\032\031.ptre.AttemptPushRes"
+  "ponse\022B\n\013AckPushDone\022\030.ptre.AckPushDoneR"
+  "equest\032\031.ptre.AckPushDoneResponse\0226\n\007Bar"
+  "rier\022\024.ptre.BarrierRequest\032\025.ptre.Barrie"
+  "rResponse\022W\n\022GetRemoteAddressV2\022\037.ptre.G"
+  "etRemoteAddressV2Request\032 .ptre.GetRemot"
+  "eAddressV2Responseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
-static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdma_5fservice_2eproto_sccs[14] = {
+static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdma_5fservice_2eproto_sccs[16] = {
   &scc_info_AckPushDoneRequest_rdma_5fservice_2eproto.base,
   &scc_info_AckPushDoneResponse_rdma_5fservice_2eproto.base,
   &scc_info_AttemptPushRequest_rdma_5fservice_2eproto.base,
@@ -458,6 +528,8 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
   &scc_info_Channel_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteAddressRequest_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteAddressResponse_rdma_5fservice_2eproto.base,
+  &scc_info_GetRemoteAddressV2Request_rdma_5fservice_2eproto.base,
+  &scc_info_GetRemoteAddressV2Response_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteEnvRequest_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteEnvResponse_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto.base,
@@ -467,15 +539,34 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 1278,
-  &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 14, 0,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 1746,
+  &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 16, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
-  file_level_metadata_rdma_5fservice_2eproto, 14, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
+  file_level_metadata_rdma_5fservice_2eproto, 16, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
 };
 
 // Force running AddDescriptors() at dynamic initialization time.
 static bool dynamic_init_dummy_rdma_5fservice_2eproto = (  ::PROTOBUF_NAMESPACE_ID::internal::AddDescriptors(&descriptor_table_rdma_5fservice_2eproto), true);
 namespace ptre {
+const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* BufType_descriptor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&descriptor_table_rdma_5fservice_2eproto);
+  return file_level_enum_descriptors_rdma_5fservice_2eproto[0];
+}
+bool BufType_IsValid(int value) {
+  switch (value) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+      return true;
+    default:
+      return false;
+  }
+}
+
 
 // ===================================================================
 
@@ -4732,6 +4823,808 @@ void BarrierResponse::InternalSwap(BarrierResponse* other) {
 }
 
 
+// ===================================================================
+
+void GetRemoteAddressV2Request::InitAsDefaultInstance() {
+}
+class GetRemoteAddressV2Request::HasBitSetters {
+ public:
+};
+
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int GetRemoteAddressV2Request::kRankFieldNumber;
+const int GetRemoteAddressV2Request::kTypeFieldNumber;
+const int GetRemoteAddressV2Request::kNameFieldNumber;
+#endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
+
+GetRemoteAddressV2Request::GetRemoteAddressV2Request()
+  : ::PROTOBUF_NAMESPACE_ID::Message(), _internal_metadata_(nullptr) {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:ptre.GetRemoteAddressV2Request)
+}
+GetRemoteAddressV2Request::GetRemoteAddressV2Request(const GetRemoteAddressV2Request& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      _internal_metadata_(nullptr) {
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (from.name().size() > 0) {
+    name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.name_);
+  }
+  ::memcpy(&rank_, &from.rank_,
+    static_cast<size_t>(reinterpret_cast<char*>(&type_) -
+    reinterpret_cast<char*>(&rank_)) + sizeof(type_));
+  // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteAddressV2Request)
+}
+
+void GetRemoteAddressV2Request::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetRemoteAddressV2Request_rdma_5fservice_2eproto.base);
+  name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&rank_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&type_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(type_));
+}
+
+GetRemoteAddressV2Request::~GetRemoteAddressV2Request() {
+  // @@protoc_insertion_point(destructor:ptre.GetRemoteAddressV2Request)
+  SharedDtor();
+}
+
+void GetRemoteAddressV2Request::SharedDtor() {
+  name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+
+void GetRemoteAddressV2Request::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const GetRemoteAddressV2Request& GetRemoteAddressV2Request::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetRemoteAddressV2Request_rdma_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void GetRemoteAddressV2Request::Clear() {
+// @@protoc_insertion_point(message_clear_start:ptre.GetRemoteAddressV2Request)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&rank_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&type_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(type_));
+  _internal_metadata_.Clear();
+}
+
+#if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+const char* GetRemoteAddressV2Request::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // int32 rank = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .ptre.BufType type = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+          ::PROTOBUF_NAMESPACE_ID::uint64 val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+          set_type(static_cast<::ptre::BufType>(val));
+        } else goto handle_unusual;
+        continue;
+      // string name = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_name(), ptr, ctx, "ptre.GetRemoteAddressV2Request.name");
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag, &_internal_metadata_, ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
+}
+#else  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+bool GetRemoteAddressV2Request::MergePartialFromCodedStream(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!PROTOBUF_PREDICT_TRUE(EXPRESSION)) goto failure
+  ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+  // @@protoc_insertion_point(parse_start:ptre.GetRemoteAddressV2Request)
+  for (;;) {
+    ::std::pair<::PROTOBUF_NAMESPACE_ID::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // int32 rank = 1;
+      case 1: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (8 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &rank_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // .ptre.BufType type = 2;
+      case 2: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (16 & 0xFF)) {
+          int value = 0;
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   int, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          set_type(static_cast< ::ptre::BufType >(value));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // string name = 3;
+      case 3: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
+                input, this->mutable_name()));
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+            this->name().data(), static_cast<int>(this->name().length()),
+            ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
+            "ptre.GetRemoteAddressV2Request.name"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0) {
+          goto success;
+        }
+        DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SkipField(
+              input, tag, _internal_metadata_.mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:ptre.GetRemoteAddressV2Request)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:ptre.GetRemoteAddressV2Request)
+  return false;
+#undef DO_
+}
+#endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+
+void GetRemoteAddressV2Request::SerializeWithCachedSizes(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:ptre.GetRemoteAddressV2Request)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
+  }
+
+  // .ptre.BufType type = 2;
+  if (this->type() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteEnum(
+      2, this->type(), output);
+  }
+
+  // string name = 3;
+  if (this->name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->name().data(), static_cast<int>(this->name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ptre.GetRemoteAddressV2Request.name");
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
+      3, this->name(), output);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
+        _internal_metadata_.unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:ptre.GetRemoteAddressV2Request)
+}
+
+::PROTOBUF_NAMESPACE_ID::uint8* GetRemoteAddressV2Request::InternalSerializeWithCachedSizesToArray(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:ptre.GetRemoteAddressV2Request)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
+  }
+
+  // .ptre.BufType type = 2;
+  if (this->type() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteEnumToArray(
+      2, this->type(), target);
+  }
+
+  // string name = 3;
+  if (this->name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->name().data(), static_cast<int>(this->name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ptre.GetRemoteAddressV2Request.name");
+    target =
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
+        3, this->name(), target);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:ptre.GetRemoteAddressV2Request)
+  return target;
+}
+
+size_t GetRemoteAddressV2Request::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ptre.GetRemoteAddressV2Request)
+  size_t total_size = 0;
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::ComputeUnknownFieldsSize(
+        _internal_metadata_.unknown_fields());
+  }
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string name = 3;
+  if (this->name().size() > 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->name());
+  }
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->rank());
+  }
+
+  // .ptre.BufType type = 2;
+  if (this->type() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::EnumSize(this->type());
+  }
+
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void GetRemoteAddressV2Request::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:ptre.GetRemoteAddressV2Request)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetRemoteAddressV2Request* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetRemoteAddressV2Request>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.GetRemoteAddressV2Request)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.GetRemoteAddressV2Request)
+    MergeFrom(*source);
+  }
+}
+
+void GetRemoteAddressV2Request::MergeFrom(const GetRemoteAddressV2Request& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:ptre.GetRemoteAddressV2Request)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from.name().size() > 0) {
+
+    name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.name_);
+  }
+  if (from.rank() != 0) {
+    set_rank(from.rank());
+  }
+  if (from.type() != 0) {
+    set_type(from.type());
+  }
+}
+
+void GetRemoteAddressV2Request::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:ptre.GetRemoteAddressV2Request)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void GetRemoteAddressV2Request::CopyFrom(const GetRemoteAddressV2Request& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ptre.GetRemoteAddressV2Request)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GetRemoteAddressV2Request::IsInitialized() const {
+  return true;
+}
+
+void GetRemoteAddressV2Request::Swap(GetRemoteAddressV2Request* other) {
+  if (other == this) return;
+  InternalSwap(other);
+}
+void GetRemoteAddressV2Request::InternalSwap(GetRemoteAddressV2Request* other) {
+  using std::swap;
+  _internal_metadata_.Swap(&other->_internal_metadata_);
+  name_.Swap(&other->name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+    GetArenaNoVirtual());
+  swap(rank_, other->rank_);
+  swap(type_, other->type_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteAddressV2Request::GetMetadata() const {
+  return GetMetadataStatic();
+}
+
+
+// ===================================================================
+
+void GetRemoteAddressV2Response::InitAsDefaultInstance() {
+}
+class GetRemoteAddressV2Response::HasBitSetters {
+ public:
+};
+
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int GetRemoteAddressV2Response::kRankFieldNumber;
+const int GetRemoteAddressV2Response::kTypeFieldNumber;
+const int GetRemoteAddressV2Response::kNameFieldNumber;
+const int GetRemoteAddressV2Response::kMrFieldNumber;
+#endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
+
+GetRemoteAddressV2Response::GetRemoteAddressV2Response()
+  : ::PROTOBUF_NAMESPACE_ID::Message(), _internal_metadata_(nullptr) {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:ptre.GetRemoteAddressV2Response)
+}
+GetRemoteAddressV2Response::GetRemoteAddressV2Response(const GetRemoteAddressV2Response& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      _internal_metadata_(nullptr),
+      mr_(from.mr_) {
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (from.name().size() > 0) {
+    name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.name_);
+  }
+  ::memcpy(&rank_, &from.rank_,
+    static_cast<size_t>(reinterpret_cast<char*>(&type_) -
+    reinterpret_cast<char*>(&rank_)) + sizeof(type_));
+  // @@protoc_insertion_point(copy_constructor:ptre.GetRemoteAddressV2Response)
+}
+
+void GetRemoteAddressV2Response::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_GetRemoteAddressV2Response_rdma_5fservice_2eproto.base);
+  name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&rank_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&type_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(type_));
+}
+
+GetRemoteAddressV2Response::~GetRemoteAddressV2Response() {
+  // @@protoc_insertion_point(destructor:ptre.GetRemoteAddressV2Response)
+  SharedDtor();
+}
+
+void GetRemoteAddressV2Response::SharedDtor() {
+  name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+
+void GetRemoteAddressV2Response::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const GetRemoteAddressV2Response& GetRemoteAddressV2Response::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_GetRemoteAddressV2Response_rdma_5fservice_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void GetRemoteAddressV2Response::Clear() {
+// @@protoc_insertion_point(message_clear_start:ptre.GetRemoteAddressV2Response)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  mr_.Clear();
+  name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&rank_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&type_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(type_));
+  _internal_metadata_.Clear();
+}
+
+#if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+const char* GetRemoteAddressV2Response::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // int32 rank = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .ptre.BufType type = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+          ::PROTOBUF_NAMESPACE_ID::uint64 val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+          set_type(static_cast<::ptre::BufType>(val));
+        } else goto handle_unusual;
+        continue;
+      // string name = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParserUTF8(mutable_name(), ptr, ctx, "ptre.GetRemoteAddressV2Response.name");
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated .ptre.MemoryRegion mr = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(add_mr(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<::PROTOBUF_NAMESPACE_ID::uint8>(ptr) == 34);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag, &_internal_metadata_, ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
+}
+#else  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+bool GetRemoteAddressV2Response::MergePartialFromCodedStream(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!PROTOBUF_PREDICT_TRUE(EXPRESSION)) goto failure
+  ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+  // @@protoc_insertion_point(parse_start:ptre.GetRemoteAddressV2Response)
+  for (;;) {
+    ::std::pair<::PROTOBUF_NAMESPACE_ID::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // int32 rank = 1;
+      case 1: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (8 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &rank_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // .ptre.BufType type = 2;
+      case 2: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (16 & 0xFF)) {
+          int value = 0;
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   int, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          set_type(static_cast< ::ptre::BufType >(value));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // string name = 3;
+      case 3: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (26 & 0xFF)) {
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadString(
+                input, this->mutable_name()));
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+            this->name().data(), static_cast<int>(this->name().length()),
+            ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::PARSE,
+            "ptre.GetRemoteAddressV2Response.name"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // repeated .ptre.MemoryRegion mr = 4;
+      case 4: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (34 & 0xFF)) {
+          DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadMessage(
+                input, add_mr()));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0) {
+          goto success;
+        }
+        DO_(::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SkipField(
+              input, tag, _internal_metadata_.mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:ptre.GetRemoteAddressV2Response)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:ptre.GetRemoteAddressV2Response)
+  return false;
+#undef DO_
+}
+#endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+
+void GetRemoteAddressV2Response::SerializeWithCachedSizes(
+    ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:ptre.GetRemoteAddressV2Response)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
+  }
+
+  // .ptre.BufType type = 2;
+  if (this->type() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteEnum(
+      2, this->type(), output);
+  }
+
+  // string name = 3;
+  if (this->name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->name().data(), static_cast<int>(this->name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ptre.GetRemoteAddressV2Response.name");
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringMaybeAliased(
+      3, this->name(), output);
+  }
+
+  // repeated .ptre.MemoryRegion mr = 4;
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteMessageMaybeToArray(
+      4,
+      this->mr(static_cast<int>(i)),
+      output);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
+        _internal_metadata_.unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:ptre.GetRemoteAddressV2Response)
+}
+
+::PROTOBUF_NAMESPACE_ID::uint8* GetRemoteAddressV2Response::InternalSerializeWithCachedSizesToArray(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:ptre.GetRemoteAddressV2Response)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
+  }
+
+  // .ptre.BufType type = 2;
+  if (this->type() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteEnumToArray(
+      2, this->type(), target);
+  }
+
+  // string name = 3;
+  if (this->name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->name().data(), static_cast<int>(this->name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ptre.GetRemoteAddressV2Response.name");
+    target =
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteStringToArray(
+        3, this->name(), target);
+  }
+
+  // repeated .ptre.MemoryRegion mr = 4;
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->mr_size()); i < n; i++) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessageToArray(
+        4, this->mr(static_cast<int>(i)), target);
+  }
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:ptre.GetRemoteAddressV2Response)
+  return target;
+}
+
+size_t GetRemoteAddressV2Response::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ptre.GetRemoteAddressV2Response)
+  size_t total_size = 0;
+
+  if (_internal_metadata_.have_unknown_fields()) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::ComputeUnknownFieldsSize(
+        _internal_metadata_.unknown_fields());
+  }
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // repeated .ptre.MemoryRegion mr = 4;
+  {
+    unsigned int count = static_cast<unsigned int>(this->mr_size());
+    total_size += 1UL * count;
+    for (unsigned int i = 0; i < count; i++) {
+      total_size +=
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          this->mr(static_cast<int>(i)));
+    }
+  }
+
+  // string name = 3;
+  if (this->name().size() > 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->name());
+  }
+
+  // int32 rank = 1;
+  if (this->rank() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->rank());
+  }
+
+  // .ptre.BufType type = 2;
+  if (this->type() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::EnumSize(this->type());
+  }
+
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void GetRemoteAddressV2Response::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:ptre.GetRemoteAddressV2Response)
+  GOOGLE_DCHECK_NE(&from, this);
+  const GetRemoteAddressV2Response* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<GetRemoteAddressV2Response>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.GetRemoteAddressV2Response)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.GetRemoteAddressV2Response)
+    MergeFrom(*source);
+  }
+}
+
+void GetRemoteAddressV2Response::MergeFrom(const GetRemoteAddressV2Response& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:ptre.GetRemoteAddressV2Response)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  mr_.MergeFrom(from.mr_);
+  if (from.name().size() > 0) {
+
+    name_.AssignWithDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from.name_);
+  }
+  if (from.rank() != 0) {
+    set_rank(from.rank());
+  }
+  if (from.type() != 0) {
+    set_type(from.type());
+  }
+}
+
+void GetRemoteAddressV2Response::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:ptre.GetRemoteAddressV2Response)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void GetRemoteAddressV2Response::CopyFrom(const GetRemoteAddressV2Response& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ptre.GetRemoteAddressV2Response)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool GetRemoteAddressV2Response::IsInitialized() const {
+  return true;
+}
+
+void GetRemoteAddressV2Response::Swap(GetRemoteAddressV2Response* other) {
+  if (other == this) return;
+  InternalSwap(other);
+}
+void GetRemoteAddressV2Response::InternalSwap(GetRemoteAddressV2Response* other) {
+  using std::swap;
+  _internal_metadata_.Swap(&other->_internal_metadata_);
+  CastToBase(&mr_)->InternalSwap(CastToBase(&other->mr_));
+  name_.Swap(&other->name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+    GetArenaNoVirtual());
+  swap(rank_, other->rank_);
+  swap(type_, other->type_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata GetRemoteAddressV2Response::GetMetadata() const {
+  return GetMetadataStatic();
+}
+
+
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace ptre
 PROTOBUF_NAMESPACE_OPEN
@@ -4776,6 +5669,12 @@ template<> PROTOBUF_NOINLINE ::ptre::BarrierRequest* Arena::CreateMaybeMessage< 
 }
 template<> PROTOBUF_NOINLINE ::ptre::BarrierResponse* Arena::CreateMaybeMessage< ::ptre::BarrierResponse >(Arena* arena) {
   return Arena::CreateInternal< ::ptre::BarrierResponse >(arena);
+}
+template<> PROTOBUF_NOINLINE ::ptre::GetRemoteAddressV2Request* Arena::CreateMaybeMessage< ::ptre::GetRemoteAddressV2Request >(Arena* arena) {
+  return Arena::CreateInternal< ::ptre::GetRemoteAddressV2Request >(arena);
+}
+template<> PROTOBUF_NOINLINE ::ptre::GetRemoteAddressV2Response* Arena::CreateMaybeMessage< ::ptre::GetRemoteAddressV2Response >(Arena* arena) {
+  return Arena::CreateInternal< ::ptre::GetRemoteAddressV2Response >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
 

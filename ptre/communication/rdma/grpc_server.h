@@ -2,14 +2,18 @@
 #define PTRE_COMMUNICATION_RDMA_GRPC_SERVER_H_
 
 #include <memory>
+#include <string>
 
 #include <grpcpp/grpcpp.h>
 
+#include "ptre/communication/rdma/rdma.h"
 #include "ptre/protobuf/rdma_service.grpc.pb.h"
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/communication/rdma/rdma_manager.h"
 
 namespace ptre {
+
+using std::string;
 
 class RdmaServiceImpl final : public Rdma::Service {
  public:
@@ -31,6 +35,9 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status Barrier(grpc::ServerContext* context,
       const BarrierRequest* request,
       BarrierResponse* response) override;
+  grpc::Status GetRemoteAddressV2(grpc::ServerContext* context,
+      const GetRemoteAddressV2Request* request,
+      GetRemoteAddressV2Response* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);

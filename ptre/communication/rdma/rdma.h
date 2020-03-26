@@ -9,6 +9,8 @@
 
 #include <infiniband/verbs.h>
 
+#include "tensorflow/core/platform/logging.h"
+
 namespace ptre {
 #define IB_PORT 1
 #define QUEUE_DEPTH_DEFAULT 1024
@@ -59,6 +61,7 @@ class RdmaWrId {
 
 struct RemoteMR {
   uint64_t remote_addr;
+  //size_t length;
   uint32_t rkey;
 };
 

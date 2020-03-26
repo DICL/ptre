@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "ptre/communication/rdma/rdma.h"
+#include "ptre/communication/rdma/rdma_agg_writer.h"
 //#include "ptre/communication/grpc/grpc_client_cache.h"
 #include "ptre/protobuf/rdma_service.pb.h"
 
@@ -32,15 +33,29 @@ class RdmaManager {
  public:
   RdmaManager(int ptre_size, int ptre_rank, bool add);
   ~RdmaManager();
+  void CreateCQs();
+  void CreateQPs();
+  int ConnectQP(int dst_rank);
   /// The input tensor's buffer must be fixed.
   void InitTensorMR(int dst_id, const std::string& name,
                     Tensor* recv, Tensor* send);
   void InitParamMR(bool* is_new_incoming, bool* send_in_flag);
+
+  /// MR management V2
+  void RegisterMR(const BufType buf_type, const string& name, void* buf,
+                  size_t length, bool remote);
+  struct ibv_mr* GetMR(const BufType buf_type, const string& name);
+  int GetRemoteAccessBufInfos(std::vector<BufType>* out_buf_types,
+                              std::vector<string>* out_names);
+  bool IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
+                       const string& name);
+  void SetRemoteMRV2(const int dst_rank, const BufType buf_type,
+      const string& name, const uint64_t remote_addr, const uint32_t rkey);
+  void InitAggWriter();
+  int PushTensorBufferedAggregation(const int dst_rank, const string& name);
+
   void MarkMRInitialized();
   bool IsMRInitialized();
-  void CreateCQs();
-  void CreateQPs();
-  int ConnectQP(int dst_rank);
   void ProcessCQ();
   void Poll(int num_comps);
 /// message GetRemoteAddressResponse {
@@ -59,6 +74,7 @@ class RdmaManager {
   void set_qpn(int rank, uint32_t qpn) { qpns_.emplace(rank, qpn); }
   void set_snp(int rank, uint64_t snp) { snps_.emplace(rank, snp); }
   void set_iid(int rank, uint64_t iid) { iids_.emplace(rank, iid); }
+  /// Local MR with rkey
   RemoteMR GetRemoteMR(const std::string& name);
   RemoteMR GetRemoteParamMR();
   int RdmaWriteTensor(int dst_id, const std::string& name,
@@ -87,17 +103,33 @@ class RdmaManager {
   int ptre_size_;
   int ptre_rank_;
   RdmaEnv rdma_env_;
-  std::map<RemoteTensorId, RemoteMR> rmrs_;  // remote tensor data memory regions
+  std::map<RemoteTensorId, RemoteMR> tensor_rmrs_;  // remote tensor data memory regions
   std::map<int, RemoteMR> rpmrs_;  // remote parameter memory regions
   ibv_mr* recv_in_flag_mr_;  // is_new_incoming_
   ibv_mr* send_in_flag_mr_;  // is_new_incoming_
+
+  /// All MRs must be registered to this map, so remote client can find
+  /// MRs for all type of variables.
+  std::vector<string> recv_tensor_names_;
+  std::map<string, int> buf_name_to_index_;
+  std::vector<string> buf_names_;
+  std::vector<struct ibv_mr*> buf_mrs_;
+  //std::vector<struct ibv_mr*> mrs_for_remote_;
+  std::map<BufType, std::map<string, struct ibv_mr*>> mrs_;
+  std::map<BufType, std::map<string, int>> access_flags_;
+  //std::map<string, struct ibv_mr*> mrs_;
+  /// rank, buf_name
+  std::map<int, std::map<string, RemoteMR>> remote_buf_addrs_;
+  std::map<int, std::map<BufType, std::map<string, RemoteMR>>> rmrs_;
+  std::map<int, RdmaAggWriter*> agg_writers_;  // owned.
+
+
   std::map<std::string, ibv_mr*> recv_mrs_;
   std::map<std::string, ibv_mr*> send_mrs_;
   std::map<int, uint32_t> dlids_;
   std::map<int, uint32_t> qpns_;
   std::map<int, uint64_t> snps_;
   std::map<int, uint64_t> iids_;
-  //std::map<int, std::map<std::string, RemoteMR>> rmrs_;
   ibv_comp_channel* event_channel_;
   ibv_cq* cq_;
   std::map<int, ibv_comp_channel*> event_channels_;
@@ -111,6 +143,7 @@ class RdmaManager {
   //std::vector<MemoryRegion> mrs_;
   bool atomic_add_ = false;
   //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
+
 };
 
 }  // namespace ptre

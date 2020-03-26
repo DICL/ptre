@@ -25,6 +25,7 @@ static const char* Rdma_method_names[] = {
   "/ptre.Rdma/AttemptPush",
   "/ptre.Rdma/AckPushDone",
   "/ptre.Rdma/Barrier",
+  "/ptre.Rdma/GetRemoteAddressV2",
 };
 
 std::unique_ptr< Rdma::Stub> Rdma::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -40,6 +41,7 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   , rpcmethod_AttemptPush_(Rdma_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_AckPushDone_(Rdma_method_names[4], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_Barrier_(Rdma_method_names[5], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetRemoteAddressV2_(Rdma_method_names[6], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Rdma::Stub::GetRemoteEnv(::grpc::ClientContext* context, const ::ptre::GetRemoteEnvRequest& request, ::ptre::GetRemoteEnvResponse* response) {
@@ -162,6 +164,26 @@ void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, con
   return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, false);
 }
 
+::grpc::Status Rdma::Stub::GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::ptre::GetRemoteAddressV2Response* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_GetRemoteAddressV2_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>* Rdma::Stub::AsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>* Rdma::Stub::PrepareAsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, false);
+}
+
 Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[0],
@@ -193,6 +215,11 @@ Rdma::Service::Service() {
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::BarrierRequest, ::ptre::BarrierResponse>(
           std::mem_fn(&Rdma::Service::Barrier), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[6],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>(
+          std::mem_fn(&Rdma::Service::GetRemoteAddressV2), this)));
 }
 
 Rdma::Service::~Service() {
@@ -234,6 +261,13 @@ Rdma::Service::~Service() {
 }
 
 ::grpc::Status Rdma::Service::Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Rdma::Service::GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) {
   (void) context;
   (void) request;
   (void) response;

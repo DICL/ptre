@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "ptre/cm/peer_selector.h"
+#include "ptre/cm/tensor_aggregator.h"
 #include "ptre/communication/rdma/rdma_manager.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
 //#include "ptre/communication/tcp/tcp_manager.h"
@@ -26,7 +27,10 @@ using tensorflow::Tensor;
 class ConsensusManager {
  public:
   ~ConsensusManager();
+  /// NOT USED at least until 5f1352f07118881c8c5319e341fde8633905b42f
   void InitGlobalConsensus(std::vector<const Tensor*>& vars);
+  int InitGlobalConsensusV2(const std::vector<string>& names,
+                            const std::vector<const Tensor*>& vars);
   void InitBufTensor(const std::string& name, const Tensor& tensor);
   void InitBufParam();
   bool IsInitialized() { return is_initialized_; }
@@ -61,13 +65,18 @@ class ConsensusManager {
   int rank() { return ptre_rank_; }
   bool* is_new_incoming_ptr() { return is_new_incoming_; }
   void MarkNoNew() { *is_new_incoming_ = false; }
-  Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
-  Tensor* send_tensor(const string& name) { return send_tensors_[name]; }
+  //Tensor* send_tensor(int index) { return send_tensors_list_[index]; }
+  //Tensor* send_tensor(const string& name) { return send_tensors_[name]; }
+  Tensor* send_tensor(int index);
+  Tensor* send_tensor(const string& name);
 
   bool CanReceive(int src_rank);
   int FinalizeRecv(int src_rank);
 
-  int InitRecvBuf();
+  /// Init recv_tensor buf and agg_done counts
+  /// and all related states
+  /// Must Open Receive after this preparation done
+  int PrepareReceive();
   int OpenReceive();
   int CloseReceive();
   bool IsReceiveDone();
@@ -76,6 +85,10 @@ class ConsensusManager {
   int InitNumRecvTensors();
 
   void set_rcv_done_cnt(int cnt) { rcv_done_cnt_ = cnt; }
+
+  /// ...
+  /// V2 Element Access Functions
+  void* buf_ptr(const BufType type, const string& name);
 
   std::mutex send_mu_;
   std::condition_variable send_cv_;
@@ -89,16 +102,27 @@ class ConsensusManager {
   int ptre_size_;
   int ptre_rank_;
 
+  int num_vars_;
+  //std::map<string, int> name_to_index_;
   std::vector<Tensor*> global_consensus_;
   std::map<std::string, Tensor*> recv_tensors_;
   std::map<std::string, Tensor*> send_tensors_;
   std::vector<Tensor*> send_tensors_list_;
   std::vector<std::string> tensor_names_;
   std::vector<std::string> actual_comm_tensors_;
-  int num_vars_;
   bool is_initialized_ = false;
   bool* is_new_incoming_ = nullptr;
   bool flag_to_send_ = true;
+
+  /// Buffers
+  int num_bufs_ = 0;
+  std::map<string, int> buf_name_to_index_;
+  std::map<BufType, std::map<string, int>> buf_type_name_index_map_;
+  std::vector<BufType> buf_types_;
+  std::vector<void*> bufs_;
+  std::vector<size_t> buf_lengths_;
+  // To be deprecated.
+  std::vector<string> buf_names_;
 
   std::mutex rcv_mu_;
   std::condition_variable rcv_cv_;
@@ -126,6 +150,8 @@ class ConsensusManager {
   bool ready_to_push_ = false;
   RdmaManager* rdma_manager_ = nullptr;
   //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
+
+  TensorAggregator* tensor_aggregator_ = nullptr;
 };
 
 }  // namespace ptre

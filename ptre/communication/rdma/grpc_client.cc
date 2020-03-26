@@ -136,6 +136,25 @@ bool GrpcClient::Barrier() {
   }
 }
 
+int GrpcClient::GetRemoteAddressV2(const BufType type, const string& name,
+                                   RemoteMR* const rmr) {
+  GetRemoteAddressV2Request request;
+  GetRemoteAddressV2Response response;
+  ClientContext context;
+  request.set_rank(src_rank_);
+  request.set_type(type);
+  request.set_name(name);
+  grpc::Status status = stub_->GetRemoteAddressV2(&context, request, &response);
+  if (status.ok()) {
+    rmr->remote_addr = response.mr()[0].remote_addr();
+    rmr->rkey = response.mr()[0].rkey();
+    return 0;
+  } else {
+    LOG(INFO) << "dst_rank=" << dst_rank_ << " error_code="
+        << status.error_code() << ": " << status.error_message();
+    return -1;
+  }
+}
 //GrpcClient* GrpcClientCache::GetClient(int dst_rank) {
 //  if (cache_.find(rank) == cache_.end()) {
 //    auto client = new GrpcClient(rank_, dst_rank,

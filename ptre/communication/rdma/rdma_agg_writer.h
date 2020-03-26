@@ -15,12 +15,12 @@ using std::string;
 class RdmaAggWriter {
  public:
   RdmaAggWriter(int dst_rank, struct ibv_pd* pd,
-                struct ibv_qp* qp, struct ibv_cq* cq,
+                struct ibv_cq* cq, struct ibv_qp* qp,
                 const std::vector<string>& names,
-                const std::vector<struct ibv_mr*>& agg_buf_state_rmrs,
-                const std::vector<struct ibv_mr*>& agg_buf_rmrs,
+                const std::vector<RemoteMR>& agg_buf_state_rmrs,
+                const std::vector<RemoteMR>& agg_buf_rmrs,
                 const std::vector<struct ibv_mr*>& send_buf_mrs);
-  int WriteAggBuf(const string& name);
+  int WriteToAggBuf(const string& name);
 
  private:
   int dst_rank_;
@@ -29,20 +29,20 @@ class RdmaAggWriter {
   /// Protection Domain
   /// TODO: const?
   struct ibv_pd* pd_;
-  /// QP
-  /// TODO: const?
-  struct ibv_qp* qp_;
   /// Completion Queue
   /// TODO: const?
   struct ibv_cq* cq_;
+  /// QP
+  /// TODO: const?
+  struct ibv_qp* qp_;
   /// State Read Bufs
   /// Owned. No need of exchanging rkeys.
   uint64_t* state_read_bufs_;
   std::vector<struct ibv_mr*> state_read_buf_mrs_;
   /// Remote AggBuf State MRs
-  std::vector<struct ibv_mr*> agg_buf_state_rmrs_;
+  std::vector<RemoteMR> agg_buf_state_rmrs_;
   /// Remote AggBufs
-  std::vector<struct ibv_mr*> agg_buf_rmrs_;
+  std::vector<RemoteMR> agg_buf_rmrs_;
   /// Local Send Bufs
   std::vector<struct ibv_mr*> send_buf_mrs_;
 };

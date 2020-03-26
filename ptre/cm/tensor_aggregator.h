@@ -36,7 +36,7 @@ struct StatefulAggBuf {
   };
   uint64_t state = kInit;
   Flat* flat;
-  int count = 0;
+  int agg_done_cnt = 0;
 };
 
 using TargetBufPair = std::pair<Flat, StatefulAggBuf*>;
@@ -48,20 +48,26 @@ class TensorAggregator {
       const std::vector<Flat>& flats);
   ~TensorAggregator();
 
-  // State Transition
-  void Terminate() { state_ = kTerminate; }
-
   // Element Access Functions
   float* buf_ptr(int i);
   float* buf_ptr(const string& name);
   size_t buf_length(const string& name);
+  uint64_t* state_ptr(int i);
+  uint64_t* state_ptr(const string& name);
   StatefulAggBuf* agg_buf_ptr(int i);
+  int agg_done_cnt(const string& name);
+
+  // State Transition
+  void Terminate() { state_ = kTerminate; }
+  // State Transition of each StatefulAggBufs
+  void InitAggBufStates();
 
  protected:
   void BackgroundThreadLoop();
 
   std::thread background_thread_;
   Eigen::ThreadPool* pool_;
+  //Eigen::ThreadPoolDevice* d_;
   int pool_size_;  // number of threads for Eigen::ThreadPool
 
   enum State {
@@ -79,7 +85,7 @@ class TensorAggregator {
   std::map<string, int> name_to_index_;
   std::vector<TargetBufPair> target_buf_pairs_;
   std::vector<string> names_;
-  std::vector<Flat> buf_flats_;
+  std::vector<Flat*> buf_flats_;
 };
 
 }  // namespace ptre

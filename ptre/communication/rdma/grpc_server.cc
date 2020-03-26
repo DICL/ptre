@@ -1,6 +1,5 @@
 #include "ptre/communication/rdma/grpc_server.h"
 
-#include <string>
 #include <iostream>
 
 namespace ptre {
@@ -85,6 +84,22 @@ grpc::Status RdmaServiceImpl::Barrier(grpc::ServerContext* context,
   int this_rank = cm_->rank();
   //std::cout << "[RANK:" << this_rank << "] Server::Barrier: is_entered?=" << *barrier_variable_ << std::endl;
   response->set_entered(*barrier_variable_);
+  return grpc::Status::OK;
+}
+
+grpc::Status RdmaServiceImpl::GetRemoteAddressV2(grpc::ServerContext* context,
+    const GetRemoteAddressV2Request* request,
+    GetRemoteAddressV2Response* response) {
+  BufType type = request->type();
+  string name = request->name();
+  struct ibv_mr* mr = rdma_manager_->GetMR(type, name);
+  response->set_rank(rdma_manager_->rank());
+  response->set_type(type);
+  response->set_name(name);
+  MemoryRegion* mr_proto = response->add_mr();
+  uint64_t mr_addr = (uint64_t) mr->addr;
+  mr_proto->set_remote_addr(mr_addr);
+  mr_proto->set_rkey(mr->rkey);
   return grpc::Status::OK;
 }
 

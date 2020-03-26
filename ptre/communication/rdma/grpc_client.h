@@ -12,6 +12,8 @@
 
 namespace ptre {
 
+using std::string;
+
 class GrpcClient {
  public:
   //GrpcClient(std::shared_ptr<::grpc::Channel> channel);
@@ -24,6 +26,9 @@ class GrpcClient {
   int AckPushDone();
   bool Barrier();
   void SetRdmaManager(RdmaManager* rdma_manager);
+
+  int GetRemoteAddressV2(const BufType type, const string& name,
+                         RemoteMR* const rmr);
 
  private:
   int src_rank_;

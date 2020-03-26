@@ -13,8 +13,6 @@
 #include <typeinfo>
 #include <atomic>
 
-//#include <glog/logging.h>
-
 #include "ptre/kernels/ptre_ops.h"
 //#include "ptre/kernels/ptre_op_helpers.h"
 //#include "ptre/ptre_global.h"
@@ -55,6 +53,9 @@ using ::ptre::RdmaManager;
 using ::ptre::RdmaServiceImpl;
 using ::ptre::GrpcClient;
 using ::ptre::GrpcClientCache;
+using ::ptre::BufType;
+using ::ptre::RemoteMR;
+using ::ptre::Flat;
 
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
@@ -90,7 +91,10 @@ struct PtreGlobal {
   std::vector<std::string> grpc_hosts;
   std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
-  bool is_push_step = false;
+  /// 0: NOT PUSH
+  /// 1: PUSH
+  /// 2: SKIP
+  int push_step_state = 0;
   /// 0: None
   /// 1: New
   /// 2: Used
@@ -98,7 +102,7 @@ struct PtreGlobal {
   int incoming_peer;
 
   bool barrier_variable = false;
-  bool is_broadcast_done = false;
+  bool is_broadcast_done = true;
 
   ~PtreGlobal() {
     if (background_thread.joinable()) {
@@ -183,6 +187,25 @@ void ProcessRequestQueueInternalAtomicAdd() {
   }
 }
 
+void ProcessRequestQueueInternalBufferedAggregation() {
+  auto& q = ptre_global.q;
+  auto& mu = ptre_global.q_mu;
+  int dst_rank = -1;
+  mu.lock();
+  if (!ptre_global.q.empty()) {
+    dst_rank = q.front();
+    q.pop();
+  }
+  mu.unlock();
+  if (dst_rank >= 0) {
+    // TODO: Implement This PushTensorsBufferedAggregation
+    ptre_global.cm.PushTensorsV3(dst_rank);
+    GrpcClient* grpc_client;
+    ptre_global.grpc_client_cache->GetClient(dst_rank, &grpc_client);
+    grpc_client->AckPushDone();
+  }
+}
+
 void ProcessRequestQueue() {
   if (!ptre_global.is_broadcast_done) {
     ProcessRequestQueueInternal1();
@@ -191,7 +214,11 @@ void ProcessRequestQueue() {
   if (ptre_global.num_push == 1) {
     ProcessRequestQueueInternal1();
   } else {
+#if 0
     ProcessRequestQueueInternalAtomicAdd();
+#else
+    ProcessRequestQueueInternalBufferedAggregation();
+#endif
   }
 }
 
@@ -249,6 +276,83 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
 void InitGrpcService() {
   std::cout << "Running grpc server" << std::endl;
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
+}
+
+void InitRemoteMRV2() {
+  std::vector<BufType> buf_types;
+  std::vector<string> names;
+  int num_bufs = ptre_global.rdma_manager->
+      GetRemoteAccessBufInfos(&buf_types, &names);
+#if 0
+  for (int i = 0; i < num_bufs; i++) {
+    LOG(INFO) << "type=" << buf_types[i] << ", name=" << names[i];
+  }
+#endif
+  for (int i = 0; i < ptre_global.size; i++) {
+    if (i != ptre_global.rank) {
+      GrpcClient* grpc_client;
+      ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
+      grpc_client->SetRdmaManager(ptre_global.rdma_manager);
+    }
+  }
+  bool peer_flag[ptre_global.size] = { };
+  peer_flag[ptre_global.rank] = true;
+  int done_flag = 0;
+  while (!done_flag) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    done_flag = 1;
+    for (int i = 0; i < ptre_global.size; i++) {
+      if (peer_flag[i]) {
+        continue;
+      }
+      GrpcClient* grpc_client;
+      ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
+      if (!ptre_global.rdma_manager->IsDlidSet(i)) {
+        int ret = grpc_client->GetRemoteEnv();
+        if (ret < 0) {
+          done_flag = 0;
+          continue;
+        }
+      }
+      int client_status = 0;
+      for (int j = 0; j < num_bufs; j++) {
+        if (ptre_global.rdma_manager->
+            IsRemoteMRSetV2(i, buf_types[j], names[j])) {
+          continue;
+        }
+        RemoteMR rmr;
+        int ret = grpc_client->GetRemoteAddressV2(buf_types[j], names[j], &rmr);
+        if (ret < 0) {
+          client_status = -1;
+          break;
+        } else {
+          ptre_global.rdma_manager->SetRemoteMRV2(i, buf_types[j], names[j],
+              rmr.remote_addr, rmr.rkey);
+        }
+      }
+      if (client_status < 0) {
+        done_flag = 0;
+        continue;
+      }
+      peer_flag[i] = true;
+    }
+  }
+}
+
+void ConnectQPs() {
+  int done_flag = 0;
+  while (!done_flag) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    done_flag = 1;
+    for (int i = 0; i < ptre_global.size; i++) {
+      if (i != ptre_global.rank) {
+        int r = ptre_global.rdma_manager->ConnectQP(i);
+        if (r < 0) {
+          done_flag = 0;
+        }
+      }
+    }
+  }
 }
 
 }  // namespace
@@ -337,7 +441,7 @@ class InitRemoteMrOp : public OpKernel {
     context->GetAttr("names", &names_);
   }
   void Compute(OpKernelContext* context) override {
-    bool peer_flag[ptre_global.size] = {};
+    bool peer_flag[ptre_global.size] = { };
     peer_flag[ptre_global.rank] = true;
     int done_flag = 0;
     while (!done_flag) {
@@ -392,10 +496,69 @@ class InitRemoteMrOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(Name("InitRemoteMr").Device(DEVICE_CPU),
                         InitRemoteMrOp);
 
+/// MR management V2
+///
+REGISTER_OP("InitStepOne")
+    .Attr("T: {float32}")
+    .Attr("NumTensors: int")
+    .Attr("names: list(string)")
+    .Input("vars: NumTensors * T");
+class InitStepOneOp : public OpKernel {
+ public:
+  explicit InitStepOneOp(OpKernelConstruction* context)
+      : OpKernel(context) {
+    context->GetAttr("names", &names_);
+  }
+  void Compute(OpKernelContext* context) override {
+    int num_inputs = context->num_inputs();
+    std::vector<const Tensor*> inputs;
+    for (int i = 0; i < num_inputs; i++) {
+      const Tensor& input = context->input(i);
+      inputs.push_back(&input);
+    }
+    LOG(INFO) << "Initializing global consensus: num_tensors=" << num_inputs;
+    ptre_global.cm.InitGlobalConsensusV2(names_, inputs);
+    InitGrpcService();
+    InitRemoteMRV2();
+    ptre_global.rdma_manager->InitAggWriter();
+    ConnectQPs();
+  }
+ private:
+  std::vector<string> names_;
+};
+REGISTER_KERNEL_BUILDER(Name("InitStepOne").Device(DEVICE_CPU),
+                        InitStepOneOp);
+
+REGISTER_OP("InitGlobalConsensusV2")
+    .Attr("T: {float32}")
+    .Attr("NumTensors: int")
+    .Attr("names: list(string)")
+    .Input("vars: NumTensors * T");
+class InitGlobalConsensusV2Op : public OpKernel {
+ public:
+  explicit InitGlobalConsensusV2Op(OpKernelConstruction* context)
+      : OpKernel(context) {
+    context->GetAttr("names", &names_);
+  }
+  void Compute(OpKernelContext* context) override {
+    std::vector<const Tensor*> inputs;
+    int num_inputs = context->num_inputs();
+    for (int i = 0; i < num_inputs; i++) {
+      const Tensor& input = context->input(i);
+      inputs.push_back(&input);
+    }
+    ptre_global.cm.InitGlobalConsensusV2(names_, inputs);
+  }
+ private:
+  std::vector<std::string> names_;
+};
+REGISTER_KERNEL_BUILDER(Name("InitGlobalConsensusV2").Device(DEVICE_CPU),
+                        InitGlobalConsensusV2Op);
+
 REGISTER_OP("ConnectQps");
 class ConnectQpsOp : public OpKernel {
  public:
-  explicit ConnectQpsOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit ConnectQpsOp(OpKernelConstruction* context) : OpKernel(context) { }
   void Compute(OpKernelContext* context) override {
     int done_flag = 0;
     while (!done_flag) {
@@ -538,7 +701,7 @@ REGISTER_OP("GetRemoteVariables")
 class GetRemoteVariablesOp : public OpKernel {
  public:
   explicit GetRemoteVariablesOp(OpKernelConstruction* context)
-      : OpKernel(context) {}
+      : OpKernel(context) { }
   void Compute(OpKernelContext* context) override {
     int num_vars = ptre_global.cm.num_vars();
     for (int i = 0; i < num_vars; i++) {
@@ -641,7 +804,7 @@ REGISTER_OP("ApplyModelAveraging")
 template <typename T>
 class ApplyModelAveragingOp : public OpKernel {
  public:
-  explicit ApplyModelAveragingOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
+  explicit ApplyModelAveragingOp(OpKernelConstruction* ctx) : OpKernel(ctx) { }
 
   void Compute(OpKernelContext* ctx) {
     Tensor var = ctx->mutable_input(0, false);
@@ -666,10 +829,10 @@ REGISTER_OP("IsNewIncoming")
     .Output("out: bool");
 class IsNewIncomingOp : public OpKernel {
  public:
-  explicit IsNewIncomingOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
+  explicit IsNewIncomingOp(OpKernelConstruction* ctx) : OpKernel(ctx) { }
   void Compute(OpKernelContext* ctx) {
     Tensor* output;
-    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({}), &output));
+    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({ }), &output));
     usleep(1);
     //volatile bool* ret = ptre_global.cm.is_new_incoming_ptr();
     bool* ret = ptre_global.cm.is_new_incoming_ptr();
@@ -684,7 +847,7 @@ REGISTER_KERNEL_BUILDER(
 REGISTER_OP("MarkNoNew");
 class MarkNoNewOp : public OpKernel {
  public:
-  explicit MarkNoNewOp(OpKernelConstruction* ctx) : OpKernel(ctx) {}
+  explicit MarkNoNewOp(OpKernelConstruction* ctx) : OpKernel(ctx) { }
   void Compute(OpKernelContext* ctx) {
     ptre_global.cm.MarkNoNew();
     //volatile bool* ret = ptre_global.cm.is_new_incoming_ptr();
@@ -768,6 +931,7 @@ class ModelaverageOp : public OpKernel {
 
     bool do_reduce = true;
     int num_incomings = 1;
+#if 1
     if (1) {
       num_incomings = ptre_global.cm.WaitAndGetNumIncomings();
       if (num_incomings == 0) {
@@ -779,16 +943,19 @@ class ModelaverageOp : public OpKernel {
         do_reduce = false;
       }
     }
+#else
+    do_reduce = false;
+#endif
     if (do_reduce) {
       const Device& d = ctx->template eigen_device<Device>();
       const Tensor other(ptre_global.cm.global_consensus(var_name_));
-      Tensor m_(DataTypeToEnum<T>::v(), TensorShape({}));
+      Tensor m_(DataTypeToEnum<T>::v(), TensorShape({ }));
       m_.flat<T>()(0) = T(num_incomings + 1);
       const Tensor m(m_);
       functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
           other.flat<T>());
+      ptre_global.incoming_state = 2;  // Used
     }
-    ptre_global.incoming_state = 2;  // Used
     //LOG(INFO) << "CountReduceAndOpenRecv() Entering.";
     ptre_global.cm.CountReduceAndOpenRecv(var_name_);
     //LOG(INFO) << "CountReduceAndOpenRecv() Done.";
@@ -846,7 +1013,7 @@ class PushTensorOp : public OpKernel {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
   }
   void Compute(OpKernelContext* ctx) {
-    if (!ptre_global.is_push_step) {
+    if (ptre_global.push_step_state != 1) {
       return;
     }
     Tensor var;
@@ -855,6 +1022,7 @@ class PushTensorOp : public OpKernel {
     LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
+#if 0
     Tensor* send_tensor = ptre_global.cm.send_tensor(var_name_);
     // TODO: Make it more correct! (locking)
     std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
@@ -864,6 +1032,51 @@ class PushTensorOp : public OpKernel {
     lk.unlock();
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(),
         send_tensor->flat<T>());
+#else
+    T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
+        var_name_);
+    // TODO: Make it more correct! (locking)
+    bool SKIP_IF_SEND_BUF_IS_BUSY = false;
+    if (SKIP_IF_SEND_BUF_IS_BUSY) {
+      /// Don't wait for the running send operations at this point.
+      auto& mu = ptre_global.cm.send_mu_;
+      bool skip = false;
+      mu.lock();
+      if (ptre_global.push_step_state == 1) {  // PUSH
+        if (ptre_global.cm.send_status_ != ConsensusManager::SEND_IDLE) {
+          /// Skip
+          /// NOT ENQUEUEING (NOT ATTEMPT)
+          ptre_global.push_step_state = 2;  // SKIP
+          skip = true;
+        }
+      } else if (ptre_global.push_step_state == 2) {  // SKIP set by another
+        skip = true;
+      } else {
+        LOG(ERROR) << "Something's gone wrong.";
+        exit(EXIT_FAILURE);
+      }
+      mu.unlock();
+      if (skip) {
+        return;
+      }
+    } else {
+      /// Wait for the running send operations at this point.
+      std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
+      ptre_global.cm.send_cv_.wait(lk, [&] {
+#if 1
+          bool is_idle = (ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE);
+          if (!is_idle) {
+          }
+          return is_idle;
+#else
+          return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
+#endif
+          });
+      lk.unlock();
+    }
+    typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
+    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
+#endif
   }
  private:
   string var_name_;
@@ -914,6 +1127,7 @@ int ptre_init(int size, int rank, char* grpc_hosts_file,
   tensorflow::ptre_global.num_push = num_push;
   tensorflow::InitComm(size, rank, grpc_hosts_file);
   tensorflow::ptre_global.cm.InitPeerSelector(selection_strategy);
+  LOG(INFO) << "Peer selection strategy = " << selection_strategy;
 }
 
 int ptre_init_rdma_grpc_service() {
@@ -948,40 +1162,53 @@ void ptre_enqueue_push() {
   auto& mu = tensorflow::ptre_global.q_mu;
   /// clear the queue
   mu.lock();
+  /// TODO: If Push operations are on going at this point,
+  ///  Skip enqueuing
   while (!ptre_global.q.empty()) {
     ptre_global.q.pop();
   }
-  //mu.unlock();
+#if 0
   int n = ptre_global.num_push;
   int targets[n];
   int ret = ptre_global.cm.get_peers(n, targets);
-  //std::cout << "\n[RANK=" << ptre_global.rank << "]: targets=";
-  //for (int i = 0; i < ret; i++) {
-  //  std::cout << targets[i];
-  //  if (i == ret - 1) {
-  //    std::cout << "\n";
-  //  } else {
-  //    std::cout << ", ";
-  //  }
-  //}
-  //mu.lock();
   for (int i = 0; i < ret; i++) {
     tensorflow::GrpcClient* grpc_client;
     ptre_global.grpc_client_cache->GetClient(targets[i], &grpc_client);
     bool can_push = grpc_client->AttemptPush();
     //LOG(INFO) << "RANK:" << ptre_global.rank << " can_push=" << can_push << " for rank=" << targets[i];
-    //can_push = true;
     if (can_push) {
       ptre_global.q.push(targets[i]);
     }
   }
+#elif 1
+  /// V2
+  if (ptre_global.push_step_state == 1) {
+    int attempt_cnt = 0;
+    int num_targets = 0;
+    std::vector<bool> checker(ptre_global.size, 0);
+    checker[ptre_global.rank] = 1;
+    //int sleep_sec = 5;
+    while (attempt_cnt < ptre_global.size && num_targets < ptre_global.num_push) {
+      attempt_cnt++;
+      int target = ptre_global.cm.get_peer();
+      if (!checker[target]) {
+        //checker[target] = 1;
+        tensorflow::GrpcClient* grpc_client;
+        ptre_global.grpc_client_cache->GetClient(target, &grpc_client);
+        // TODO: Make AttemptPush returns PUSH MODE, e.g. DIRECT_WRITE / BUF_AGG
+        bool can_push = grpc_client->AttemptPush();
+        if (can_push) {
+          checker[target] = 1;
+          ptre_global.q.push(target);
+          num_targets++;
+        }
+      }
+    }
+  } else if (ptre_global.push_step_state == 2) {
+  }
+#else
+#endif
   mu.unlock();
-  //for (int i = 0; i < ptre_global.num_push; i++) {
-  //  int target_rank = tensorflow::ptre_global.cm.get_peer();
-  //  mu.lock();
-  //  tensorflow::ptre_global.q.push(target_rank);
-  //  mu.unlock();
-  //}
 }
 
 void ptre_set_num_push(int num_push) {
@@ -989,11 +1216,11 @@ void ptre_set_num_push(int num_push) {
 }
 
 void ptre_set_push() {
-  tensorflow::ptre_global.is_push_step = true;
+  tensorflow::ptre_global.push_step_state = 1;
 }
 
 void ptre_unset_push() {
-  tensorflow::ptre_global.is_push_step = false;
+  tensorflow::ptre_global.push_step_state = 0;
 }
 
 void ptre_finalize(unsigned int wait_time) {
@@ -1007,7 +1234,7 @@ void ptre_synchronization_barrier() {
   using tensorflow::ptre_global;
   LOG(INFO) << "RANK:" << ptre_global.rank << " Entered Barrier";
   ptre_global.barrier_variable = true;
-  bool peer_flag[ptre_global.size] = {};
+  bool peer_flag[ptre_global.size] = { };
   peer_flag[ptre_global.rank] = true;
   bool global_flag = false;
   while (!global_flag) {
@@ -1034,6 +1261,10 @@ void ptre_synchronization_barrier() {
 void ptre_init_num_rcv_tensors() {
   LOG(INFO) << "Init num_rcv_tensors";
   tensorflow::ptre_global.cm.InitNumRecvTensors();
+}
+
+void ptre_set_broadcast_not_done() {
+  tensorflow::ptre_global.is_broadcast_done = false;
 }
 
 }
