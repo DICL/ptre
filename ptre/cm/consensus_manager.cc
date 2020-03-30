@@ -13,11 +13,14 @@
 namespace ptre {
 
 ConsensusManager::~ConsensusManager() {
-  if (rdma_manager_ != nullptr) {
-    delete rdma_manager_;
-  }
+  //if (rdma_manager_ != nullptr) {
+  //  delete rdma_manager_;
+  //}
   if (peer_selector_ != nullptr) {
     delete peer_selector_;
+  }
+  if (tensor_aggregator_ != nullptr) {
+    tensor_aggregator_->Terminate();
   }
 }
 
@@ -229,15 +232,10 @@ void ConsensusManager::PushModel(int dst_rank) {
 }
 
 void ConsensusManager::PushTensors(int dst_rank) {
-  for (auto it : send_tensors_) {
-    const std::string& name = it.first;
-    Tensor* t = it.second;
-    rdma_manager_->RdmaWriteTensor(dst_rank, name, *t, false);
+  for (auto it : buf_type_name_index_map_[BUF_TYPE_SEND_BUF]) {
+    rdma_manager_->RdmaWriteBufRemote(dst_rank, BUF_TYPE_SEND_BUF,
+        BUF_TYPE_RECV_BUF, it.first, true);
   }
-  flag_to_send_ = true;
-  rdma_manager_->RdmaWriteIncomingFlag(dst_rank, &flag_to_send_);
-  int num_comps = send_tensors_.size() + 1;
-  rdma_manager_->Poll(num_comps);
 }
 
 void ConsensusManager::PushTensors2(int dst_rank) {
@@ -320,6 +318,9 @@ Tensor* ConsensusManager::send_tensor(const string& name) {
 bool ConsensusManager::CanReceive(int src_rank) {
   std::lock_guard<std::mutex> guard(rcv_mu_);
   if (rcv_open_) {
+    if (rcv_ing_cnt_ >= MAX_RECV_THRESHOLD) {
+      return false;
+    }
     auto ret = rcv_status_.emplace(src_rank, RECV_IN_PROGRESS);
     if (!ret.second) {
       return false;
@@ -380,12 +381,20 @@ bool ConsensusManager::IsReceiveDone() {
 
 int ConsensusManager::WaitAndGetNumIncomings() {
   CloseReceive();
+  //if (rcv_ing_cnt_ > 1) {
+  //  LOG(INFO) << "[DEBUG] WaitAndGetNumIncomings(): rcv_ing_cnt=" << rcv_ing_cnt_;
+  //}
+#if 1
   std::unique_lock<std::mutex> lk(rcv_mu_);
   rcv_cv_.wait(lk, [&] {
 #if 1
         bool recv_done = (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
         if (!recv_done) {
+          for (auto it : rcv_status_) {
+            //LOG(INFO) << "[DEBUG] rcving from: " << it.first << ", status=" << it.second;
+          }
         }
+        //LOG(INFO) << "[DEBUG] rcv_ing_cnt=" << rcv_ing_cnt_ << ", rcv_done_cnt=" << rcv_done_cnt_;
         return recv_done;
 #else
         return (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
@@ -393,15 +402,23 @@ int ConsensusManager::WaitAndGetNumIncomings() {
         //return (rcv_ing_cnt_ == rcv_done_cnt_);
       });
   lk.unlock();
+#else
+
+#endif
   /// Wait for aggregation done
   /// rcv_ing_cnt_ == rcv_done_cnt_ ensures that
   /// each state of all aggbuf is one of AggReady, AggInProgress or RecvReady
+  if (rcv_done_cnt_ > 0) {
+    //LOG(INFO) << "[DEBUG] WaitForAggregations() rcv_done_cnt=" << rcv_done_cnt_;
+  }
   bool all_agg_done = false;
   while (!all_agg_done) {
     all_agg_done = true;
     for (const auto& name : actual_comm_tensors_) {
-      all_agg_done &= tensor_aggregator_->agg_done_cnt(name) == rcv_done_cnt_;
+      int agg_done_cnt = tensor_aggregator_->agg_done_cnt(name);
+      all_agg_done &= agg_done_cnt == rcv_done_cnt_;
       if (!all_agg_done) {
+        //LOG(INFO) << "[DEBUG] agg_done_cnt=" << agg_done_cnt << ", rcv_done_cnt=" << rcv_done_cnt_;
         break;
       }
     }

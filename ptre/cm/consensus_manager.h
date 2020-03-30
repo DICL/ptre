@@ -15,6 +15,8 @@
 //#include "ptre/communication/tcp/tcp_manager.h"
 #include "tensorflow/core/framework/tensor.h"
 
+#define MAX_RECV_THRESHOLD 2
+
 namespace ptre {
 using std::string;
 using std::cout;

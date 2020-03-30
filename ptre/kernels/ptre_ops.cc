@@ -67,7 +67,7 @@ struct PtreGlobal {
     std::cout << (void*) this << std::endl;
   }
   ConsensusManager cm;
-  RdmaManager* rdma_manager;
+  RdmaManager* rdma_manager = nullptr;
   //std::vector<Tensor*> remote_tensors;
   std::mutex mu;
   //std::queue<PtreRequest> request_queue;
@@ -91,6 +91,10 @@ struct PtreGlobal {
   std::vector<std::string> grpc_hosts;
   std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
+
+  // Training Infos
+  int local_step = 0;
+
   /// 0: NOT PUSH
   /// 1: PUSH
   /// 2: SKIP
@@ -111,6 +115,9 @@ struct PtreGlobal {
     }
     if (grpc_server_thread.joinable()) {
       grpc_server_thread.join();
+    }
+    if (rdma_manager != nullptr) {
+      delete rdma_manager;
     }
   }
 
@@ -212,7 +219,8 @@ void ProcessRequestQueue() {
     return;
   }
   if (ptre_global.num_push == 1) {
-    ProcessRequestQueueInternal1();
+    //ProcessRequestQueueInternal1();
+    ProcessRequestQueueInternalBufferedAggregation();
   } else {
 #if 0
     ProcessRequestQueueInternalAtomicAdd();
@@ -296,6 +304,11 @@ void InitRemoteMRV2() {
     }
   }
   bool peer_flag[ptre_global.size] = { };
+  //for (int j = 0; j < num_bufs; j++) {
+  //  struct ibv_mr* mr = ptre_global.rdma_manager->GetMR(buf_types[j], names[j]);
+  //  ptre_global.rdma_manager->SetRemoteMRV2(ptre_global.rank, buf_types[j],
+  //      names[j], (uint64_t) mr->addr, mr->rkey);
+  //}
   peer_flag[ptre_global.rank] = true;
   int done_flag = 0;
   while (!done_flag) {
@@ -638,19 +651,20 @@ class BroadcastModelOp : public OpKernel {
       if (target_rank == ptre_global.rank) {
         continue;
       }
-      mu.lock();
-      ptre_global.q.push(target_rank);
-      mu.unlock();
+      ptre_global.cm.PushTensors(target_rank);
+      //mu.lock();
+      //ptre_global.q.push(target_rank);
+      //mu.unlock();
     }
 
     //std::cout << "Wait for send done." << std::endl;
-    bool cond = false;
-    while (!cond) {
-      mu.lock();
-      //std::cout << "Queue size=" << ptre_global.q.size() << std::endl;
-      cond = ptre_global.q.empty();
-      mu.unlock();
-    }
+    //bool cond = false;
+    //while (!cond) {
+    //  mu.lock();
+    //  //std::cout << "Queue size=" << ptre_global.q.size() << std::endl;
+    //  cond = ptre_global.q.empty();
+    //  mu.unlock();
+    //}
     //ptre_global.is_broadcast_done = true;
   }
 
@@ -934,6 +948,9 @@ class ModelaverageOp : public OpKernel {
 #if 1
     if (1) {
       num_incomings = ptre_global.cm.WaitAndGetNumIncomings();
+      if (num_incomings > 0) {
+        //LOG(INFO) << "[DEBUG] RECV and AGG all done: num_incomings = " << num_incomings;
+      }
       if (num_incomings == 0) {
         do_reduce = false;
       }
@@ -1032,11 +1049,11 @@ class PushTensorOp : public OpKernel {
     lk.unlock();
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(),
         send_tensor->flat<T>());
-#else
+#elif 1
     T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
         var_name_);
     // TODO: Make it more correct! (locking)
-    bool SKIP_IF_SEND_BUF_IS_BUSY = false;
+    bool SKIP_IF_SEND_BUF_IS_BUSY = true;
     if (SKIP_IF_SEND_BUF_IS_BUSY) {
       /// Don't wait for the running send operations at this point.
       auto& mu = ptre_global.cm.send_mu_;
@@ -1074,6 +1091,11 @@ class PushTensorOp : public OpKernel {
           });
       lk.unlock();
     }
+    typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
+    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
+#else
+    T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
+        var_name_);
     typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
 #endif
@@ -1157,6 +1179,7 @@ void ptre_mark_no_new() {
 
 void ptre_enqueue_push() {
   using tensorflow::ptre_global;
+  std::vector<bool> checker(ptre_global.size, 0);
   //int target_rank = tensorflow::ptre_global.cm.GetRandomTarget();
   //GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
   auto& mu = tensorflow::ptre_global.q_mu;
@@ -1164,9 +1187,18 @@ void ptre_enqueue_push() {
   mu.lock();
   /// TODO: If Push operations are on going at this point,
   ///  Skip enqueuing
+#if 0
   while (!ptre_global.q.empty()) {
     ptre_global.q.pop();
   }
+#else
+  if (!ptre_global.q.empty()) {
+    LOG(INFO) << "ptre_enqueue_push(): Queue is not empty, push_state=" << ptre_global.push_step_state;
+    //exit(EXIT_FAILURE);
+    ptre_global.push_step_state = 2;
+  }
+#endif
+
 #if 0
   int n = ptre_global.num_push;
   int targets[n];
@@ -1185,20 +1217,17 @@ void ptre_enqueue_push() {
   if (ptre_global.push_step_state == 1) {
     int attempt_cnt = 0;
     int num_targets = 0;
-    std::vector<bool> checker(ptre_global.size, 0);
     checker[ptre_global.rank] = 1;
-    //int sleep_sec = 5;
     while (attempt_cnt < ptre_global.size && num_targets < ptre_global.num_push) {
       attempt_cnt++;
       int target = ptre_global.cm.get_peer();
       if (!checker[target]) {
-        //checker[target] = 1;
+        checker[target] = 1;
         tensorflow::GrpcClient* grpc_client;
         ptre_global.grpc_client_cache->GetClient(target, &grpc_client);
         // TODO: Make AttemptPush returns PUSH MODE, e.g. DIRECT_WRITE / BUF_AGG
         bool can_push = grpc_client->AttemptPush();
         if (can_push) {
-          checker[target] = 1;
           ptre_global.q.push(target);
           num_targets++;
         }
@@ -1247,7 +1276,6 @@ void ptre_synchronization_barrier() {
       tensorflow::GrpcClient* grpc_client;
       ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
       bool ret = grpc_client->Barrier();
-      //std::cout << "[RANK:" << ptre_global.rank << "] Is rank " << i << " entered?=" << ret << std::endl;
       if (!ret) {
         global_flag = false;
       }
@@ -1265,6 +1293,14 @@ void ptre_init_num_rcv_tensors() {
 
 void ptre_set_broadcast_not_done() {
   tensorflow::ptre_global.is_broadcast_done = false;
+}
+
+void ptre_count_step() {
+  tensorflow::ptre_global.local_step++;
+}
+
+void ptre_set_local_step(int local_step) {
+  tensorflow::ptre_global.local_step = local_step;
 }
 
 }

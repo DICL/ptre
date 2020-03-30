@@ -46,7 +46,8 @@ int RdmaAggWriter::WriteToAggBuf(const string& name) {
   // TODO: Check send buf state
   int idx = name_to_index_[name];
 
-  int debug_cnt = 0;
+  //LOG(INFO) << "[DEBUG] Writing Target=" << dst_rank_ << ", Name=" << name;
+  //LOG(INFO) << "[DEBUG] STEP 1: CAS";
   /// STEP 1: CAS
   /// Get State Read Buf MR
   struct ibv_mr* state_read_buf_mr = state_read_buf_mrs_[idx];
@@ -82,10 +83,13 @@ int RdmaAggWriter::WriteToAggBuf(const string& name) {
     ptre_poll_cq(cq_, 1, &wc);  // delete RdmaWrId
     if (*state_read_buf == StatefulAggBuf::kRecvReady) {
       cas_done = true;
+    } else {
+      //LOG(INFO) << "[DEBUG] state_read_buf=" << *state_read_buf << ", kRecvReady=" << StatefulAggBuf::kRecvReady;
+      usleep(1000);
     }
   }
-  debug_cnt++;
 
+  //LOG(INFO) << "[DEBUG] STEP 2: Write";
   /// STEP 2: Write
   /// Get Local Send Buf MR
   struct ibv_mr* send_buf_mr = send_buf_mrs_[idx];
@@ -110,6 +114,7 @@ int RdmaAggWriter::WriteToAggBuf(const string& name) {
   int ret = ibv_post_send(qp_, &wr, &bad_wr_1);
   struct ibv_wc wc;
   ptre_poll_cq(cq_, 1, &wc);  // delete RdmaWrId
+  //LOG(INFO) << "[DEBUG] STEP 3: CAS: to AggReady";
   // Transit State
   // Init Scatter & Gather List
   memset(&sge, 0, sizeof(struct ibv_sge));
@@ -135,6 +140,7 @@ int RdmaAggWriter::WriteToAggBuf(const string& name) {
         << std::endl;
     exit(EXIT_FAILURE);
   }
+  //LOG(INFO) << "[DEBUG] Done.";
 }
 
 }  // namespcae ptre

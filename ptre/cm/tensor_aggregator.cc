@@ -29,7 +29,7 @@ TensorAggregator::TensorAggregator(Eigen::ThreadPool* pool, int pool_size,
     name_to_index_.emplace(names[i], i);
   }
   // Init StatefulAggBuf
-  for (const auto& f : flats) {
+  for (auto& f : flats) {
     size_t num_bytes = sizeof(float) * f.size();
     float* buf = (float*) malloc(num_bytes);
     memset(buf, 0, num_bytes);
@@ -119,9 +119,19 @@ void TensorAggregator::BackgroundThreadLoop() {
     for (const auto& p : target_buf_pairs_) {
       if (p.second->state == StatefulAggBuf::kAggReady) {
         p.second->state = StatefulAggBuf::kAggInProgress;
+#if 1
         Eigen::ThreadPoolDevice d(pool_, pool_size_);
         // TODO: Check target buf state
         AggregateSum(d, p.first, *p.second->flat);
+#elif 0
+        for (int i = 0; i < p.first.size(); i++) {
+          p.first.data()[i] += p.second->flat->data()[i];
+        }
+#else
+        Eigen::ThreadPool pool(4);
+        Eigen::ThreadPoolDevice d(&pool, 4);
+        AggregateSum(d, p.first, *p.second->flat);
+#endif
         p.second->agg_done_cnt++;
         p.second->state = StatefulAggBuf::kRecvReady;
       }

@@ -6,7 +6,6 @@
 
 #include "ptre/communication/rdma/rdma.h"
 
-#define DDLOG DLOG(INFO) << "RANK:" << ptre_rank_ << " "
 
 namespace ptre {
 
@@ -25,9 +24,9 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank, bool add)
 }
 
 RdmaManager::~RdmaManager() {
-  if (polling_thread_.joinable()) {
-    polling_thread_.join();
-  }
+  //if (polling_thread_.joinable()) {
+  //  polling_thread_.join();
+  //}
 }
 
 void RdmaManager::CreateCQs() {
@@ -295,6 +294,34 @@ bool RdmaManager::IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
 void RdmaManager::SetRemoteMRV2(const int dst_rank, const BufType buf_type,
     const string& name, const uint64_t remote_addr, const uint32_t rkey) {
   rmrs_[dst_rank][buf_type].emplace(name, RemoteMR { remote_addr, rkey });
+
+}
+
+int RdmaManager::RdmaWriteBufRemote(const int dst_rank, const BufType src_type,
+    const BufType dst_type, const string& name, const bool polling) {
+  struct ibv_qp* qp = qps_[dst_rank];
+  struct ibv_mr* mr = mrs_[src_type][name];
+  RemoteMR rmr = rmrs_[dst_rank][dst_type][name];
+  struct ibv_sge sge;
+  memset(&sge, 0, sizeof(struct ibv_sge));
+  sge.addr = (uint64_t) mr->addr;
+  sge.length = mr->length;
+  sge.lkey = mr->lkey;
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(struct ibv_send_wr));
+  wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WRITE_ID_TENSOR_WRITE, nullptr);
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_RDMA_WRITE;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  wr.wr.rdma.remote_addr = rmr.remote_addr;
+  wr.wr.rdma.rkey = rmr.rkey;
+  struct ibv_send_wr* bad_wr;
+  int ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (polling) {
+    struct ibv_wc wc;
+    ptre_poll_cq(cq_, 1, &wc);
+  }
 }
 
 /// Must be called after all remote mrs initialized.
@@ -556,7 +583,6 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
   //if (num_elem > 589824) {
   //  return 0;
   //}
-  //DDLOG << "PushTensorAtomicAddBatch(" << dst_rank << ", " << name << ", ..), num_elem=" << num_elem;
 
   RemoteMR rmr = tensor_rmrs_[RemoteTensorId{ dst_rank, name }];
   uint64_t remote_addr_base = rmr.remote_addr;
@@ -566,30 +592,23 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
 
   int batch_size_tot = (num_elem + 0) / 2;
   //size_t length = batch_size_tot * 2 * sizeof(float);
-  //DDLOG << "TotalBytes=" << tensor.TotalBytes();
   size_t length = tensor.TotalBytes();
-  //DDLOG << "size_t length=" << length;
   //float read_buf[batch_size_tot * 2];
   float* read_buf = (float*) malloc(length);
   int ibv_access_flags = (IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
                           IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC);
   //void* vaddr = (void*) read_buf;
-  //DDLOG << "readbuf=" << read_buf << ", (uint64_t)=" << (uint64_t) read_buf << ", (void*) addr=" << (void*) read_buf << ", vaddr=" << vaddr;
   struct ibv_mr* mr = ibv_reg_mr(rdma_env_.pd, (void*) read_buf, length,
                                  ibv_access_flags);
   if (mr == NULL) {
     std::cerr << "ibv_reg_mr failed. length=" << length << ": " << std::strerror(errno);
     //if (errno == EINVAL) {
-    //  DDLOG << "EINVAL";
     //} else if (errno == ENOMEM) {
-    //  DDLOG << "ENOMEM";
     //}
     exit(EXIT_FAILURE);
   } else {
-    //DDLOG << "ibv_reg_mr done. length=" << length;
   }
   uint64_t read_buf_addr = (uint64_t) read_buf;
-  //DDLOG << "read_buf_addr=" << read_buf_addr;
   uint64_t wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_CAS_TWO, nullptr);
   post_read(length, read_buf_addr, mr->lkey, remote_addr_base, rkey, wr_id, qp);
   struct ibv_wc wc;
@@ -601,26 +620,18 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
     if (batch_size > 1024) {
       batch_size = 1024;
     }
-    //DDLOG << "batch_size=" << batch_size;
     struct ibv_sge sg[batch_size];
     struct ibv_send_wr wr[batch_size];
-    //DDLOG << "sg and wr array set for " << batch_size;
     int j = 0;
     wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_CAS_TWO, nullptr);
-    //DDLOG << "wr_id = " << wr_id;
     for (uint64_t i = 0; i < batch_size_tot; i++) {
       if (checker[i]) {
         continue;
       }
       memset(&sg[j], 0, sizeof(struct ibv_sge));
-      //if (j == 0) DDLOG << "memset sg done for " << j;
       sg[j].addr = (uint64_t) (read_buf_addr + i * sizeof(uint64_t));
-      //if (j == 0) DDLOG << "sg.addr set " << sg[j].addr;
       sg[j].length = sizeof(uint64_t);
-      //if (j == 0) DDLOG << "sg.length set " << sg[j].length;
       sg[j].lkey = mr->lkey;
-      //if (j == 0) DDLOG << "sg.lkey set " << sg[j].lkey;
-      //if (j == 0) DDLOG << "sg set for " << j;
 
       memset(&wr[j], 0, sizeof(struct ibv_send_wr));
       wr[j].wr_id = wr_id;
@@ -629,12 +640,9 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
       wr[j].next = (j == batch_size - 1) ? NULL : &wr[j + 1];
       wr[j].opcode = IBV_WR_ATOMIC_CMP_AND_SWP;
       wr[j].send_flags = (j == batch_size - 1) ? IBV_SEND_SIGNALED : 0;
-      //if (j == 0) DDLOG << "wr set for " << j;
       //wr[j].send_flags = IBV_SEND_SIGNALED;
       uint64_t offset32 = 2 * i;
-      //if (j == 0) DDLOG << "offset32=" << offset32 << " for " << j;
       uint64_t remote_addr = remote_addr_base + sizeof(float) * offset32;
-      //if (j == 0) DDLOG << "remote_addr=" << remote_addr << " for " << j;
       wr[j].wr.atomic.remote_addr = remote_addr;
       wr[j].wr.atomic.compare_add = *(((uint64_t*) read_buf) + i);
       wr[j].wr.atomic.rkey = rkey;
@@ -643,7 +651,6 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
         break;
       }
     }
-    //DDLOG << "wr set done for " << batch_size;
     j = 0;
     for (int i = 0; i < batch_size_tot; i++) {
       if (checker[i]) {
@@ -669,12 +676,9 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
         break;
       }
     }
-    //DDLOG << "set wr.atomic.swap done.";
     struct ibv_send_wr* bad_wr;
     int ret = ibv_post_send(qp, &wr[0], &bad_wr);
-    //DDLOG << "ibv_post_send done. batch_size=" << batch_size;
     ptre_poll_cq(cq_, 1, &wc);
-    //DDLOG << "poll_cq done.";
     j = 0;
     for (int i = 0; i < batch_size_tot; i++) {
       if (checker[i]) {
@@ -683,7 +687,6 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
       uint64_t compare_add = wr[j].wr.atomic.compare_add;
       if (compare_add == *(((uint64_t*) read_buf) + i)) {
         checker[i] = 1;
-        //std::cout << "batch=" << i << ", ca=" << compare_add << ", rb=" << *(((uint64_t*) read_buf) + i * 2) << std::endl;
         cnt++;
       }
       j++;
@@ -691,15 +694,8 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
         break;
       }
     }
-    if (cnt > 0 && cnt < batch_size_tot) {
-      //LOG_EVERY_N(INFO, 10000) << "RANK:" << ptre_rank_ << " match=[" << cnt << " / " << batch_size_tot << "]";
-    }
     if (cnt == batch_size_tot) {
       break;
-    } else {
-      //if (cnt > 0) {
-      //  break;
-      //}
     }
   }
   int ret = ibv_dereg_mr(mr);

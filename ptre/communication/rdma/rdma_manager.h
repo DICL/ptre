@@ -51,6 +51,9 @@ class RdmaManager {
                        const string& name);
   void SetRemoteMRV2(const int dst_rank, const BufType buf_type,
       const string& name, const uint64_t remote_addr, const uint32_t rkey);
+  /// If polling is false, a caller must poll by itself.
+  int RdmaWriteBufRemote(const int dst_rank, const BufType src_type,
+      const BufType dst_type, const string& name, const bool polling);
   void InitAggWriter();
   int PushTensorBufferedAggregation(const int dst_rank, const string& name);
 
