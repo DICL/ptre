@@ -96,11 +96,12 @@ int GrpcClient::GetRemoteEnv() {
   }
 }
 
-bool GrpcClient::AttemptPush() {
+bool GrpcClient::AttemptPush(int vstep) {
   AttemptPushRequest request;
   AttemptPushResponse response;
   ClientContext context;
   request.set_rank(src_rank_);
+  request.set_vstep(vstep);
   grpc::Status status = stub_->AttemptPush(&context, request, &response);
   if (status.ok()) {
     return response.available();

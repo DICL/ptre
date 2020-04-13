@@ -16,6 +16,7 @@ target_link_libraries(consensus_manager
 add_library(tensor_aggregator SHARED tensor_aggregator.cc)
 target_link_libraries(tensor_aggregator
   pthread
+  rdma
 )
 
 add_executable(test_peer_selector test_peer_selector.cc)

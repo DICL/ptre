@@ -8,8 +8,33 @@ target_link_libraries(cas_test rdma_manager
                       rdma_grpc_client
                       )
 
-add_executable(agg_test agg_test.cc)
-target_link_libraries(agg_test 
-  pthread
+                    #add_executable(agg_test agg_test.cc)
+                    #target_link_libraries(agg_test 
+                    #  pthread
+                    #  :libtensorflow_framework.so.2
+                    #  tensor_aggregator)
+
+add_library(test_server_lib SHARED test_server_lib.cc)
+target_link_libraries(test_server_lib
   :libtensorflow_framework.so.2
-  tensor_aggregator)
+  rdma
+  pthread
+  consensus_manager
+  rdma_manager
+  rdma_grpc_server
+  rdma_grpc_client
+  grpc_client_cache
+  )
+
+
+add_executable(state_test state_test.cc)
+target_link_libraries(state_test
+  test_server_lib
+  pthread
+  consensus_manager
+  tensor_aggregator
+  rdma_manager
+  rdma_grpc_server
+  rdma_grpc_client
+  grpc_client_cache
+  )

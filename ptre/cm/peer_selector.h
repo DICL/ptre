@@ -18,7 +18,8 @@ enum SelectionStrategy {
   DHT_ROUND_ROBIN, // 3
   ADJACENT,        // 4
   MOVING_DHT_RR,   // 5
-  PRIORITY_DIFF
+  PRIORITY_DIFF,   // 6
+  DIVN_ROUND_ROBIN // 7
 };
 
 class PeerSelectorInterface {
@@ -99,11 +100,25 @@ class DifferenceBasedPeerSelector : public PeerSelectorInterface {
   std::vector<float> cdf_;
 };
 
+class DivNRoundRobinPeerSelector : public PeerSelectorInterface {
+ public:
+  DivNRoundRobinPeerSelector(int comm_size, int comm_rank, int num_push);
+  int get_peer() override;
+
+ protected:
+  std::vector<int> nexts_;
+  int num_push_;
+  int div_idx_;
+  int elem_cnt_;
+  double inc_;
+};
+
 class PeerSelectorFactory {
  public:
   static void NewPeerSelector(int comm_size, int comm_rank,
       SelectionStrategy strategy,
-      PeerSelectorInterface* &out_selector);
+      PeerSelectorInterface* &out_selector,
+      int num_push = 1);
 };
 
 }  // namespace ptre

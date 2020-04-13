@@ -15,7 +15,7 @@
 //#include "ptre/communication/tcp/tcp_manager.h"
 #include "tensorflow/core/framework/tensor.h"
 
-#define MAX_RECV_THRESHOLD 2
+#define MAX_RECV_THRESHOLD 4
 
 namespace ptre {
 using std::string;
@@ -53,7 +53,7 @@ class ConsensusManager {
   int get_peer();
   int get_peers(int num_peer, int* peers);
 
-  void InitPeerSelector(int strategy);
+  void InitPeerSelector(int strategy, int num_push);
 
   const std::vector<Tensor*>& GetGlobalConsensusList();
   const std::vector<Tensor*>& GetSendTensorsList();
@@ -72,7 +72,7 @@ class ConsensusManager {
   Tensor* send_tensor(int index);
   Tensor* send_tensor(const string& name);
 
-  bool CanReceive(int src_rank);
+  bool CanReceive(int src_rank, int src_vstep);
   int FinalizeRecv(int src_rank);
 
   /// Init recv_tensor buf and agg_done counts
@@ -84,13 +84,25 @@ class ConsensusManager {
   bool IsReceiveDone();
   int WaitAndGetNumIncomings();
   int CountReduceAndOpenRecv(std::string& name);
+  bool IsInitNumApplyOps();
   int InitNumRecvTensors();
+  int ProcessAggregation();
 
   void set_rcv_done_cnt(int cnt) { rcv_done_cnt_ = cnt; }
+
+  /// Training Status
+  void set_local_step(int step) { local_step_ = step; }
+  void count_local_step() { local_step_++; }
+  void set_virtual_step(int step) { virtual_step_ = step; }
+  void count_virtual_step() { virtual_step_++; }
 
   /// ...
   /// V2 Element Access Functions
   void* buf_ptr(const BufType type, const string& name);
+  int rcv_ing_cnt() { return rcv_ing_cnt_; }
+  int rcv_steps_sum() { return rcv_steps_sum_; }
+  int num_apply_ops() { return num_rcv_tensors_; }
+  TensorAggregator* tensor_aggregator() { return tensor_aggregator_; }
 
   std::mutex send_mu_;
   std::condition_variable send_cv_;
@@ -103,6 +115,10 @@ class ConsensusManager {
  private:
   int ptre_size_;
   int ptre_rank_;
+
+  /// Training Status
+  int local_step_;
+  int virtual_step_ = 1;
 
   int num_vars_;
   //std::map<string, int> name_to_index_;
@@ -123,6 +139,7 @@ class ConsensusManager {
   std::vector<BufType> buf_types_;
   std::vector<void*> bufs_;
   std::vector<size_t> buf_lengths_;
+  std::vector<uint64_t*> agg_buf_states_;
   // To be deprecated.
   std::vector<string> buf_names_;
 
@@ -131,6 +148,7 @@ class ConsensusManager {
   bool rcv_open_ = false;
   int rcv_ing_cnt_ = 0;  // num peers
   int rcv_done_cnt_ = 0;  // num peers
+  int rcv_steps_sum_ = 0;
   enum {
     RECV_IN_PROGRESS,
     RECV_DONE

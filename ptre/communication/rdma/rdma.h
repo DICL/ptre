@@ -1,6 +1,7 @@
 #ifndef PTRE_COMMUNICATION_RDMA_RDMA_H_
 #define PTRE_COMMUNICATION_RDMA_RDMA_H_
 
+#include <unistd.h>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -47,7 +48,9 @@ enum RdmaWrIdType {
   RDMA_WRITE_ID_INCOMING_FLAG_WRITE,
   RDMA_WR_ID_READ_TWO,
   RDMA_WR_ID_CAS_TWO,
-  RDMA_WR_ID_CAS_TENSOR_AGG_STATE
+  RDMA_WR_ID_CAS_TENSOR_AGG_STATE,
+  RDMA_WR_ID_WRITE_TENSOR_AGG_STATE,
+  RDMA_WR_ID_CAS
 };
 
 class RdmaWrId {
@@ -101,6 +104,11 @@ class RemoteTensorChannel {
 };
 
 int init_rdma_env(RdmaEnv& env);
+struct ibv_cq* ptre_rdma_create_cq(RdmaEnv* rdma_env, int comp_vector);
+struct ibv_qp* ptre_rdma_create_qp(RdmaEnv* rdma_env, struct ibv_cq* send_cq,
+    struct ibv_cq* recv_cq);
+int ptre_rdma_connect_qp(struct ibv_qp* qp, uint32_t dest_qp_num,
+    uint64_t global_subnet_prefix, uint64_t global_interface_id, uint16_t dlid);
 
 static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
                                 struct ibv_wc* wcs) {
@@ -108,6 +116,7 @@ static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
   while (cnt < num_comps) {
     struct ibv_wc& wc = wcs[cnt];
     int new_comps = ibv_poll_cq(cq, num_comps - cnt, &wc);
+    usleep(1);
     if (new_comps > 0) {
       for (int i = 0; i < new_comps; i++) {
         struct ibv_wc& curr_wc = wcs[cnt + i];
@@ -120,6 +129,8 @@ static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
         delete wr_id;
       }
       cnt += new_comps;
+    } else if (new_comps < 0) {
+      LOG(INFO) << "[DEBUG] ibv_poll_cq failed.";
     }
   }
 }

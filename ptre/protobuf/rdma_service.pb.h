@@ -133,12 +133,14 @@ enum BufType : int {
   BUF_TYPE_AGG_BUF = 4,
   BUF_TYPE_FLAG_RECV = 5,
   BUF_TYPE_FLAG_SEND = 6,
+  BUF_TYPE_BARRIER_COUNTER = 7,
+  BUF_TYPE_BARRIER_RELEASE = 8,
   BufType_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::min(),
   BufType_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::max()
 };
 bool BufType_IsValid(int value);
 constexpr BufType BufType_MIN = BUF_TYPE_RAW;
-constexpr BufType BufType_MAX = BUF_TYPE_FLAG_SEND;
+constexpr BufType BufType_MAX = BUF_TYPE_BARRIER_RELEASE;
 constexpr int BufType_ARRAYSIZE = BufType_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* BufType_descriptor();
@@ -1415,12 +1417,19 @@ class AttemptPushRequest :
   ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
   void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
 
+  // int32 vstep = 2;
+  void clear_vstep();
+  static const int kVstepFieldNumber = 2;
+  ::PROTOBUF_NAMESPACE_ID::int32 vstep() const;
+  void set_vstep(::PROTOBUF_NAMESPACE_ID::int32 value);
+
   // @@protoc_insertion_point(class_scope:ptre.AttemptPushRequest)
  private:
   class HasBitSetters;
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::int32 rank_;
+  ::PROTOBUF_NAMESPACE_ID::int32 vstep_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
@@ -2902,6 +2911,20 @@ inline void AttemptPushRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
   rank_ = value;
   // @@protoc_insertion_point(field_set:ptre.AttemptPushRequest.rank)
+}
+
+// int32 vstep = 2;
+inline void AttemptPushRequest::clear_vstep() {
+  vstep_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 AttemptPushRequest::vstep() const {
+  // @@protoc_insertion_point(field_get:ptre.AttemptPushRequest.vstep)
+  return vstep_;
+}
+inline void AttemptPushRequest::set_vstep(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  vstep_ = value;
+  // @@protoc_insertion_point(field_set:ptre.AttemptPushRequest.vstep)
 }
 
 // -------------------------------------------------------------------

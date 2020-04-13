@@ -386,6 +386,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::ptre::AttemptPushRequest, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::AttemptPushRequest, vstep_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ptre::AttemptPushResponse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -442,13 +443,13 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 49, -1, sizeof(::ptre::GetRemoteParamAddressRequest)},
   { 55, -1, sizeof(::ptre::GetRemoteParamAddressResponse)},
   { 63, -1, sizeof(::ptre::AttemptPushRequest)},
-  { 69, -1, sizeof(::ptre::AttemptPushResponse)},
-  { 75, -1, sizeof(::ptre::AckPushDoneRequest)},
-  { 81, -1, sizeof(::ptre::AckPushDoneResponse)},
-  { 86, -1, sizeof(::ptre::BarrierRequest)},
-  { 91, -1, sizeof(::ptre::BarrierResponse)},
-  { 97, -1, sizeof(::ptre::GetRemoteAddressV2Request)},
-  { 105, -1, sizeof(::ptre::GetRemoteAddressV2Response)},
+  { 70, -1, sizeof(::ptre::AttemptPushResponse)},
+  { 76, -1, sizeof(::ptre::AckPushDoneRequest)},
+  { 82, -1, sizeof(::ptre::AckPushDoneResponse)},
+  { 87, -1, sizeof(::ptre::BarrierRequest)},
+  { 92, -1, sizeof(::ptre::BarrierResponse)},
+  { 98, -1, sizeof(::ptre::GetRemoteAddressV2Request)},
+  { 106, -1, sizeof(::ptre::GetRemoteAddressV2Response)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -486,35 +487,37 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "teParamAddressRequest\022\014\n\004rank\030\001 \001(\005\"m\n\035G"
   "etRemoteParamAddressResponse\022\014\n\004rank\030\001 \001"
   "(\005\022\036\n\007channel\030\002 \001(\0132\r.ptre.Channel\022\036\n\002mr"
-  "\030\003 \003(\0132\022.ptre.MemoryRegion\"\"\n\022AttemptPus"
-  "hRequest\022\014\n\004rank\030\001 \001(\005\"(\n\023AttemptPushRes"
-  "ponse\022\021\n\tavailable\030\001 \001(\010\"\"\n\022AckPushDoneR"
-  "equest\022\014\n\004rank\030\001 \001(\005\"\025\n\023AckPushDoneRespo"
-  "nse\"\020\n\016BarrierRequest\"\"\n\017BarrierResponse"
-  "\022\017\n\007entered\030\001 \001(\010\"T\n\031GetRemoteAddressV2R"
-  "equest\022\014\n\004rank\030\001 \001(\005\022\033\n\004type\030\002 \001(\0162\r.ptr"
-  "e.BufType\022\014\n\004name\030\003 \001(\t\"u\n\032GetRemoteAddr"
-  "essV2Response\022\014\n\004rank\030\001 \001(\005\022\033\n\004type\030\002 \001("
-  "\0162\r.ptre.BufType\022\014\n\004name\030\003 \001(\t\022\036\n\002mr\030\004 \003"
-  "(\0132\022.ptre.MemoryRegion*\253\001\n\007BufType\022\020\n\014BU"
-  "F_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_RECV_BUF\020\001\022\025\n\021B"
-  "UF_TYPE_SEND_BUF\020\002\022\032\n\026BUF_TYPE_AGG_BUF_S"
-  "TATE\020\003\022\024\n\020BUF_TYPE_AGG_BUF\020\004\022\026\n\022BUF_TYPE"
-  "_FLAG_RECV\020\005\022\026\n\022BUF_TYPE_FLAG_SEND\020\0062\233\004\n"
-  "\004Rdma\022E\n\014GetRemoteEnv\022\031.ptre.GetRemoteEn"
-  "vRequest\032\032.ptre.GetRemoteEnvResponse\022Q\n\020"
-  "GetRemoteAddress\022\035.ptre.GetRemoteAddress"
-  "Request\032\036.ptre.GetRemoteAddressResponse\022"
-  "`\n\025GetRemoteParamAddress\022\".ptre.GetRemot"
-  "eParamAddressRequest\032#.ptre.GetRemotePar"
-  "amAddressResponse\022B\n\013AttemptPush\022\030.ptre."
-  "AttemptPushRequest\032\031.ptre.AttemptPushRes"
-  "ponse\022B\n\013AckPushDone\022\030.ptre.AckPushDoneR"
-  "equest\032\031.ptre.AckPushDoneResponse\0226\n\007Bar"
-  "rier\022\024.ptre.BarrierRequest\032\025.ptre.Barrie"
-  "rResponse\022W\n\022GetRemoteAddressV2\022\037.ptre.G"
-  "etRemoteAddressV2Request\032 .ptre.GetRemot"
-  "eAddressV2Responseb\006proto3"
+  "\030\003 \003(\0132\022.ptre.MemoryRegion\"1\n\022AttemptPus"
+  "hRequest\022\014\n\004rank\030\001 \001(\005\022\r\n\005vstep\030\002 \001(\005\"(\n"
+  "\023AttemptPushResponse\022\021\n\tavailable\030\001 \001(\010\""
+  "\"\n\022AckPushDoneRequest\022\014\n\004rank\030\001 \001(\005\"\025\n\023A"
+  "ckPushDoneResponse\"\020\n\016BarrierRequest\"\"\n\017"
+  "BarrierResponse\022\017\n\007entered\030\001 \001(\010\"T\n\031GetR"
+  "emoteAddressV2Request\022\014\n\004rank\030\001 \001(\005\022\033\n\004t"
+  "ype\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030\003 \001(\t\"u"
+  "\n\032GetRemoteAddressV2Response\022\014\n\004rank\030\001 \001"
+  "(\005\022\033\n\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030"
+  "\003 \001(\t\022\036\n\002mr\030\004 \003(\0132\022.ptre.MemoryRegion*\347\001"
+  "\n\007BufType\022\020\n\014BUF_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_"
+  "RECV_BUF\020\001\022\025\n\021BUF_TYPE_SEND_BUF\020\002\022\032\n\026BUF"
+  "_TYPE_AGG_BUF_STATE\020\003\022\024\n\020BUF_TYPE_AGG_BU"
+  "F\020\004\022\026\n\022BUF_TYPE_FLAG_RECV\020\005\022\026\n\022BUF_TYPE_"
+  "FLAG_SEND\020\006\022\034\n\030BUF_TYPE_BARRIER_COUNTER\020"
+  "\007\022\034\n\030BUF_TYPE_BARRIER_RELEASE\020\0102\233\004\n\004Rdma"
+  "\022E\n\014GetRemoteEnv\022\031.ptre.GetRemoteEnvRequ"
+  "est\032\032.ptre.GetRemoteEnvResponse\022Q\n\020GetRe"
+  "moteAddress\022\035.ptre.GetRemoteAddressReque"
+  "st\032\036.ptre.GetRemoteAddressResponse\022`\n\025Ge"
+  "tRemoteParamAddress\022\".ptre.GetRemotePara"
+  "mAddressRequest\032#.ptre.GetRemoteParamAdd"
+  "ressResponse\022B\n\013AttemptPush\022\030.ptre.Attem"
+  "ptPushRequest\032\031.ptre.AttemptPushResponse"
+  "\022B\n\013AckPushDone\022\030.ptre.AckPushDoneReques"
+  "t\032\031.ptre.AckPushDoneResponse\0226\n\007Barrier\022"
+  "\024.ptre.BarrierRequest\032\025.ptre.BarrierResp"
+  "onse\022W\n\022GetRemoteAddressV2\022\037.ptre.GetRem"
+  "oteAddressV2Request\032 .ptre.GetRemoteAddr"
+  "essV2Responseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
@@ -539,7 +542,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 1746,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 1821,
   &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 16, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
   file_level_metadata_rdma_5fservice_2eproto, 16, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
@@ -561,6 +564,8 @@ bool BufType_IsValid(int value) {
     case 4:
     case 5:
     case 6:
+    case 7:
+    case 8:
       return true;
     default:
       return false;
@@ -3397,6 +3402,7 @@ class AttemptPushRequest::HasBitSetters {
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int AttemptPushRequest::kRankFieldNumber;
+const int AttemptPushRequest::kVstepFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 AttemptPushRequest::AttemptPushRequest()
@@ -3408,12 +3414,16 @@ AttemptPushRequest::AttemptPushRequest(const AttemptPushRequest& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  rank_ = from.rank_;
+  ::memcpy(&rank_, &from.rank_,
+    static_cast<size_t>(reinterpret_cast<char*>(&vstep_) -
+    reinterpret_cast<char*>(&rank_)) + sizeof(vstep_));
   // @@protoc_insertion_point(copy_constructor:ptre.AttemptPushRequest)
 }
 
 void AttemptPushRequest::SharedCtor() {
-  rank_ = 0;
+  ::memset(&rank_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&vstep_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(vstep_));
 }
 
 AttemptPushRequest::~AttemptPushRequest() {
@@ -3439,7 +3449,9 @@ void AttemptPushRequest::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  rank_ = 0;
+  ::memset(&rank_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&vstep_) -
+      reinterpret_cast<char*>(&rank_)) + sizeof(vstep_));
   _internal_metadata_.Clear();
 }
 
@@ -3455,6 +3467,13 @@ const char* AttemptPushRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMES
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
           rank_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // int32 vstep = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+          vstep_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -3501,6 +3520,19 @@ bool AttemptPushRequest::MergePartialFromCodedStream(
         break;
       }
 
+      // int32 vstep = 2;
+      case 2: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (16 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::int32, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_INT32>(
+                 input, &vstep_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0) {
@@ -3533,6 +3565,11 @@ void AttemptPushRequest::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->rank(), output);
   }
 
+  // int32 vstep = 2;
+  if (this->vstep() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(2, this->vstep(), output);
+  }
+
   if (_internal_metadata_.have_unknown_fields()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
         _internal_metadata_.unknown_fields(), output);
@@ -3549,6 +3586,11 @@ void AttemptPushRequest::SerializeWithCachedSizes(
   // int32 rank = 1;
   if (this->rank() != 0) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->rank(), target);
+  }
+
+  // int32 vstep = 2;
+  if (this->vstep() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(2, this->vstep(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -3577,6 +3619,13 @@ size_t AttemptPushRequest::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
         this->rank());
+  }
+
+  // int32 vstep = 2;
+  if (this->vstep() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+        this->vstep());
   }
 
   int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
@@ -3609,6 +3658,9 @@ void AttemptPushRequest::MergeFrom(const AttemptPushRequest& from) {
   if (from.rank() != 0) {
     set_rank(from.rank());
   }
+  if (from.vstep() != 0) {
+    set_vstep(from.vstep());
+  }
 }
 
 void AttemptPushRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -3637,6 +3689,7 @@ void AttemptPushRequest::InternalSwap(AttemptPushRequest* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
   swap(rank_, other->rank_);
+  swap(vstep_, other->vstep_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata AttemptPushRequest::GetMetadata() const {

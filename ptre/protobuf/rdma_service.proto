@@ -76,6 +76,7 @@ message GetRemoteParamAddressResponse {
 
 message AttemptPushRequest {
   int32 rank = 1;
+  int32 vstep = 2;
 }
 
 message AttemptPushResponse {
@@ -103,6 +104,8 @@ enum BufType {
   BUF_TYPE_AGG_BUF = 4;
   BUF_TYPE_FLAG_RECV = 5;
   BUF_TYPE_FLAG_SEND = 6;
+  BUF_TYPE_BARRIER_COUNTER = 7;
+  BUF_TYPE_BARRIER_RELEASE = 8;
 }
 
 message GetRemoteAddressV2Request {

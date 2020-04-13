@@ -20,7 +20,12 @@ class RdmaAggWriter {
                 const std::vector<RemoteMR>& agg_buf_state_rmrs,
                 const std::vector<RemoteMR>& agg_buf_rmrs,
                 const std::vector<struct ibv_mr*>& send_buf_mrs);
+  /// Returns 0 on success, -1 on failure.
+  int TransitState(const string& name);
+  int TransitStateV2(const string& name, const uint64_t from,
+      const uint64_t to);
   int WriteToAggBuf(const string& name);
+  int WriteToAggBufV2(const string& name);
 
  private:
   int dst_rank_;

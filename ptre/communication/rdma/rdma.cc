@@ -38,6 +38,114 @@ int init_rdma_env(RdmaEnv& env) {
   return ret;
 }
 
+struct ibv_cq* ptre_rdma_create_cq(RdmaEnv* rdma_env, int comp_vector) {
+  struct ibv_cq* cq = ibv_create_cq(rdma_env->context, QUEUE_DEPTH_DEFAULT * 2,
+                             NULL, NULL, comp_vector);
+  if (cq == NULL) {
+    std::cout << "Failed to create CQ" << std::endl;
+  }
+  return cq;
+}
+
+struct ibv_qp* ptre_rdma_create_qp(RdmaEnv* rdma_env, struct ibv_cq* send_cq,
+    struct ibv_cq* recv_cq) {
+  /// Create QP
+  struct ibv_qp* qp;
+  {
+    struct ibv_qp_init_attr qp_init_attr;
+    memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
+    qp_init_attr.send_cq = send_cq;
+    qp_init_attr.recv_cq = recv_cq;
+    qp_init_attr.cap.max_send_wr = QUEUE_DEPTH_DEFAULT;
+    qp_init_attr.cap.max_recv_wr = QUEUE_DEPTH_DEFAULT;
+    qp_init_attr.cap.max_send_sge = 8;
+    qp_init_attr.cap.max_recv_sge = 8;
+    qp_init_attr.qp_type = IBV_QPT_RC;
+
+    qp = ibv_create_qp(rdma_env->pd, &qp_init_attr);
+    if (qp == NULL) {
+      std::cout << "Failed to create QP" << std::endl;
+    }
+  }
+
+  /// Init QP
+  {
+    struct ibv_qp_attr attr;
+    memset(&attr, 0, sizeof(ibv_qp_attr));
+    attr.qp_state = IBV_QPS_INIT;
+    attr.pkey_index = 0;
+    attr.port_num = IB_PORT;
+    attr.qp_access_flags = (IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
+        IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_ATOMIC);
+
+    int attr_mask =
+        IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS;
+    int r = ibv_modify_qp(qp, &attr, attr_mask);
+    if (r < 0) {
+      std::cout << "Failed to set QP to INIT" << std::endl;
+    }
+  }
+  return qp;
+}
+
+int ptre_rdma_connect_qp(struct ibv_qp* qp, uint32_t dest_qp_num,
+    uint64_t global_subnet_prefix, uint64_t global_interface_id,
+    uint16_t dlid) {
+  /// RTR
+  {
+    struct ibv_qp_attr attr;
+    memset(&attr, 0, sizeof(ibv_qp_attr));
+    attr.qp_state = IBV_QPS_RTR;
+
+    attr.path_mtu = IBV_MTU_4096;
+    attr.dest_qp_num = dest_qp_num;
+    attr.rq_psn = 0;
+    attr.max_dest_rd_atomic = 64;
+    attr.min_rnr_timer = 12;
+    attr.ah_attr.is_global = 1;
+    attr.ah_attr.grh.dgid.global.subnet_prefix = global_subnet_prefix;
+    attr.ah_attr.grh.dgid.global.interface_id = global_interface_id;
+    attr.ah_attr.grh.flow_label = 0;
+    attr.ah_attr.grh.hop_limit = 255;
+    attr.ah_attr.dlid = dlid;
+    attr.ah_attr.sl = 0;
+    attr.ah_attr.src_path_bits = 0;
+    attr.ah_attr.port_num = IB_PORT;
+
+    int r = ibv_modify_qp(qp, &attr,
+                          IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU |
+                          IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
+                          IBV_QP_MAX_DEST_RD_ATOMIC |
+                          IBV_QP_MIN_RNR_TIMER);
+    if (r < 0) {
+      std::cout << "Failed to ibv_modify_qp to RTR " << r << std::endl;
+      return r;
+    }
+  }
+
+  /// RTS
+  {
+    struct ibv_qp_attr attr;
+    memset(&attr, 0, sizeof(ibv_qp_attr));
+    attr.qp_state = IBV_QPS_RTS;
+    attr.sq_psn = 0;
+    attr.timeout = TIMEOUT_DEFAULT;
+    attr.retry_cnt = RETRY_CNT_DEFAULT;
+    attr.rnr_retry = 7; /* infinite */
+    attr.max_rd_atomic = 64;
+
+    int r = ibv_modify_qp(qp, &attr,
+                          IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
+                          IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
+                          IBV_QP_MAX_QP_RD_ATOMIC);
+    if (r < 0) {
+      std::cout << "Failed to ibv_modify_qp to RTS " << r << std::endl;
+      return r;
+    }
+  }
+  return 0;
+}
+
 /// ibv_post_send posts a linked list of WRs to a queue pair's (QP) send queue.
 /// This operation is used to initiate all communication, including RDMA
 /// operations. Processing of the WR list is stopped on the first error and a
@@ -227,8 +335,8 @@ RdmaTensorChannel::RdmaTensorChannel(const RdmaEnv* env,
     //qp_init_attr.recv_cq = env_->cq;
     qp_init_attr.cap.max_send_wr = QUEUE_DEPTH_DEFAULT;
     qp_init_attr.cap.max_recv_wr = QUEUE_DEPTH_DEFAULT;
-    qp_init_attr.cap.max_send_sge = 1;
-    qp_init_attr.cap.max_recv_sge = 1;
+    qp_init_attr.cap.max_send_sge = 8;
+    qp_init_attr.cap.max_recv_sge = 8;
     qp_init_attr.qp_type = IBV_QPT_RC;
 
     qp_ = ibv_create_qp(env_->pd, &qp_init_attr);
@@ -266,7 +374,7 @@ void RdmaTensorChannel::Connect(uint32_t dlid) {
       attr.path_mtu = IBV_MTU_4096;
       attr.dest_qp_num = qp_->qp_num;
       attr.rq_psn = 0;
-      attr.max_dest_rd_atomic = 1;
+      attr.max_dest_rd_atomic = 64;
       attr.min_rnr_timer = 12;
       attr.ah_attr.is_global = 0;
       attr.ah_attr.dlid = dlid;
@@ -293,7 +401,7 @@ void RdmaTensorChannel::Connect(uint32_t dlid) {
       attr.timeout = TIMEOUT_DEFAULT;
       attr.retry_cnt = RETRY_CNT_DEFAULT;
       attr.rnr_retry = 7; /* infinite */
-      attr.max_rd_atomic = 1;
+      attr.max_rd_atomic = 64;
 
       int r = ibv_modify_qp(qp_, &attr,
                             IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |

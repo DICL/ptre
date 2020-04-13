@@ -16,6 +16,14 @@ struct Modelaverage {
 };
 
 template <typename Device, typename T>
+struct LinearWeightedAverageApprox {
+  void operator()(const Device& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstScalar c1,
+                  typename TTypes<T>::ConstFlat other,
+                  typename TTypes<T>::ConstScalar c2);
+};
+
+template <typename Device, typename T>
 struct CopyTensorToSendBuf {
   void operator()(const Device& d,
                   typename TTypes<T>::Flat src,

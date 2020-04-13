@@ -56,6 +56,10 @@ class RdmaManager {
       const BufType dst_type, const string& name, const bool polling);
   void InitAggWriter();
   int PushTensorBufferedAggregation(const int dst_rank, const string& name);
+  int PushTensorBufferedAggregation(const int dst_rank,
+                                    const std::vector<string>& names);
+  uint64_t RdmaFetchAndAdd(const int dst_rank, const BufType dst_type,
+      const string& name, const uint64_t add, struct ibv_mr* read_mr);
 
   void MarkMRInitialized();
   bool IsMRInitialized();
@@ -94,6 +98,7 @@ class RdmaManager {
   int AckPushDone(int dst_rank);
 
   int rank() { return ptre_rank_; }
+  struct ibv_pd* pd() { return rdma_env_.pd; }
   ibv_cq* cq() { return cq_; }
   ibv_qp* qp(int dest_rank) { return qps_[dest_rank]; }
   RdmaEnv* rdma_env() { return &rdma_env_; }

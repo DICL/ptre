@@ -22,7 +22,7 @@ class GrpcClient {
   int GetRemoteAddress(const std::string& name);
   int GetRemoteParamAddress();
   int GetRemoteEnv();
-  bool AttemptPush();
+  bool AttemptPush(int vstep);
   int AckPushDone();
   bool Barrier();
   void SetRdmaManager(RdmaManager* rdma_manager);

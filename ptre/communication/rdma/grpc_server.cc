@@ -60,7 +60,8 @@ grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,
                                       const AttemptPushRequest* request,
                                       AttemptPushResponse* response) {
   int src_rank = request->rank();
-  if (cm_->CanReceive(src_rank)) {
+  int src_vstep = request->vstep();
+  if (cm_->CanReceive(src_rank, src_vstep)) {
     response->set_available(true);
   } else {
     response->set_available(false);

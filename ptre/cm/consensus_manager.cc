@@ -90,7 +90,8 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
   for (int i = 0; i < num_vars_; i++) {
     recv_flats.push_back(global_consensus_[i]->flat<float>());
   }
-  tensor_aggregator_ = new TensorAggregator(nullptr, 0, names, recv_flats);
+  tensor_aggregator_ = new TensorAggregator(nullptr, 0,
+      rdma_manager_->rdma_env(), names, recv_flats);
   for (int i = 0; i < num_vars_; i++) {
     void* buf = (void*) tensor_aggregator_->buf_ptr(names[i]);
     size_t length = tensor_aggregator_->buf_length(names[i]);
@@ -118,7 +119,10 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
     num_bufs_++;
     rdma_manager_->RegisterMR(BUF_TYPE_AGG_BUF_STATE, names[i], buf, length,
         true);
+    struct ibv_mr* mr = rdma_manager_->GetMR(BUF_TYPE_AGG_BUF_STATE, names[i]);
+    tensor_aggregator_->SetStateMR(names[i], mr);
   }
+  //tensor_aggregator_->Start();
 
   /// For Backward-Compatibility
   /// TODO: This logic should be deprecated and replaced by counting logic.
@@ -144,10 +148,11 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
   }
 }
 
-void ConsensusManager::InitPeerSelector(int strategy) {
+void ConsensusManager::InitPeerSelector(int strategy, int num_push) {
   PeerSelectorFactory::NewPeerSelector(ptre_size_, ptre_rank_,
                                        SelectionStrategy(strategy),
-                                       peer_selector_);
+                                       peer_selector_,
+                                       num_push);
   //for (int i = 0; i < ptre_size_ * 2; i++) {
   //  std::cout << peer_selector_->get_peer() << std::endl;
   //}
@@ -257,36 +262,38 @@ void ConsensusManager::PushTensorsV3(int dst_rank) {
   send_status_ = SEND_IN_PROGRESS;
   send_mu_.unlock();
 #if 0
-    for (auto it : send_tensors_) {
-      const std::string& name = it.first;
-      Tensor* t = it.second;
-      rdma_manager_->PushTensorAtomicAddBatch(dst_rank, name, *t);
-    }
+  for (auto it : send_tensors_) {
+    const std::string& name = it.first;
+    Tensor* t = it.second;
+    rdma_manager_->PushTensorAtomicAddBatch(dst_rank, name, *t);
+  }
 #elif 0
-    //for (auto& name : actual_comm_tensors_) {
-    //  if (ptre_rank_ == 0) {
-    //    Tensor* t = send_tensors_[name];
-    //    std::cout << t->NumElements() << std::endl;
-    //  }
-    //}
-    for (auto& name : actual_comm_tensors_) {
-      //DDLOG << name;
-      if (name.rfind("block4", 0) == 0) {
-        Tensor* t = send_tensors_[name];
-        try {
-          rdma_manager_->PushTensorAtomicAddBatch(dst_rank, name, *t);
-        } catch (std::exception& e) {
-          std::cerr << "Exception caught : " << e.what() << std::endl;
-        }
+  //for (auto& name : actual_comm_tensors_) {
+  //  if (ptre_rank_ == 0) {
+  //    Tensor* t = send_tensors_[name];
+  //    std::cout << t->NumElements() << std::endl;
+  //  }
+  //}
+  for (auto& name : actual_comm_tensors_) {
+    //DDLOG << name;
+    if (name.rfind("block4", 0) == 0) {
+      Tensor* t = send_tensors_[name];
+      try {
+        rdma_manager_->PushTensorAtomicAddBatch(dst_rank, name, *t);
+      } catch (std::exception& e) {
+        std::cerr << "Exception caught : " << e.what() << std::endl;
       }
     }
+  }
+#elif 0
+  /// Use RdmaAggWriter
+  /// NOTE: AggBuf at dst_rank must be initialized.
+  /// Init AggBuf when OpenRecv
+  for (auto& name : actual_comm_tensors_) {
+    rdma_manager_->PushTensorBufferedAggregation(dst_rank, name);
+  }
 #else
-    /// Use RdmaAggWriter
-    /// NOTE: AggBuf at dst_rank must be initialized.
-    /// Init AggBuf when OpenRecv
-    for (auto& name : actual_comm_tensors_) {
-      rdma_manager_->PushTensorBufferedAggregation(dst_rank, name);
-    }
+  rdma_manager_->PushTensorBufferedAggregation(dst_rank, actual_comm_tensors_);
 #endif
   send_mu_.lock();
   send_status_ = SEND_IDLE;
@@ -315,17 +322,28 @@ Tensor* ConsensusManager::send_tensor(const string& name) {
   return send_tensors_[name];
 }
 
-bool ConsensusManager::CanReceive(int src_rank) {
+bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
+  //LOG(INFO) << "[DEBUG] src_rank=" << src_rank << ", src_vstep=" << src_vstep << ", local_vstep=" << virtual_step_ << ", rcv_open=" << rcv_open_;
+  if (virtual_step_ > src_vstep) {
+    return false;
+  }
   std::lock_guard<std::mutex> guard(rcv_mu_);
   if (rcv_open_) {
-    if (rcv_ing_cnt_ >= MAX_RECV_THRESHOLD) {
-      return false;
+    if (virtual_step_ < 10) {
+      if (rcv_ing_cnt_ >= 1) {
+        return false;
+      }
+    } else {
+      if (rcv_ing_cnt_ >= MAX_RECV_THRESHOLD) {
+        return false;
+      }
     }
     auto ret = rcv_status_.emplace(src_rank, RECV_IN_PROGRESS);
     if (!ret.second) {
       return false;
     }
     rcv_ing_cnt_++;
+    rcv_steps_sum_ += src_vstep;
     //std::cout << "\n[RANK=" << ptre_rank_ << "]: rcv_ing_cnt=" << rcv_ing_cnt_ << std::endl;
     return true;
   }
@@ -385,17 +403,21 @@ int ConsensusManager::WaitAndGetNumIncomings() {
   //  LOG(INFO) << "[DEBUG] WaitAndGetNumIncomings(): rcv_ing_cnt=" << rcv_ing_cnt_;
   //}
 #if 1
+  //auto start_time = std:chrono::system_clock::now();
+  //auto last_time = start_time;
   std::unique_lock<std::mutex> lk(rcv_mu_);
   rcv_cv_.wait(lk, [&] {
 #if 1
-        bool recv_done = (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
-        if (!recv_done) {
-          for (auto it : rcv_status_) {
-            //LOG(INFO) << "[DEBUG] rcving from: " << it.first << ", status=" << it.second;
-          }
+      //auto curr_time = std::chrono::system_clock::now();
+      //std::chrono::duration<double> time_diff = curr_time - last_time;
+      bool recv_done = (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
+      if (!recv_done) {
+        for (auto it : rcv_status_) {
+          //LOG(INFO) << "[DEBUG] rcving from: " << it.first << ", status=" << it.second;
         }
-        //LOG(INFO) << "[DEBUG] rcv_ing_cnt=" << rcv_ing_cnt_ << ", rcv_done_cnt=" << rcv_done_cnt_;
-        return recv_done;
+      }
+      //LOG(INFO) << "[DEBUG] rcv_ing_cnt=" << rcv_ing_cnt_ << ", rcv_done_cnt=" << rcv_done_cnt_;
+      return recv_done;
 #else
         return (!rcv_open_ && rcv_ing_cnt_ == rcv_done_cnt_);
 #endif
@@ -411,6 +433,7 @@ int ConsensusManager::WaitAndGetNumIncomings() {
   if (rcv_done_cnt_ > 0) {
     //LOG(INFO) << "[DEBUG] WaitForAggregations() rcv_done_cnt=" << rcv_done_cnt_;
   }
+#if 1
   bool all_agg_done = false;
   while (!all_agg_done) {
     all_agg_done = true;
@@ -423,6 +446,7 @@ int ConsensusManager::WaitAndGetNumIncomings() {
       }
     }
   }
+#endif
   // TODO: Must return zero and don't average if counts don't match.
   return rcv_done_cnt_;
 }
@@ -435,6 +459,7 @@ int ConsensusManager::CountReduceAndOpenRecv(std::string& name) {
       /// Open Receive
       rcv_ing_cnt_ = 0;
       rcv_done_cnt_ = 0;
+      rcv_steps_sum_ = 0;
       PrepareReceive();
       rcv_open_ = true;
       reduce_cnt_ = 0;
@@ -447,11 +472,16 @@ int ConsensusManager::CountReduceAndOpenRecv(std::string& name) {
   return 0;
 }
 
+bool ConsensusManager::IsInitNumApplyOps() {
+  return is_init_num_rcv_tensors_;
+}
+
 int ConsensusManager::InitNumRecvTensors() {
   rcv_mu_.lock();
   /// Open Receive
   rcv_ing_cnt_ = 0;
   rcv_done_cnt_ = 0;
+  rcv_steps_sum_ = 0;
   PrepareReceive();
   rcv_open_ = true;
   reduce_cnt_ = 0;
@@ -470,6 +500,10 @@ int ConsensusManager::InitNumRecvTensors() {
   std::cout << "RANK:" << ptre_rank_ << " NUM_RECV_TENSORS = " << num_rcv_tensors_ << std::endl;
   rcv_mu_.unlock();
   return 0;
+}
+
+int ConsensusManager::ProcessAggregation() {
+  return tensor_aggregator_->ProcessAggregation();
 }
 
 int ConsensusManager::GetRandomTarget() {

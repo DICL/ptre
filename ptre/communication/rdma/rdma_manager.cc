@@ -3,8 +3,10 @@
 #include <iostream>
 #include <cstdlib>
 #include <cerrno>
+#include <chrono>
 
 #include "ptre/communication/rdma/rdma.h"
+#include "ptre/cm/tensor_aggregator.h"
 
 
 namespace ptre {
@@ -16,6 +18,7 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank, bool add)
   if (ret < 0) {
     std::cout << "init_rdma_env failed. ret=" << ret << std::endl;
   } else {
+    //LOG(INFO) << "[DEBUG] num_comp_vectors=" << rdma_env_.context->num_comp_vectors;
     //std::cout << "init_rdma_env done." << std::endl;
   }
   CreateCQs();
@@ -30,13 +33,18 @@ RdmaManager::~RdmaManager() {
 }
 
 void RdmaManager::CreateCQs() {
+#if 0
   event_channel_ = ibv_create_comp_channel(rdma_env_.context);
   if (!event_channel_) {
     std::cout << "Failed to create completion channel" << std::endl;
   }
   cq_ = ibv_create_cq(rdma_env_.context, MAX_CONCURRENT_WRITES * 2,
-                             nullptr, event_channel_, 0);
-  if (cq_ == nullptr) {
+                             NULL, event_channel_, 0);
+#else
+  cq_ = ibv_create_cq(rdma_env_.context, QUEUE_DEPTH_DEFAULT * 2,
+                             NULL, NULL, 1);
+#endif
+  if (cq_ == NULL) {
     std::cout << "Failed to create CQ" << std::endl;
   }
   //for (int i = 0; i < ptre_size_; i++) {
@@ -44,8 +52,8 @@ void RdmaManager::CreateCQs() {
   //    continue;
   //  }
   //  ibv_cq* cq = ibv_create_cq(rdma_env_.context, rdma_env_.dev_attr.max_cqe,
-  //                             nullptr, nullptr, 0);
-  //  if (cq == nullptr) {
+  //                             NULL, NULL, 0);
+  //  if (cq == NULL) {
   //    std::cout << "Failed to create CQ for rank=" << i << std::endl;
   //  }
   //  cqs_.emplace(i, cq);
@@ -54,9 +62,11 @@ void RdmaManager::CreateCQs() {
 
 void RdmaManager::CreateQPs() {
   for (int i = 0; i < ptre_size_; i++) {
+#if 1
     if (i == ptre_rank_) {
       continue;
     }
+#endif
 
     /// Create QP
     ibv_qp* qp;
@@ -67,12 +77,12 @@ void RdmaManager::CreateQPs() {
       qp_init_attr.recv_cq = cq_;
       qp_init_attr.cap.max_send_wr = QUEUE_DEPTH_DEFAULT;
       qp_init_attr.cap.max_recv_wr = QUEUE_DEPTH_DEFAULT;
-      qp_init_attr.cap.max_send_sge = 1;
-      qp_init_attr.cap.max_recv_sge = 1;
+      qp_init_attr.cap.max_send_sge = 8;
+      qp_init_attr.cap.max_recv_sge = 8;
       qp_init_attr.qp_type = IBV_QPT_RC;
 
       qp = ibv_create_qp(rdma_env_.pd, &qp_init_attr);
-      if (qp == nullptr) {
+      if (qp == NULL) {
         std::cout << "Failed to create QP" << std::endl;
       }
     }
@@ -333,7 +343,12 @@ void RdmaManager::InitAggWriter() {
     send_buf_mrs.push_back(send_buf_mr_map[recv_tensor_names_[i]]);
   }
   for (int dst = 0; dst < ptre_size_; dst++) {
-    if (dst != ptre_rank_) {
+#if 0
+    bool condition = dst != ptre_rank_;
+#else
+    bool condition = true;
+#endif
+    if (condition) {
       // Init vector agg_buf_state_rmrs
       std::map<string, RemoteMR>& agg_buf_state_rmr_map =
           rmrs_[dst][BUF_TYPE_AGG_BUF_STATE];
@@ -365,11 +380,103 @@ int RdmaManager::PushTensorBufferedAggregation(const int dst_rank,
   return agg_writers_[dst_rank]->WriteToAggBuf(name);
 }
 
+int RdmaManager::PushTensorBufferedAggregation(const int dst_rank,
+    const std::vector<string>& names) {
+  int done_cnt = 0;
+  int n = names.size();
+  bool done_flags[n] = { };
+  uint64_t read_states[n] = { };
+  bool all_done = false;
+  LOG(INFO) << "[DEBUG] Write Tensors to rank " << dst_rank;
+  auto start_time = std::chrono::system_clock::now();
+  auto last_time = start_time;
+  while (!all_done) {
+    auto curr_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> time_diff = curr_time - last_time;
+    if (time_diff.count() > 10) {
+      LOG(INFO) << "[DEBUG] Hangs on writing tensors to rank " << dst_rank;
+      int written_cnt = 0;
+      for (int i = 0; i < n; i++) {
+        if (!done_flags[i]) {
+          LOG(INFO) << "[DEBUG] not written: " << names[i] << ", state = " << read_states[i];
+        } else {
+          written_cnt++;
+        }
+      }
+      LOG(INFO) << "[DEBUG] Written count = " << written_cnt << " to rank " << dst_rank;
+      last_time = curr_time;
+    }
+    all_done = true;
+    for (int i = 0; i < n; i++) {
+      if (!done_flags[i]) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //LOG(INFO) << "[DEBUG] TransitStateV2(" << names[i] << ")";
+        int remote_state = agg_writers_[dst_rank]->TransitStateV2(names[i],
+            StatefulAggBuf::kRecvReady, StatefulAggBuf::kRecvInProgress);
+        read_states[i] = remote_state;
+        if (remote_state == StatefulAggBuf::kRecvReady) {
+          //LOG(INFO) << "[DEBUG] WriteToAggBufV2(" << names[i] << ")";
+          agg_writers_[dst_rank]->WriteToAggBufV2(names[i]);
+          done_flags[i] = true;
+          //LOG(INFO) << "[DEBUG] Write Done for dst=" << dst_rank << " (" << ++done_cnt << "/" << n << ")";
+        } else {
+          //LOG(INFO) << "[DEBUG] TransitState Failed for dst=" << dst_rank << ", name=" << names[i];
+          all_done = false;
+        }
+      }
+    }
+    //usleep(1000 * 1000 * 1);
+  }
+  auto end_time = std::chrono::system_clock::now();
+  std::chrono::duration<double> time_diff = end_time - start_time;
+  //LOG(INFO) << "Done pushing all tensors to rank " << dst_rank << ": elapsed " << time_diff.count() << " s";
+}
+
+uint64_t RdmaManager::RdmaFetchAndAdd(const int dst_rank,
+    const BufType dst_type, const string& name, const uint64_t add,
+    struct ibv_mr* read_mr) {
+  LOG(ERROR) << "THIS FUNCTION IS NOT READY YET.";
+  exit(EXIT_FAILURE);
+  uint64_t* read_buf;
+  bool dereg_mr;
+  if (read_mr == nullptr) {
+    dereg_mr = true;
+    read_buf = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
+    read_mr = ibv_reg_mr(rdma_env_.pd, (void*) read_buf, sizeof(uint64_t),
+        IBV_ACCESS_LOCAL_WRITE);
+  } else {
+    dereg_mr = false;
+    read_buf = (uint64_t*) read_mr->addr;
+  }
+
+  struct ibv_sge sge;
+  sge.addr = (uint64_t) read_buf;
+  sge.length = sizeof(uint64_t);
+  sge.lkey = read_mr->lkey;
+
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_CAS, nullptr);
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_ATOMIC_FETCH_AND_ADD;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  RemoteMR rmr = rmrs_[dst_rank][dst_type][name];
+  wr.wr.atomic.remote_addr = rmr.remote_addr;
+  wr.wr.atomic.compare_add = add;
+  wr.wr.atomic.rkey = rmr.rkey;
+
+  struct ibv_send_wr* bad_wr;
+  struct ibv_qp* qp = qps_[dst_rank];
+  int ret = ibv_post_send(qp, &wr, &bad_wr);
+}
+
 struct ibv_mr* RdmaManager::GetMR(const BufType buf_type, const string& name) {
   return mrs_[buf_type][name];
 }
 
 void RdmaManager::ProcessCQ() {
+#if 0
   std::cout << "Start ProcessCQ()" << std::endl;
   while (true) {
     ibv_cq* cq;
@@ -402,6 +509,7 @@ void RdmaManager::ProcessCQ() {
       //std::cout << "wc opcode=" << wc_[i].opcode << std::endl;
     }
   }
+#endif
 }
 
 void RdmaManager::Poll(int num_comps) {

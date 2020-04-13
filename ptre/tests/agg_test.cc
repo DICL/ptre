@@ -44,16 +44,16 @@ int main() {
   std::cout << tensors[0]->DebugString() << std::endl;
 
   auto buf = agg.agg_buf_ptr(0);
-  while (buf->state != ptre::StatefulAggBuf::kRecvReady);
+  while (*buf->state != ptre::StatefulAggBuf::kRecvReady);
   (*buf->flat).setConstant(0.1);
-  buf->state = ptre::StatefulAggBuf::kAggReady;
+  *buf->state = ptre::StatefulAggBuf::kAggReady;
 
-  while (buf->state != ptre::StatefulAggBuf::kRecvReady);
+  while (*buf->state != ptre::StatefulAggBuf::kRecvReady);
   std::cout << tensors[0]->DebugString() << std::endl;
 
   (*buf->flat).setConstant(0.2);
-  buf->state = ptre::StatefulAggBuf::kAggReady;
-  while (buf->state != ptre::StatefulAggBuf::kRecvReady);
+  *buf->state = ptre::StatefulAggBuf::kAggReady;
+  while (*buf->state != ptre::StatefulAggBuf::kRecvReady);
   std::cout << tensors[0]->DebugString() << std::endl;
 
   std::cout << agg.buf_ptr(0) << std::endl;

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <typeinfo>
 #include <atomic>
+#include <chrono>
 
 #include "ptre/kernels/ptre_ops.h"
 //#include "ptre/kernels/ptre_op_helpers.h"
@@ -31,6 +32,8 @@
 //#include "tensorflow/core/framework/tensor.h"
 //#include "tensorflow/core/lib/core/refcount.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
+
+#define LOGSTEP LOG(INFO) << "[DEBUG,step=" << ptre_global.local_step << "]: "
 
 namespace tensorflow {
 
@@ -65,6 +68,19 @@ namespace {
 struct PtreGlobal {
   PtreGlobal() {
     std::cout << (void*) this << std::endl;
+    ma_op_cnt = 0;
+    ma_op_cnt2 = 0;
+    reduce_op_cnt0 = 0;
+    reduce_op_cnt1 = 0;
+    for (int i = 0; i < num_copy_cnt; i++) {
+      copy_cnt[i] = 0;
+    }
+
+    /// Init barrier variables
+    barrier_counter = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
+    barrier_release = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
+    memset(barrier_counter, 0, 8);
+    memset(barrier_release, 0, 8);
   }
   ConsensusManager cm;
   RdmaManager* rdma_manager = nullptr;
@@ -82,6 +98,7 @@ struct PtreGlobal {
   // Background thread running PTRE communication.
   std::thread grpc_server_thread;
   std::thread background_thread;
+  std::thread aggregation_thread;
 
   //bool new_incoming;
 
@@ -94,6 +111,7 @@ struct PtreGlobal {
 
   // Training Infos
   int local_step = 0;
+  int virtual_step = 1;
 
   /// 0: NOT PUSH
   /// 1: PUSH
@@ -108,6 +126,21 @@ struct PtreGlobal {
   bool barrier_variable = false;
   bool is_broadcast_done = true;
 
+  int num_push = 1;
+  bool ever_pushed = false;
+  std::atomic<int> ma_op_cnt;
+  std::atomic<int> ma_op_cnt2;
+  std::atomic<int> reduce_op_cnt0;
+  std::atomic<int> reduce_op_cnt1;
+  int num_copy_cnt = 2;
+  std::atomic<int> copy_cnt[2];
+
+  std::mutex push_mu;
+
+  /// Barrier variables
+  uint64_t* barrier_counter;
+  uint64_t* barrier_release;
+
   ~PtreGlobal() {
     if (background_thread.joinable()) {
       //shut_down = true;
@@ -116,12 +149,13 @@ struct PtreGlobal {
     if (grpc_server_thread.joinable()) {
       grpc_server_thread.join();
     }
+    if (background_thread.joinable()) {
+      aggregation_thread.join();
+    }
     if (rdma_manager != nullptr) {
       delete rdma_manager;
     }
   }
-
-  int num_push = 1;
 };
 
 static PtreGlobal ptre_global;
@@ -237,6 +271,29 @@ void BackgroundThreadLoop() {
   }
 }
 
+int ProcessAggregation() {
+  return ptre_global.cm.ProcessAggregation();
+}
+
+void AggregationThreadLoop() {
+  ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
+  auto last_time = std::chrono::system_clock::now();
+  while (!ptre_global.is_shutdown) {
+    auto curr_time = std::chrono::system_clock::now();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    int ret = ProcessAggregation();
+    if (ret > 0) {
+      //LOG(INFO) << "[DEBUG] agg_cnt=" << ret;
+      last_time = curr_time;
+    }
+    std::chrono::duration<double> since_last = curr_time - last_time;
+    if (since_last.count() > 15) {
+      LOG(INFO) << "[DEBUG] Agg not performed for a while.";
+      agg->PrintDebug();
+      last_time = curr_time;
+    }
+  }
+}
 
 void InitPtreOnce() {
   //while(true) {
@@ -261,6 +318,19 @@ void load_grpc_hosts(const string& grpc_hosts_file) {
   }
 }
 
+#if 0
+void PtreBarrier() {
+  if (ptre_global.rank == 0) {
+    while (true) {
+      usleep(1);
+      uint64_t read_val = *ptre_global.barrier_counter;
+      if (read_val == ptre_global.size - 1) {
+      }
+    }
+  }
+}
+#endif
+
 void InitComm(int size, int rank, const string& grpc_hosts_file) {
   /// First Initialization step
   ptre_global.size = size;
@@ -274,6 +344,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.grpc_client_cache = std::make_shared<GrpcClientCache>(rank,
       ptre_global.grpc_hosts);
 
+  /// Init RdmaManager
   std::cout << "Initializing RdmaManager" << std::endl;
   ptre_global.rdma_manager = new RdmaManager(size, rank, false);
   ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
@@ -318,6 +389,7 @@ void InitRemoteMRV2() {
       if (peer_flag[i]) {
         continue;
       }
+      LOG(INFO) << "Get Remote Address of RANK:" << i;
       GrpcClient* grpc_client;
       ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
       if (!ptre_global.rdma_manager->IsDlidSet(i)) {
@@ -358,7 +430,11 @@ void ConnectQPs() {
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     done_flag = 1;
     for (int i = 0; i < ptre_global.size; i++) {
+#if 1
       if (i != ptre_global.rank) {
+#else
+      if (true) {
+#endif
         int r = ptre_global.rdma_manager->ConnectQP(i);
         if (r < 0) {
           done_flag = 0;
@@ -530,7 +606,10 @@ class InitStepOneOp : public OpKernel {
       inputs.push_back(&input);
     }
     LOG(INFO) << "Initializing global consensus: num_tensors=" << num_inputs;
+
+    /// Register MR
     ptre_global.cm.InitGlobalConsensusV2(names_, inputs);
+    ptre_global.aggregation_thread = std::thread(AggregationThreadLoop);
     InitGrpcService();
     InitRemoteMRV2();
     ptre_global.rdma_manager->InitAggWriter();
@@ -887,6 +966,16 @@ struct Modelaverage<CPUDevice, T> {
 };
 
 template <typename T>
+struct LinearWeightedAverageApprox<CPUDevice, T> {
+  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstScalar c1,
+                  typename TTypes<T>::ConstFlat other,
+                  typename TTypes<T>::ConstScalar c2) {
+    var.device(d) = c1() * var + c2() * other;
+  }
+};
+
+template <typename T>
 struct CopyTensorToSendBuf<CPUDevice, T> {
   void operator()(const CPUDevice& d,
                   typename TTypes<T>::Flat src,
@@ -947,7 +1036,36 @@ class ModelaverageOp : public OpKernel {
     int num_incomings = 1;
 #if 1
     if (1) {
+      //if (ptre_global.cm.IsInitNumApplyOps() && ptre_global.ever_pushed) {
+      //  LOG(INFO) << "[DEBUG] Waiting for rcv_ing_cnt == num_push";
+      //  while (true) {
+      //    if (ptre_global.cm.rcv_ing_cnt() == ptre_global.num_push) {
+      //      break;
+      //    }
+      //  }
+      //  LOG(INFO) << "[DEBUG] rcv_ing_cnt=" << ptre_global.cm.rcv_ing_cnt();
+      //}
+      if (ptre_global.ever_pushed) {
+        int old;
+        while (1) {
+          old = ptre_global.ma_op_cnt.fetch_add(1);
+          if (old < ptre_global.cm.num_apply_ops()) {
+            break;
+          }
+        }
+        if (old == 0) {
+          LOG(INFO) << "[DEBUG] Waiting for Agg Step=" << ptre_global.local_step;
+        }
+      }
       num_incomings = ptre_global.cm.WaitAndGetNumIncomings();
+      if (ptre_global.ever_pushed) {
+        int old = ptre_global.ma_op_cnt2.fetch_add(1);
+        if (old == ptre_global.cm.num_apply_ops() - 1) {
+          LOG(INFO) << "[DEBUG] Done Waiting for Aggs" << ptre_global.local_step;
+          ptre_global.ma_op_cnt.store(0);
+          ptre_global.ma_op_cnt2.store(0);
+        }
+      }
       if (num_incomings > 0) {
         //LOG(INFO) << "[DEBUG] RECV and AGG all done: num_incomings = " << num_incomings;
       }
@@ -966,11 +1084,54 @@ class ModelaverageOp : public OpKernel {
     if (do_reduce) {
       const Device& d = ctx->template eigen_device<Device>();
       const Tensor other(ptre_global.cm.global_consensus(var_name_));
+#if 0
       Tensor m_(DataTypeToEnum<T>::v(), TensorShape({ }));
       m_.flat<T>()(0) = T(num_incomings + 1);
       const Tensor m(m_);
       functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
           other.flat<T>());
+#else
+      int old = ptre_global.reduce_op_cnt0.fetch_add(1);
+      Tensor c1_(DataTypeToEnum<T>::v(), TensorShape({ }));
+      Tensor c2_(DataTypeToEnum<T>::v(), TensorShape({ }));
+      int k = ptre_global.virtual_step;
+      int k_r_sum = ptre_global.cm.rcv_steps_sum();
+      int k_sum = k + k_r_sum;
+      int n = num_incomings + 1;
+      float k_r_avg = (float) k_r_sum / (n - 1);
+      float c1_val = (float) k / k_sum;
+      float c2_val = (float) k_r_avg / k_sum;
+      int www = 0;
+      if (k < www) {
+        float delta = 0.5 - c1_val;
+        c1_val = c1_val + (delta / www) * (www - k);
+        c2_val = (1.0 - c1_val) / (n - 1);
+      }
+      c1_.flat<T>()(0) = T(c1_val);
+      c2_.flat<T>()(0) = T(c2_val);
+      const Tensor c1(c1_);
+      const Tensor c2(c2_);
+      if (old == 0) {
+        LOG(INFO) << "[DEBUG]\nlocal_step=" << ptre_global.local_step
+            << "\nvirtual_step=" << ptre_global.virtual_step
+            << "\nc1=" << c1_.flat<T>()(0)
+            << ", c2=" << c2_.flat<T>()(0)
+            << ", c1 + (n-1)c2 = " << c1_.flat<T>()(0) + (T) (n - 1) * c2_.flat<T>()(0)
+            << "\nk=" << k << ", k_r_avg=" << k_r_avg;
+      }
+      functor::LinearWeightedAverageApprox<Device, T>()(d, var.flat<T>(),
+          c1.scalar<T>(), other.flat<T>(), c2.scalar<T>());
+      int k_avg = k_sum / n;
+      if (k_avg > k) {
+        ptre_global.virtual_step = k_avg;
+        ptre_global.cm.set_virtual_step(k_avg);
+      }
+      old = ptre_global.reduce_op_cnt1.fetch_add(1);
+      if (old == ptre_global.cm.num_apply_ops() - 1) {
+        ptre_global.reduce_op_cnt0 = 0;
+        ptre_global.reduce_op_cnt1 = 0;
+      }
+#endif
       ptre_global.incoming_state = 2;  // Used
     }
     //LOG(INFO) << "CountReduceAndOpenRecv() Entering.";
@@ -1039,7 +1200,35 @@ class PushTensorOp : public OpKernel {
     LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
+    int old;
+    while (1) {
+      old = ptre_global.copy_cnt[0].fetch_add(1);
+      if (old < ptre_global.cm.num_apply_ops()) {
+        break;
+      }
+    }
+    if (old == 0) LOGSTEP << "Starting CopyToSendBuf...";
 #if 0
+    ptre_global.q_mu.lock();
+    int old = ptre_global.copy_cnt[0].fetch_add(1);
+    if (old == 0) {
+      LOG(INFO) << "[DEBUG] Starting CopyToSendBuf... (step=" << ptre_global.local_step << ")";
+    }
+    int q_size = ptre_global.q.size();
+    LOGSTEP << "Number of remaining queued send requests=" << q_size;
+    /// Waiting for the on-going send request.
+    if (old == 0) LOGSTEP << "Checking if SendBuf is idle.";
+    std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
+    ptre_global.cm.send_cv_.wait(lk, [&] {
+        return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
+        });
+
+    T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
+        var_name_);
+    typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
+    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
+    lk.unlock();
+#elif 0
     Tensor* send_tensor = ptre_global.cm.send_tensor(var_name_);
     // TODO: Make it more correct! (locking)
     std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
@@ -1053,11 +1242,16 @@ class PushTensorOp : public OpKernel {
     T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
         var_name_);
     // TODO: Make it more correct! (locking)
-    bool SKIP_IF_SEND_BUF_IS_BUSY = true;
-    if (SKIP_IF_SEND_BUF_IS_BUSY) {
+    int SKIP_IF_SEND_BUF_IS_BUSY = 2;
+    if (SKIP_IF_SEND_BUF_IS_BUSY == 1) {
       /// Don't wait for the running send operations at this point.
       auto& mu = ptre_global.cm.send_mu_;
       bool skip = false;
+      ptre_global.q_mu.lock();
+      if (!ptre_global.q.empty()) {
+        ptre_global.push_step_state = 2;
+      }
+      ptre_global.q_mu.unlock();
       mu.lock();
       if (ptre_global.push_step_state == 1) {  // PUSH
         if (ptre_global.cm.send_status_ != ConsensusManager::SEND_IDLE) {
@@ -1076,18 +1270,27 @@ class PushTensorOp : public OpKernel {
       if (skip) {
         return;
       }
-    } else {
+    } else if (SKIP_IF_SEND_BUF_IS_BUSY == 0) {
       /// Wait for the running send operations at this point.
       std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
       ptre_global.cm.send_cv_.wait(lk, [&] {
-#if 1
-          bool is_idle = (ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE);
-          if (!is_idle) {
-          }
-          return is_idle;
-#else
           return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
-#endif
+          });
+      lk.unlock();
+    } else {
+      bool q_empty = false;
+      while (!q_empty) {
+        ptre_global.q_mu.lock();
+        if (ptre_global.q.empty()) {
+          q_empty = true;
+        } else {
+          //LOG(INFO) << "[DEBUG] Queue is not empty. size=" << ptre_global.q.size();
+        }
+        ptre_global.q_mu.unlock();
+      }
+      std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
+      ptre_global.cm.send_cv_.wait(lk, [&] {
+          return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
           });
       lk.unlock();
     }
@@ -1099,6 +1302,12 @@ class PushTensorOp : public OpKernel {
     typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
 #endif
+    int old2 = ptre_global.copy_cnt[1].fetch_add(1);
+    if (old2 == ptre_global.cm.num_apply_ops() - 1) {
+      LOGSTEP << "Done CopyToSendBuf.";
+      ptre_global.copy_cnt[0] = 0;
+      ptre_global.copy_cnt[1] = 0;
+    }
   }
  private:
   string var_name_;
@@ -1148,7 +1357,7 @@ int ptre_init(int size, int rank, char* grpc_hosts_file,
               int selection_strategy, int num_push) {
   tensorflow::ptre_global.num_push = num_push;
   tensorflow::InitComm(size, rank, grpc_hosts_file);
-  tensorflow::ptre_global.cm.InitPeerSelector(selection_strategy);
+  tensorflow::ptre_global.cm.InitPeerSelector(selection_strategy, num_push);
   LOG(INFO) << "Peer selection strategy = " << selection_strategy;
 }
 
@@ -1179,6 +1388,7 @@ void ptre_mark_no_new() {
 
 void ptre_enqueue_push() {
   using tensorflow::ptre_global;
+  ptre_global.ever_pushed = 1;
   std::vector<bool> checker(ptre_global.size, 0);
   //int target_rank = tensorflow::ptre_global.cm.GetRandomTarget();
   //GrpcClient grpc_client(ptre_global.rank, i, ptre_global.grpc_hosts[i]);
@@ -1193,7 +1403,8 @@ void ptre_enqueue_push() {
   }
 #else
   if (!ptre_global.q.empty()) {
-    LOG(INFO) << "ptre_enqueue_push(): Queue is not empty, push_state=" << ptre_global.push_step_state;
+    LOG(INFO) << "ptre_enqueue_push(): Queue is not empty, push_state=" << ptre_global.push_step_state
+        << ", queue size = " << ptre_global.q.size();
     //exit(EXIT_FAILURE);
     ptre_global.push_step_state = 2;
   }
@@ -1214,19 +1425,23 @@ void ptre_enqueue_push() {
   }
 #elif 1
   /// V2
+  LOG(INFO) << "[DEBUG] enqueue_push Step=" << ptre_global.local_step;
+  int num_targets = 0;
   if (ptre_global.push_step_state == 1) {
     int attempt_cnt = 0;
-    int num_targets = 0;
     checker[ptre_global.rank] = 1;
-    while (attempt_cnt < ptre_global.size && num_targets < ptre_global.num_push) {
-      attempt_cnt++;
+    while (attempt_cnt < ptre_global.size
+        && num_targets < ptre_global.num_push) {
       int target = ptre_global.cm.get_peer();
+      attempt_cnt++;
       if (!checker[target]) {
         checker[target] = 1;
+        //LOG(INFO) << "[DEBUG] Attempt to push to RANK=" << target;
+        //checker[target] = 1;
         tensorflow::GrpcClient* grpc_client;
         ptre_global.grpc_client_cache->GetClient(target, &grpc_client);
         // TODO: Make AttemptPush returns PUSH MODE, e.g. DIRECT_WRITE / BUF_AGG
-        bool can_push = grpc_client->AttemptPush();
+        bool can_push = grpc_client->AttemptPush(ptre_global.virtual_step);
         if (can_push) {
           ptre_global.q.push(target);
           num_targets++;
@@ -1235,6 +1450,7 @@ void ptre_enqueue_push() {
     }
   } else if (ptre_global.push_step_state == 2) {
   }
+  LOG(INFO) << "[DEBUG] Done enqueue_push: num_targets=" << num_targets << ", Step=" << ptre_global.local_step;
 #else
 #endif
   mu.unlock();
@@ -1254,6 +1470,7 @@ void ptre_unset_push() {
 
 void ptre_finalize(unsigned int wait_time) {
   sleep(wait_time);
+  //tensorflow::PtreBarrier();
   tensorflow::ShutdownGrpcServer();
   tensorflow::ptre_global.is_shutdown = true;
 }
@@ -1296,11 +1513,14 @@ void ptre_set_broadcast_not_done() {
 }
 
 void ptre_count_step() {
-  tensorflow::ptre_global.local_step++;
+  //tensorflow::ptre_global.local_step++;
+  tensorflow::ptre_global.virtual_step++;
+  tensorflow::ptre_global.cm.count_virtual_step();
 }
 
 void ptre_set_local_step(int local_step) {
   tensorflow::ptre_global.local_step = local_step;
+  tensorflow::ptre_global.cm.set_local_step(local_step);
 }
 
 }

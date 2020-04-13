@@ -1,11 +1,14 @@
 #include "peer_selector.h"
+
 #include <unistd.h>
+#include "tensorflow/core/platform/logging.h"
 
 namespace ptre {
 
 void PeerSelectorFactory::NewPeerSelector(int comm_size, int comm_rank,
     SelectionStrategy strategy,
-    PeerSelectorInterface* &out_selector) {
+    PeerSelectorInterface* &out_selector,
+    int num_push) {
   if (strategy == RANDOM) {
     out_selector = new RandomPeerSelector(comm_size, comm_rank);
   } else if (strategy == ROUND_ROBIN) {
@@ -20,9 +23,17 @@ void PeerSelectorFactory::NewPeerSelector(int comm_size, int comm_rank,
     out_selector = new MovingDHTRoundRobinSelector(comm_size, comm_rank);
   } else if (strategy == PRIORITY_DIFF) {
     out_selector = new DifferenceBasedPeerSelector(comm_size, comm_rank);
+  } else if (strategy == DIVN_ROUND_ROBIN) {
+    out_selector = new DivNRoundRobinPeerSelector(comm_size, comm_rank,
+        num_push);
   } else {
     // Default: RANDOM
+#if 0
     out_selector = new RandomPeerSelector(comm_size, comm_rank);
+#else
+    LOG(ERROR) << "Unknown peer selection strategy: " << strategy;
+    exit(EXIT_FAILURE);
+#endif
   }
 }
 
@@ -150,6 +161,29 @@ int DifferenceBasedPeerSelector::get_peer() {
       }
     }
   }
+  return ret;
+}
+
+DivNRoundRobinPeerSelector::DivNRoundRobinPeerSelector(int comm_size,
+    int comm_rank, int num_push) : PeerSelectorInterface(comm_size, comm_rank) {
+  num_push_ = num_push;
+  div_idx_ = 0;
+  int distance = comm_size_ / num_push_;
+  int next = (comm_rank_ + 1) % comm_size_;
+  for (int i = 0; i < num_push_; i++) {
+    nexts_.push_back(next);
+    next = (next + distance) % comm_size_;
+  }
+}
+
+int DivNRoundRobinPeerSelector::get_peer() {
+  int ret = nexts_[div_idx_];
+  int next = (ret + 1) % comm_size_;
+  while (next == comm_rank_) {
+    next = (next + 1) % comm_size_;
+  }
+  nexts_[div_idx_] = next;
+  div_idx_ = (div_idx_ + 1) % num_push_;
   return ret;
 }
 
