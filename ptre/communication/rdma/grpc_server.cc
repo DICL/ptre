@@ -1,4 +1,5 @@
 #include "ptre/communication/rdma/grpc_server.h"
+#include "tensorflow/core/platform/logging.h"
 
 #include <iostream>
 
@@ -30,6 +31,7 @@ grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* context,
 grpc::Status RdmaServiceImpl::GetRemoteParamAddress(grpc::ServerContext* context,
                                 const GetRemoteParamAddressRequest* request,
                                 GetRemoteParamAddressResponse* response) {
+  int src_rank = request->rank();
   int rank = rdma_manager_->rank();
   RemoteMR rpmr = rdma_manager_->GetRemoteParamMR();
 
@@ -91,6 +93,7 @@ grpc::Status RdmaServiceImpl::Barrier(grpc::ServerContext* context,
 grpc::Status RdmaServiceImpl::GetRemoteAddressV2(grpc::ServerContext* context,
     const GetRemoteAddressV2Request* request,
     GetRemoteAddressV2Response* response) {
+  int src_rank = request->rank();
   BufType type = request->type();
   string name = request->name();
   struct ibv_mr* mr = rdma_manager_->GetMR(type, name);

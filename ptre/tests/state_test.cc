@@ -112,8 +112,10 @@ void TrainingThreadLoop() {
       kCm->InitNumRecvTensors();
       first_step = 0;
     }
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < kSize; i++) {
+      //if (i == kRank) continue;
       int dst_rank = i;
+      LOG(INFO) << "target to push = " << i;
       GrpcClient* grpc_client;
       kGrpcClientCache->GetClient(dst_rank, &grpc_client);
       bool can_push = grpc_client->AttemptPush(1);

@@ -38,9 +38,6 @@ struct RdmaEnv {
   ibv_port_attr port_attr;
   ibv_device_attr dev_attr;
   union ibv_gid gid;
-  //ibv_cq* cq;
-  //ibv_wc wc[MAX_CONCURRENT_WRITES * 2];
-  //std::thread polling_thread;
 };
 
 enum RdmaWrIdType {
@@ -81,18 +78,6 @@ struct RemoteMR {
 //  RemoteMR rmr;
 //};
 
-class RdmaTensorChannel {
- public:
-  RdmaTensorChannel(const RdmaEnv* env, const RemoteTensorId& id);
-  void Connect(uint32_t dlid);
-
- private:
-  const RdmaEnv* env_;
-  RemoteTensorId id_;
-  ibv_qp* qp_ = nullptr;
-  bool connected_ = false;
-};
-
 /// local_tensor_send_buf ----- remote_tensor_recv_buf
 ///                       \---- remote_tensor_recv_buf
 /// local_tensor_recv_buf ----- remote_tensor_send_buf
@@ -108,32 +93,16 @@ struct ibv_cq* ptre_rdma_create_cq(RdmaEnv* rdma_env, int comp_vector);
 struct ibv_qp* ptre_rdma_create_qp(RdmaEnv* rdma_env, struct ibv_cq* send_cq,
     struct ibv_cq* recv_cq);
 int ptre_rdma_connect_qp(struct ibv_qp* qp, uint32_t dest_qp_num,
-    uint64_t global_subnet_prefix, uint64_t global_interface_id, uint16_t dlid);
+    uint64_t global_subnet_prefix, uint64_t global_interface_id, uint16_t dlid,
+    uint32_t my_psn, uint32_t remote_psn);
+int ptre_rdma_connect_qp_local(struct ibv_qp* qp, uint32_t dest_qp_num,
+    uint16_t dlid,
+    uint32_t my_psn, uint32_t remote_psn);
+void rdma_qp_reset_to_rts(struct ibv_qp* qp, uint32_t remote_qpn,
+    uint16_t remote_lid, uint32_t remote_psn = 0, uint32_t my_psn = 0);
 
-static inline void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
-                                struct ibv_wc* wcs) {
-  int cnt = 0;
-  while (cnt < num_comps) {
-    struct ibv_wc& wc = wcs[cnt];
-    int new_comps = ibv_poll_cq(cq, num_comps - cnt, &wc);
-    usleep(1);
-    if (new_comps > 0) {
-      for (int i = 0; i < new_comps; i++) {
-        struct ibv_wc& curr_wc = wcs[cnt + i];
-        if (curr_wc.status < 0) {
-          std::cerr << "Bad wc status " << curr_wc.status << endl;
-        }
-        RdmaWrId* wr_id = reinterpret_cast<RdmaWrId*>(curr_wc.wr_id);
-        //std::cout << "WorkCompletion (RdmaWrIdType=" << wr_id->write_type
-        //    << ")\n";
-        delete wr_id;
-      }
-      cnt += new_comps;
-    } else if (new_comps < 0) {
-      LOG(INFO) << "[DEBUG] ibv_poll_cq failed.";
-    }
-  }
-}
+void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
+                                struct ibv_wc* wcs, int caller_id = 0);
 
 int post_write(size_t buffer_size, uint64_t src_addr,
                uint32_t lkey, uint64_t remote_addr,
@@ -160,6 +129,13 @@ int post_read(size_t buffer_size, uint64_t local_addr,
                uint32_t lkey, uint64_t remote_addr,
                uint32_t rkey, uint64_t wr_id,
                struct ibv_qp *qp);
+void rdma_modify_qp_rts(struct ibv_qp* qp, uint32_t remote_qpn,
+    uint32_t remote_psn, uint16_t remote_lid, uint32_t my_psn);
+void rdma_poll_cq(struct ibv_cq* cq, int num_comps,
+                                struct ibv_wc* wcs);
+uint64_t rdma_cas(uint64_t compare, uint64_t swap, struct ibv_qp* qp,
+    struct ibv_cq* cq, struct ibv_mr* read_buf_mr, uint64_t remote_addr,
+    uint32_t rkey, struct ibv_pd* pd);
 }  // namespace ptre
 
 #endif  // PTRE_COMMUNICATION_RDMA_RDMA_H_

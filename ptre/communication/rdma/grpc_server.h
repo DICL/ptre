@@ -47,6 +47,12 @@ class RdmaServiceImpl final : public Rdma::Service {
   bool* barrier_variable_ = nullptr;
   RdmaManager* rdma_manager_ = nullptr;  // not owned.
   ConsensusManager* cm_ = nullptr;  // not owned.
+
+  // Rdma Attributes
+  //uint32_t lid_;
+  //std::map<string, uint32_t> qpns_;
+  //std::map<string, uint64_t> remote_addrs_;
+  //std::map<string, uint32_t> rkeys_;
 };
 
 class GrpcServer {

@@ -90,8 +90,12 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
   for (int i = 0; i < num_vars_; i++) {
     recv_flats.push_back(global_consensus_[i]->flat<float>());
   }
+  struct ibv_cq* local_cq = rdma_manager_->local_cq();
+  struct ibv_qp* local_qp = rdma_manager_->local_qp();
   tensor_aggregator_ = new TensorAggregator(nullptr, 0,
-      rdma_manager_->rdma_env(), names, recv_flats);
+      rdma_manager_->rdma_env(),
+      local_cq, local_qp,
+      names, recv_flats);
   for (int i = 0; i < num_vars_; i++) {
     void* buf = (void*) tensor_aggregator_->buf_ptr(names[i]);
     size_t length = tensor_aggregator_->buf_length(names[i]);
@@ -504,6 +508,7 @@ int ConsensusManager::InitNumRecvTensors() {
 
 int ConsensusManager::ProcessAggregation() {
   return tensor_aggregator_->ProcessAggregation();
+  //return tensor_aggregator_->ProcessAggregationNoVerbs();
 }
 
 int ConsensusManager::GetRandomTarget() {
@@ -526,6 +531,12 @@ int ConsensusManager::GetIncNeighbor() {
 
 int ConsensusManager::get_peer() {
   return peer_selector_->get_peer();
+}
+
+void ConsensusManager::next_peer() {
+  LOG(ERROR) << "THIS FUNCTION IS NOT READY.";
+  exit(1);
+  peer_selector_->next();
 }
 
 int ConsensusManager::get_peers(int num_peer, int* peers) {
@@ -561,6 +572,10 @@ const Tensor& ConsensusManager::global_consensus(const std::string& name) {
 
 const std::vector<Tensor*>& ConsensusManager::GetGlobalConsensusList() {
   return global_consensus_;
+}
+
+const std::vector<string>& ConsensusManager::GetGlcNameList() {
+  return tensor_names_;
 }
 
 const std::vector<Tensor*>& ConsensusManager::GetSendTensorsList() {

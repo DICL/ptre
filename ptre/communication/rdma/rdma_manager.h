@@ -33,6 +33,7 @@ class RdmaManager {
  public:
   RdmaManager(int ptre_size, int ptre_rank, bool add);
   ~RdmaManager();
+  void InitLocalQP();
   void CreateCQs();
   void CreateQPs();
   int ConnectQP(int dst_rank);
@@ -45,6 +46,8 @@ class RdmaManager {
   void RegisterMR(const BufType buf_type, const string& name, void* buf,
                   size_t length, bool remote);
   struct ibv_mr* GetMR(const BufType buf_type, const string& name);
+  void GetRemoteAddress(int dst_rank, const BufType buf_type,
+      const string& name, uint64_t* out_addr, uint32_t* out_rkey);
   int GetRemoteAccessBufInfos(std::vector<BufType>* out_buf_types,
                               std::vector<string>* out_names);
   bool IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
@@ -98,9 +101,14 @@ class RdmaManager {
   int AckPushDone(int dst_rank);
 
   int rank() { return ptre_rank_; }
+  struct ibv_context* ctx() { return rdma_env_.context; }
   struct ibv_pd* pd() { return rdma_env_.pd; }
-  ibv_cq* cq() { return cq_; }
-  ibv_qp* qp(int dest_rank) { return qps_[dest_rank]; }
+  struct ibv_cq* cq() { return cq_; }
+  struct ibv_qp* qp(int dest_rank) { return qps_[dest_rank]; }
+  struct ibv_cq* local_cq() { return cq_local_; }
+  struct ibv_qp* local_qp() { return qp_local_; }
+  uint32_t lid() { return rdma_env_.port_attr.lid; }
+  uint32_t remote_lid(int dst_rank) { return dlids_[dst_rank]; }
   RdmaEnv* rdma_env() { return &rdma_env_; }
 
  private:
@@ -140,6 +148,8 @@ class RdmaManager {
   std::map<int, uint64_t> iids_;
   ibv_comp_channel* event_channel_;
   ibv_cq* cq_;
+  struct ibv_cq* cq_local_;
+  struct ibv_qp* qp_local_;
   std::map<int, ibv_comp_channel*> event_channels_;
   std::map<int, ibv_cq*> cqs_;
   std::map<int, ibv_qp*> qps_;

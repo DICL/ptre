@@ -51,6 +51,7 @@ class TensorAggregator {
  public:
   TensorAggregator(Eigen::ThreadPool* pool, int pool_size,
       RdmaEnv* rdma_env,
+      struct ibv_cq* cq, struct ibv_qp* qp,
       const std::vector<string>& names,
       const std::vector<Flat>& flats);
   ~TensorAggregator();
@@ -67,12 +68,14 @@ class TensorAggregator {
   int agg_done_cnt(const string& name);
 
   // State Transition
+  void InitQp(struct ibv_context* ctx, struct ibv_pd* pd);
   void Start();
   void Terminate() { state_ = kTerminate; }
-  // State Transition of each StatefulAggBufs
-  int TransitState(const string& name, const uint64_t from, const uint64_t to);
+  // State Transition of StatefulAggBuf
+  uint64_t TransitState(const string& name, const uint64_t from, const uint64_t to);
   void InitAggBufStates();
 
+  int ProcessAggregationNoVerbs();
   int ProcessAggregation();
 
   // Utility Functions
@@ -95,7 +98,6 @@ class TensorAggregator {
   };
   uint64_t state_ = kInit;
   int n_;
-  int* counts_;
 
   // Data
   std::map<string, int> name_to_index_;
@@ -115,10 +117,12 @@ class TensorAggregator {
   RdmaEnv* rdma_env_;
   /// Completion Queue
   /// TODO: const?
-  struct ibv_cq* cq_;
+  //struct ibv_cq* cq0_;
+  struct ibv_cq* cq_ = nullptr;
   /// QP
   /// TODO: const?
-  struct ibv_qp* qp_;
+  //struct ibv_qp* qp0_;
+  struct ibv_qp* qp_ = nullptr;
 };
 
 }  // namespace ptre

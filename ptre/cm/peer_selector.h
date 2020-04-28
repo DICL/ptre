@@ -25,8 +25,9 @@ enum SelectionStrategy {
 class PeerSelectorInterface {
  public:
   PeerSelectorInterface(int comm_size, int comm_rank)
-      : comm_size_(comm_size), comm_rank_(comm_rank), select_cnt_(0) {}
+      : comm_size_(comm_size), comm_rank_(comm_rank), select_cnt_(0) { }
   virtual int get_peer() = 0;
+  void next() { }
 
  protected:
   uint64_t select_cnt_;
@@ -44,7 +45,7 @@ class RandomPeerSelector : public PeerSelectorInterface {
 class RoundRobinPeerSelector : public PeerSelectorInterface {
  public:
   RoundRobinPeerSelector(int comm_size, int comm_rank)
-      : PeerSelectorInterface(comm_size, comm_rank), prev_(comm_rank) {}
+      : PeerSelectorInterface(comm_size, comm_rank), prev_(comm_rank) { }
   int get_peer() override;
 
  private:
@@ -73,7 +74,7 @@ class DHTRoundRobinPeerSelector : public PeerSelectorInterface {
 class NextPeerSelector : public PeerSelectorInterface {
  public:
   NextPeerSelector(int comm_size, int comm_rank)
-      : PeerSelectorInterface(comm_size, comm_rank) {}
+      : PeerSelectorInterface(comm_size, comm_rank) { }
   int get_peer() override;
 };
 
@@ -106,11 +107,10 @@ class DivNRoundRobinPeerSelector : public PeerSelectorInterface {
   int get_peer() override;
 
  protected:
-  std::vector<int> nexts_;
+  std::vector<std::vector<int>> elems_;
+  std::vector<int> indices_;
   int num_push_;
   int div_idx_;
-  int elem_cnt_;
-  double inc_;
 };
 
 class PeerSelectorFactory {

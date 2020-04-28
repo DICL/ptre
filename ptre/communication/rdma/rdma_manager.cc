@@ -8,19 +8,20 @@
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/cm/tensor_aggregator.h"
 
-
 namespace ptre {
 
 RdmaManager::RdmaManager(int ptre_size, int ptre_rank, bool add)
     : ptre_size_(ptre_size), ptre_rank_(ptre_rank), atomic_add_(add) {
   int ret = 0;
   ret = init_rdma_env(rdma_env_);
-  if (ret < 0) {
-    std::cout << "init_rdma_env failed. ret=" << ret << std::endl;
+  if (ret) {
+    LOG(ERROR) << "Failed to init_rdma_env: ret=" << ret;
+    exit(1);
   } else {
     //LOG(INFO) << "[DEBUG] num_comp_vectors=" << rdma_env_.context->num_comp_vectors;
     //std::cout << "init_rdma_env done." << std::endl;
   }
+  //InitLocalQP();
   CreateCQs();
   CreateQPs();
   //polling_thread_ = std::thread([this] { ProcessCQ(); });
@@ -32,6 +33,95 @@ RdmaManager::~RdmaManager() {
   //}
 }
 
+void RdmaManager::InitLocalQP() {
+  int ret;
+  // Create local CQ
+  cq_local_ = ibv_create_cq(rdma_env_.context, 100, NULL, NULL, 0);
+  if (!cq_local_) {
+    LOG(ERROR) << "Failed to create local CQ";
+    exit(1);
+  }
+  // Create local QP with local CQ
+  struct ibv_qp_init_attr qp_init_attr;
+  memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
+  qp_init_attr.send_cq = cq_local_;
+  qp_init_attr.recv_cq = cq_local_;
+  qp_init_attr.qp_type = IBV_QPT_RC;
+  qp_init_attr.cap.max_send_wr = 16;
+  qp_init_attr.cap.max_recv_wr = 16;
+  qp_init_attr.cap.max_send_sge = 1;
+  qp_init_attr.cap.max_recv_sge = 1;
+  qp_local_ = ibv_create_qp(rdma_env_.pd, &qp_init_attr);
+  if (!qp_local_) {
+    LOG(ERROR) << "Failed to create local QP";
+    exit(1);
+  }
+  // Init QP
+  struct ibv_qp_attr attr;
+  memset(&attr, 0, sizeof(attr));
+  attr.qp_state = IBV_QPS_INIT;
+  attr.pkey_index = 0;
+  attr.port_num = 1;
+  attr.qp_access_flags =
+        IBV_ACCESS_LOCAL_WRITE
+      | IBV_ACCESS_REMOTE_WRITE
+      | IBV_ACCESS_REMOTE_READ
+      | IBV_ACCESS_REMOTE_ATOMIC;
+  ret = ibv_modify_qp(qp_local_, &attr,
+        IBV_QP_STATE
+      | IBV_QP_PKEY_INDEX
+      | IBV_QP_PORT
+      | IBV_QP_ACCESS_FLAGS);
+  if (ret) {
+    LOG(ERROR) << "Failed to modify local QP to INIT: " << std::strerror(ret);
+    exit(1);
+  }
+  // INIT -> RTR
+  memset(&attr, 0, sizeof(attr));
+  attr.qp_state = IBV_QPS_RTR;
+  attr.path_mtu = IBV_MTU_4096;
+  attr.dest_qp_num = qp_local_->qp_num;
+  attr.rq_psn = 0;
+  attr.max_dest_rd_atomic = 1;
+  attr.min_rnr_timer = 12;
+  attr.ah_attr.dlid = rdma_env_.port_attr.lid;
+  attr.ah_attr.sl = 0;
+  attr.ah_attr.src_path_bits = 0;
+  attr.ah_attr.port_num  = IB_PORT;
+  ret = ibv_modify_qp(qp_local_, &attr,
+        IBV_QP_STATE
+      | IBV_QP_AV
+      | IBV_QP_PATH_MTU
+      | IBV_QP_DEST_QPN
+      | IBV_QP_RQ_PSN
+      | IBV_QP_MAX_DEST_RD_ATOMIC
+      | IBV_QP_MIN_RNR_TIMER);
+  if (ret) {
+    LOG(ERROR) << "Failed to modify local QP to RTR: " << std::strerror(ret);
+    exit(1);
+  }
+
+  /// INIT -> RTS
+  memset(&attr, 0, sizeof(attr));
+  attr.qp_state = IBV_QPS_RTS;
+  attr.sq_psn = 0;
+  attr.timeout = 14;
+  attr.retry_cnt = 7;
+  attr.rnr_retry = 7;
+  attr.max_rd_atomic = 1;
+  ret = ibv_modify_qp(qp_local_, &attr,
+        IBV_QP_STATE
+      | IBV_QP_TIMEOUT
+      | IBV_QP_RETRY_CNT
+      | IBV_QP_RNR_RETRY
+      | IBV_QP_SQ_PSN
+      | IBV_QP_MAX_QP_RD_ATOMIC);
+  if (ret) {
+    LOG(ERROR) << "Failed to modify local QP to RTS: " << std::strerror(ret);
+    exit(1);
+  }
+}
+
 void RdmaManager::CreateCQs() {
 #if 0
   event_channel_ = ibv_create_comp_channel(rdma_env_.context);
@@ -41,8 +131,8 @@ void RdmaManager::CreateCQs() {
   cq_ = ibv_create_cq(rdma_env_.context, MAX_CONCURRENT_WRITES * 2,
                              NULL, event_channel_, 0);
 #else
-  cq_ = ibv_create_cq(rdma_env_.context, QUEUE_DEPTH_DEFAULT * 2,
-                             NULL, NULL, 1);
+  cq_ = ibv_create_cq(rdma_env_.context, 100,
+                             NULL, NULL, 0);
 #endif
   if (cq_ == NULL) {
     std::cout << "Failed to create CQ" << std::endl;
@@ -62,7 +152,7 @@ void RdmaManager::CreateCQs() {
 
 void RdmaManager::CreateQPs() {
   for (int i = 0; i < ptre_size_; i++) {
-#if 1
+#if 0
     if (i == ptre_rank_) {
       continue;
     }
@@ -75,16 +165,17 @@ void RdmaManager::CreateQPs() {
       memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
       qp_init_attr.send_cq = cq_;
       qp_init_attr.recv_cq = cq_;
-      qp_init_attr.cap.max_send_wr = QUEUE_DEPTH_DEFAULT;
-      qp_init_attr.cap.max_recv_wr = QUEUE_DEPTH_DEFAULT;
-      qp_init_attr.cap.max_send_sge = 8;
-      qp_init_attr.cap.max_recv_sge = 8;
       qp_init_attr.qp_type = IBV_QPT_RC;
+      qp_init_attr.cap.max_send_wr = 16;
+      qp_init_attr.cap.max_recv_wr = 16;
+      qp_init_attr.cap.max_send_sge = 1;
+      qp_init_attr.cap.max_recv_sge = 1;
 
       qp = ibv_create_qp(rdma_env_.pd, &qp_init_attr);
       if (qp == NULL) {
         std::cout << "Failed to create QP" << std::endl;
       }
+      //LOG(INFO) << "[DEBUG] qp_num=" << qp->qp_num;
     }
 
     /// Init QP
@@ -100,8 +191,9 @@ void RdmaManager::CreateQPs() {
       int attr_mask =
           IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS;
       int r = ibv_modify_qp(qp, &attr, attr_mask);
-      if (r < 0) {
-        std::cout << "Failed to set QP to INIT" << std::endl;
+      if (r) {
+        LOG(ERROR) << "Failed to modify local QP to INIT: " << std::strerror(r);
+        exit(1);
       }
     }
 
@@ -124,13 +216,14 @@ int RdmaManager::ConnectQP(int dst_rank) {
       attr.rq_psn = 0;
       attr.max_dest_rd_atomic = 1;
       attr.min_rnr_timer = 12;
-      attr.ah_attr.is_global = 1;
-      attr.ah_attr.grh.dgid.global.subnet_prefix = snps_[dst_rank];
-      attr.ah_attr.grh.dgid.global.interface_id = iids_[dst_rank];
-      attr.ah_attr.grh.flow_label = 0;
-      attr.ah_attr.grh.hop_limit = 255;
       attr.ah_attr.dlid = dlids_[dst_rank];
       attr.ah_attr.sl = 0;
+      attr.ah_attr.is_global = 0;
+      //attr.ah_attr.is_global = 1;
+      //attr.ah_attr.grh.dgid.global.subnet_prefix = snps_[dst_rank];
+      //attr.ah_attr.grh.dgid.global.interface_id = iids_[dst_rank];
+      //attr.ah_attr.grh.flow_label = 0;
+      //attr.ah_attr.grh.hop_limit = 255;
       attr.ah_attr.src_path_bits = 0;
       attr.ah_attr.port_num = IB_PORT;
 
@@ -139,7 +232,9 @@ int RdmaManager::ConnectQP(int dst_rank) {
                             IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
                             IBV_QP_MAX_DEST_RD_ATOMIC |
                             IBV_QP_MIN_RNR_TIMER);
-      if (r < 0) {
+      if (r) {
+        LOG(ERROR) << "Failed to modify local QP to RTR: " << std::strerror(r);
+        exit(1);
         std::cout << "Failed to ibv_modify_qp to RTR " << r << std::endl;
         return r;
       }
@@ -160,7 +255,9 @@ int RdmaManager::ConnectQP(int dst_rank) {
                             IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
                             IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
                             IBV_QP_MAX_QP_RD_ATOMIC);
-      if (r < 0) {
+      if (r) {
+        LOG(ERROR) << "Failed to modify local QP to RTS: " << std::strerror(r);
+        exit(1);
         std::cout << "Failed to ibv_modify_qp to RTS " << r << std::endl;
         return r;
       }
@@ -194,7 +291,7 @@ void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
   mr = ibv_reg_mr(rdma_env_.pd, addr, length, ibv_access_flags);
   if (mr == NULL) {
     std::cerr << "ibv_reg_mr failed. name=" << name << ", addr=" << addr << ", length=" << length << std::endl;
-    exit(EXIT_FAILURE);
+    exit(1);
   }
   recv_mrs_.emplace(name, mr);
   //std::cout << "RecvMR is set for name=" << name << ", addr=" << addr <<
@@ -251,7 +348,7 @@ void RdmaManager::RegisterMR(const BufType buf_type, const string& name,
     LOG(INFO) << "ibv_reg_mr failed : (type, name, buf, length, remote)=("
         << buf_type << ", " << name << ", " << buf << ", " << length << ", " << remote
         << "), errno=" << errno;
-    exit(EXIT_FAILURE);
+    exit(1);
   }
   mrs_[buf_type][name] = mr;
   access_flags_[buf_type][name] = access;
@@ -318,19 +415,54 @@ int RdmaManager::RdmaWriteBufRemote(const int dst_rank, const BufType src_type,
   sge.length = mr->length;
   sge.lkey = mr->lkey;
   struct ibv_send_wr wr;
-  memset(&wr, 0, sizeof(struct ibv_send_wr));
-  wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WRITE_ID_TENSOR_WRITE, nullptr);
-  wr.sg_list = &sge;
-  wr.num_sge = 1;
-  wr.opcode = IBV_WR_RDMA_WRITE;
-  wr.send_flags = IBV_SEND_SIGNALED;
-  wr.wr.rdma.remote_addr = rmr.remote_addr;
-  wr.wr.rdma.rkey = rmr.rkey;
-  struct ibv_send_wr* bad_wr;
-  int ret = ibv_post_send(qp, &wr, &bad_wr);
-  if (polling) {
+  int ret;
+  // Try Write
+  while (true) {
+    memset(&wr, 0, sizeof(struct ibv_send_wr));
+    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WRITE_ID_TENSOR_WRITE, nullptr);
+    wr.sg_list = &sge;
+    wr.num_sge = 1;
+    wr.opcode = IBV_WR_RDMA_WRITE;
+    wr.send_flags = IBV_SEND_SIGNALED;
+    wr.wr.rdma.remote_addr = rmr.remote_addr;
+    wr.wr.rdma.rkey = rmr.rkey;
+    struct ibv_send_wr* bad_wr;
+    ret = ibv_post_send(qp, &wr, &bad_wr);
+    if (ret) {
+      LOG(ERROR) << "Failed to RDMA WRITE: " << std::strerror(ret) << "(code=" << ret << ")";
+      exit(1);
+    }
+#if 0
+    if (polling) {
+      struct ibv_wc wc;
+      ptre_poll_cq(cq_, 1, &wc);
+    }
+#else
     struct ibv_wc wc;
     ptre_poll_cq(cq_, 1, &wc);
+    if (!wc.status) {
+      break;
+    } else {
+      LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
+    }
+    struct ibv_qp_attr attr;
+    struct ibv_qp_init_attr init_attr;
+    ret = ibv_query_qp(qp, &attr,
+          IBV_QP_STATE
+        | IBV_QP_AV
+        | IBV_QP_DEST_QPN,
+        &init_attr);
+    if (ret) {
+      LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
+      exit(1);
+    }
+    if (attr.qp_state != IBV_QPS_RTS) {
+      uint32_t dest_qp_num = attr.dest_qp_num;
+      uint16_t dlid = attr.ah_attr.dlid;
+      LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
+      rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
+    }
+#endif
   }
 }
 
@@ -409,15 +541,25 @@ int RdmaManager::PushTensorBufferedAggregation(const int dst_rank,
     all_done = true;
     for (int i = 0; i < n; i++) {
       if (!done_flags[i]) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         //LOG(INFO) << "[DEBUG] TransitStateV2(" << names[i] << ")";
-        int remote_state = agg_writers_[dst_rank]->TransitStateV2(names[i],
+        uint64_t remote_state = agg_writers_[dst_rank]->TransitStateV2(names[i],
             StatefulAggBuf::kRecvReady, StatefulAggBuf::kRecvInProgress);
         read_states[i] = remote_state;
         if (remote_state == StatefulAggBuf::kRecvReady) {
           //LOG(INFO) << "[DEBUG] WriteToAggBufV2(" << names[i] << ")";
           agg_writers_[dst_rank]->WriteToAggBufV2(names[i]);
+          while (true) {
+            uint64_t inner = agg_writers_[dst_rank]->TransitStateV2(names[i],
+                2, 3);
+            if (inner == 2) {
+              break;
+            } else {
+              LOG(ERROR) << "inner=" << inner;
+            }
+          }
           done_flags[i] = true;
+          last_time = curr_time;
           //LOG(INFO) << "[DEBUG] Write Done for dst=" << dst_rank << " (" << ++done_cnt << "/" << n << ")";
         } else {
           //LOG(INFO) << "[DEBUG] TransitState Failed for dst=" << dst_rank << ", name=" << names[i];
@@ -429,14 +571,14 @@ int RdmaManager::PushTensorBufferedAggregation(const int dst_rank,
   }
   auto end_time = std::chrono::system_clock::now();
   std::chrono::duration<double> time_diff = end_time - start_time;
-  //LOG(INFO) << "Done pushing all tensors to rank " << dst_rank << ": elapsed " << time_diff.count() << " s";
+  LOG(INFO) << "Done pushing all tensors to rank " << dst_rank << ": elapsed " << time_diff.count() << " s";
 }
 
 uint64_t RdmaManager::RdmaFetchAndAdd(const int dst_rank,
     const BufType dst_type, const string& name, const uint64_t add,
     struct ibv_mr* read_mr) {
   LOG(ERROR) << "THIS FUNCTION IS NOT READY YET.";
-  exit(EXIT_FAILURE);
+  exit(1);
   uint64_t* read_buf;
   bool dereg_mr;
   if (read_mr == nullptr) {
@@ -473,6 +615,13 @@ uint64_t RdmaManager::RdmaFetchAndAdd(const int dst_rank,
 
 struct ibv_mr* RdmaManager::GetMR(const BufType buf_type, const string& name) {
   return mrs_[buf_type][name];
+}
+
+void RdmaManager::GetRemoteAddress(int dst_rank, const BufType buf_type,
+      const string& name, uint64_t* out_addr, uint32_t* out_rkey) {
+  RemoteMR rmr = rmrs_[dst_rank][buf_type][name];
+  *out_addr = rmr.remote_addr;
+  *out_rkey = rmr.rkey;
 }
 
 void RdmaManager::ProcessCQ() {
@@ -592,8 +741,9 @@ int RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
     ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id, qp);
     num_wrs++;
   }
-  if (ret < 0) {
+  if (ret) {
     std::cout << "post_write failed." << std::endl;
+    exit(1);
   }
   return num_wrs;
   //struct ibv_wc wc;
@@ -633,7 +783,7 @@ int RdmaManager::PushTensorAtomicAdd(int dst_rank, const std::string& name,
     //wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_READ_TWO, nullptr);
     //int ret = post_read(sizeof(uint64_t), (uint64_t) &read_buf_base, mr->lkey,
     //    remote_addr, rkey, wr_id, qp);
-    //if (ret < 0) {
+    //if (ret) {
     //  std::cout << "post_read failed." << std::endl;
     //}
     //ptre_poll_cq(cq_, 1, &wc);
@@ -661,7 +811,7 @@ int RdmaManager::PushTensorAtomicAdd(int dst_rank, const std::string& name,
           (uint64_t) &read_buf_base, mr->lkey,
           remote_addr,
           rkey, wr, wr_id, qp, compare_add, swap);
-      if (ret < 0) {
+      if (ret) {
         std::cout << "post_atomic_cmp_and_swp failed." << std::endl;
       }
       ptre_poll_cq(cq_, 1, &wc);
@@ -673,8 +823,9 @@ int RdmaManager::PushTensorAtomicAdd(int dst_rank, const std::string& name,
     }
   }
   int ret = ibv_dereg_mr(mr);
-  if (ret < 0) {
+  if (ret) {
     std::cout << "ibv_dereg_mr failed." << std::endl;
+    exit(1);
   }
   return num_wrs;
   //struct ibv_wc wc;
@@ -713,7 +864,7 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
     //if (errno == EINVAL) {
     //} else if (errno == ENOMEM) {
     //}
-    exit(EXIT_FAILURE);
+    exit(1);
   } else {
   }
   uint64_t read_buf_addr = (uint64_t) read_buf;
@@ -807,7 +958,7 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
     }
   }
   int ret = ibv_dereg_mr(mr);
-  if (ret < 0) {
+  if (ret) {
     std::cout << "ibv_dereg_mr failed." << std::endl;
   }
   free(read_buf);
@@ -830,7 +981,7 @@ void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
   //std::cout << "   buffer_size=" << buffer_size << ", flag=" << flag << "(" << *flag << ")" << ", src_addr=" << src_addr << ", remote_addr=" << remote_addr << std::endl;
   int ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id,
                        qp);
-  if (ret < 0) {
+  if (ret) {
     std::cout << "post_write failed." << std::endl;
   }
   //struct ibv_wc wc;
@@ -863,7 +1014,7 @@ int RdmaManager::PushTensor(int dst_rank, string name, const Tensor& tensor) {
   } else {
     ret = post_write(buffer_size, src_addr, lkey, remote_addr, rkey, wr_id, qp);
   }
-  if (ret < 0) {
+  if (ret) {
     std::cout << "post_write failed." << std::endl;
   }
 }

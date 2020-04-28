@@ -1,5 +1,6 @@
 #include "peer_selector.h"
 
+#include <iostream>
 #include <unistd.h>
 #include "tensorflow/core/platform/logging.h"
 
@@ -137,9 +138,9 @@ void DifferenceBasedPeerSelector::update_cdf() {
     cdf_[i] = cdf_[i - 1] + diff_list_[i];
   }
   float max = cdf_[comm_size_ - 1];
-	for (int i = 0; i < comm_size_; i++) {
-		cdf_[i] /= max;
-	}
+  for (int i = 0; i < comm_size_; i++) {
+    cdf_[i] /= max;
+  }
 }
 
 void DifferenceBasedPeerSelector::update(int rank, float diff) {
@@ -167,22 +168,45 @@ int DifferenceBasedPeerSelector::get_peer() {
 DivNRoundRobinPeerSelector::DivNRoundRobinPeerSelector(int comm_size,
     int comm_rank, int num_push) : PeerSelectorInterface(comm_size, comm_rank) {
   num_push_ = num_push;
-  div_idx_ = 0;
-  int distance = comm_size_ / num_push_;
   int next = (comm_rank_ + 1) % comm_size_;
-  for (int i = 0; i < num_push_; i++) {
-    nexts_.push_back(next);
-    next = (next + distance) % comm_size_;
+  int distance = comm_size_ / num_push_;
+  int cnt = 1;
+  bool checker[comm_size_] = { };
+  checker[comm_rank_] = 1;
+  elems_.resize(num_push_);
+  while (cnt < comm_size_) {
+    for (int i = 0; i < num_push_; i++) {
+      while (checker[next]) {
+        next = (next + 1) % comm_size_;
+      }
+      elems_[i].push_back(next);
+      checker[next] = 1;
+      cnt++;
+      next = (next + distance) % comm_size_;
+    }
+    next = elems_[0].back();
   }
+
+  indices_.resize(num_push_);
+  for (int i = 0; i < num_push_; i++) {
+    indices_[i] = 0;
+  }
+  div_idx_ = 0;
+  //for (int i = 0; i < num_push; i++) {
+  //  for (int j = 0; j < elems_[i].size(); j++) {
+  //    std::cout << elems_[i][j];
+  //    if (j == elems_[i].size() - 1) {
+  //      std::cout << std::endl;
+  //    } else {
+  //      std::cout << " ";
+  //    }
+  //  }
+  //}
 }
 
 int DivNRoundRobinPeerSelector::get_peer() {
-  int ret = nexts_[div_idx_];
-  int next = (ret + 1) % comm_size_;
-  while (next == comm_rank_) {
-    next = (next + 1) % comm_size_;
-  }
-  nexts_[div_idx_] = next;
+  int ret = elems_[div_idx_][indices_[div_idx_]];
+  indices_[div_idx_] = (indices_[div_idx_] + 1) % elems_[div_idx_].size();
   div_idx_ = (div_idx_ + 1) % num_push_;
   return ret;
 }

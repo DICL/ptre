@@ -51,12 +51,14 @@ class ConsensusManager {
   int GetRandomTarget();
   int GetIncNeighbor();
   int get_peer();
+  void next_peer();
   int get_peers(int num_peer, int* peers);
 
   void InitPeerSelector(int strategy, int num_push);
 
   const std::vector<Tensor*>& GetGlobalConsensusList();
   const std::vector<Tensor*>& GetSendTensorsList();
+  const std::vector<string>& GetGlcNameList();
 
   const Tensor& global_consensus(int index);
   const Tensor& global_consensus(const std::string& name);

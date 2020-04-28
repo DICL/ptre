@@ -2,36 +2,34 @@
 
 #define EIGEN_USE_THREADS
 
-#include <unistd.h>
-#include <thread>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <queue>
-#include <string>
-#include <stdio.h>
-#include <typeinfo>
 #include <atomic>
 #include <chrono>
+#include <fstream>
+#include <iostream>
+#include <queue>
+#include <stdio.h>
+#include <string>
+#include <thread>
+#include <typeinfo>
+#include <unistd.h>
+#include <vector>
 
-#include "ptre/kernels/ptre_ops.h"
-//#include "ptre/kernels/ptre_op_helpers.h"
-//#include "ptre/ptre_global.h"
+#include <infiniband/verbs.h>
+
 #include "ptre/cm/consensus_manager.h"
-#include "ptre/communication/rdma/grpc_server.h"
+#include "ptre/communication/grpc/grpc_client_cache.h"
 #include "ptre/communication/rdma/grpc_client.h"
+#include "ptre/communication/rdma/grpc_server.h"
+#include "ptre/communication/rdma/rdma.h"
 #include "ptre/communication/rdma/rdma_manager.h"
-//#include "tensorflow/core/common_runtime/device.h"
+#include "ptre/kernels/ptre_ops.h"
+#include "ptre/lib/cache_ctl.h"
 #include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/register_types.h"
-//#include "tensorflow/core/framework/resource_mgr.h"
 #include "tensorflow/core/framework/resource_var.h"
+#include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/types.h"
-//#include "tensorflow/core/framework/tensor.h"
-//#include "tensorflow/core/lib/core/refcount.h"
-#include "ptre/communication/grpc/grpc_client_cache.h"
 
 #define LOGSTEP LOG(INFO) << "[DEBUG,step=" << ptre_global.local_step << "]: "
 
@@ -51,14 +49,14 @@ static ShapeHandle ShapeOrHandleShape(InferenceContext* c, int input) {
 }
 
 using std::string;
+using ::ptre::BufType;
 using ::ptre::ConsensusManager;
-using ::ptre::RdmaManager;
-using ::ptre::RdmaServiceImpl;
+using ::ptre::Flat;
 using ::ptre::GrpcClient;
 using ::ptre::GrpcClientCache;
-using ::ptre::BufType;
+using ::ptre::RdmaManager;
+using ::ptre::RdmaServiceImpl;
 using ::ptre::RemoteMR;
-using ::ptre::Flat;
 
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
@@ -84,35 +82,25 @@ struct PtreGlobal {
   }
   ConsensusManager cm;
   RdmaManager* rdma_manager = nullptr;
-  //std::vector<Tensor*> remote_tensors;
   std::mutex mu;
-  //std::queue<PtreRequest> request_queue;
   std::mutex q_mu;
   std::queue<int> q;
-
   // Grpc Server
   std::unique_ptr<grpc::Server> grpc_server = nullptr;
-
   std::atomic<bool> is_shutdown;
-
   // Background thread running PTRE communication.
   std::thread grpc_server_thread;
-  std::thread background_thread;
+  std::thread rdma_thread;
   std::thread aggregation_thread;
-
-  //bool new_incoming;
 
   int rank;
   int size;
-
   std::vector<std::string> grpc_hosts;
   std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
-
 
   // Training Infos
   int local_step = 0;
   int virtual_step = 1;
-
   /// 0: NOT PUSH
   /// 1: PUSH
   /// 2: SKIP
@@ -142,14 +130,14 @@ struct PtreGlobal {
   uint64_t* barrier_release;
 
   ~PtreGlobal() {
-    if (background_thread.joinable()) {
+    if (rdma_thread.joinable()) {
       //shut_down = true;
-      background_thread.join();
+      rdma_thread.join();
     }
     if (grpc_server_thread.joinable()) {
       grpc_server_thread.join();
     }
-    if (background_thread.joinable()) {
+    if (rdma_thread.joinable()) {
       aggregation_thread.join();
     }
     if (rdma_manager != nullptr) {
@@ -178,9 +166,6 @@ void ShutdownGrpcServer() {
   if (ptre_global.grpc_server != nullptr) {
     ptre_global.grpc_server->Shutdown();
   }
-}
-
-void InitRemoteMR() {
 }
 
 void ProcessRequestQueueInternal1() {
@@ -264,7 +249,7 @@ void ProcessRequestQueue() {
   }
 }
 
-void BackgroundThreadLoop() {
+void CommunicationThreadLoop() {
   while (!ptre_global.is_shutdown) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ProcessRequestQueue();
@@ -277,6 +262,7 @@ int ProcessAggregation() {
 
 void AggregationThreadLoop() {
   ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
+  agg->InitQp(ptre_global.rdma_manager->ctx(), ptre_global.rdma_manager->pd());
   auto last_time = std::chrono::system_clock::now();
   while (!ptre_global.is_shutdown) {
     auto curr_time = std::chrono::system_clock::now();
@@ -287,7 +273,7 @@ void AggregationThreadLoop() {
       last_time = curr_time;
     }
     std::chrono::duration<double> since_last = curr_time - last_time;
-    if (since_last.count() > 15) {
+    if (since_last.count() > 10) {
       LOG(INFO) << "[DEBUG] Agg not performed for a while.";
       agg->PrintDebug();
       last_time = curr_time;
@@ -295,14 +281,195 @@ void AggregationThreadLoop() {
   }
 }
 
-void InitPtreOnce() {
-  //while(true) {
-  //  if (ptre_global.rdma_manager->IsMRInitialized()) {
-  //    break;
-  //  }
-  //}
-
-}
+//void AggregationThreadLoopV2() {
+//  int ret;
+//  // Query port attributes
+//  struct ibv_context* ctx = ptre_global.rdma_manager->ctx();
+//  struct ibv_pd* pd = ptre_global.rdma_manager->pd();
+//  struct ibv_port_attr potr_attr;
+//  ret = ibv_query_port(ctx, 1, &port_attr);
+//  if (ret) {
+//    LOG(ERROR) << "Failed to query port";
+//    exit(1);
+//  }
+//  // Create local CQ
+//  cq = ibv_create_cq(ctx, 100, NULL, NULL, 0);
+//  if (!cq) {
+//    LOG(ERROR) << "Failed to create local CQ";
+//    exit(1);
+//  }
+//  // Create local QP with local CQ
+//  struct ibv_qp_init_attr qp_init_attr;
+//  memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
+//  qp_init_attr.send_cq = cq;
+//  qp_init_attr.recv_cq = cq;
+//  qp_init_attr.qp_type = IBV_QPT_RC;
+//  qp_init_attr.cap.max_send_wr = 2;
+//  qp_init_attr.cap.max_recv_wr = 2;
+//  qp_init_attr.cap.max_send_sge = 1;
+//  qp_init_attr.cap.max_recv_sge = 1;
+//  qp = ibv_create_qp(pd, &qp_init_attr);
+//  if (!qp) {
+//    LOG(ERROR) << "Failed to create local QP";
+//    exit(1);
+//  }
+//  // Init QP
+//  struct ibv_qp_attr attr;
+//  memset(&attr, 0, sizeof(attr));
+//  attr.qp_state = IBV_QPS_INIT;
+//  attr.pkey_index = 0;
+//  attr.port_num = 1;
+//  attr.qp_access_flags =
+//        IBV_ACCESS_LOCAL_WRITE
+//      | IBV_ACCESS_REMOTE_WRITE
+//      | IBV_ACCESS_REMOTE_READ
+//      | IBV_ACCESS_REMOTE_ATOMIC;
+//  ret = ibv_modify_qp(qp, &attr,
+//        IBV_QP_STATE
+//      | IBV_QP_PKEY_INDEX
+//      | IBV_QP_PORT
+//      | IBV_QP_ACCESS_FLAGS);
+//  if (ret) {
+//    LOG(ERROR) << "Failed to modify local QP to INIT: " << std::strerror(ret);
+//    exit(1);
+//  }
+//  // INIT -> RTR
+//  memset(&attr, 0, sizeof(attr));
+//  attr.qp_state = IBV_QPS_RTR;
+//  attr.path_mtu = IBV_MTU_4096;
+//  attr.dest_qp_num = qp->qp_num;
+//  attr.rq_psn = 0;
+//  attr.max_dest_rd_atomic = 16;
+//  attr.min_rnr_timer = 12;
+//  attr.ah_attr.dlid = rdma_env_.port_attr.lid;
+//  attr.ah_attr.sl = 0;
+//  attr.ah_attr.src_path_bits = 0;
+//  attr.ah_attr.port_num  = IB_PORT;
+//  ret = ibv_modify_qp(qp, &attr,
+//        IBV_QP_STATE
+//      | IBV_QP_AV
+//      | IBV_QP_PATH_MTU
+//      | IBV_QP_DEST_QPN
+//      | IBV_QP_RQ_PSN
+//      | IBV_QP_MAX_DEST_RD_ATOMIC
+//      | IBV_QP_MIN_RNR_TIMER);
+//  if (ret) {
+//    LOG(ERROR) << "Failed to modify local QP to RTR: " << std::strerror(ret);
+//    exit(1);
+//  }
+//  /// INIT -> RTS
+//  memset(&attr, 0, sizeof(attr));
+//  attr.qp_state = IBV_QPS_RTS;
+//  attr.sq_psn = 0;
+//  attr.timeout = 14;
+//  attr.retry_cnt = 7;
+//  attr.rnr_retry = 7;
+//  attr.max_rd_atomic = 16;
+//  ret = ibv_modify_qp(qp, &attr,
+//        IBV_QP_STATE
+//      | IBV_QP_TIMEOUT
+//      | IBV_QP_RETRY_CNT
+//      | IBV_QP_RNR_RETRY
+//      | IBV_QP_SQ_PSN
+//      | IBV_QP_MAX_QP_RD_ATOMIC);
+//  if (ret) {
+//    LOG(ERROR) << "Failed to modify local QP to RTS: " << std::strerror(ret);
+//    exit(1);
+//  }
+//  // Prepare read buffer and its MR for CAS
+//  uint64_t read_buf;
+//  void* read_buf_addr = (void*) &read_buf;
+//  struct ibv_mr* read_buf_mr;
+//  read_buf_mr = ibv_reg_mr(pd, read_buf_addr, sizeof(read_buf),
+//      IBV_ACCESS_LOCAL_WRITE);
+//  if (!read_buf_mr) {
+//    LOG(ERROR) << "Failed to register MR for read_buf";
+//    exit(1);
+//  }
+//
+//  //int comm_size = ptre_global.size;
+//  //int comm_rank = ptre_global.rank;
+//  std::vector<string> names;
+//  std::vector<Flat*> glc_flats;
+//  std::vector<Flat*> buf_flats;
+//  std::vector<uint64_t*> buf_states;
+//  std::vector<uint64_t> remote_addrs;
+//  std::vector<uint64_t> rkeys;
+//
+//  // Init Flats and states
+//  const std::vector<Tensor*>& glcs = ptre_global.cm.GetGlobalConsensusList();
+//  const std::vector<string>& glc_names = ptre_global.cm.GetGlcNameList();
+//  for (int i = 0; i < glcs.size(); i++) {
+//    string name = glc_names[i];
+//    names.push_back(name);
+//    // Global consensus flat
+//    auto flat = glcs[i]->flat<float>();
+//    Flat* glc_flat = new Flat(flat.data(), flat.size());
+//    glc_flats.push_back(glc_flat);
+//    // Aggregation buffer flat
+//    size_t num_bytes = sizeof(float) * flat.size();
+//    float* buf = (float*) malloc(num_bytes);
+//    memset(buf, 0, num_bytes);
+//    Flat* buf_flat = new Flat(buf, flat.size());
+//    buf_flats.push_back(buf_flat);
+//    // Aggregation buffer state
+//    uint64_t* state = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
+//    *state = 1;
+//    cache_ctl::clflush((char*) state, 8);
+//    buf_states.push_back(state);
+//    // Remote address
+//    uint64_t remote_addr;
+//    uint32_t rkey;
+//    ptre_global.rdma_manager->GetRemoteAddress(ptre_global.rank,
+//        BUF_TYPE_AGG_BUF, name, &remote_addr, &rkey);
+//    remote_addrs.push_back(remote_addr);
+//    rkeys.push_back(rkey);
+//  }
+//
+//  Eigen::ThreadPool pool(8);
+//  Eigen::ThreadPoolDevice d(pool, 8);
+//  ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
+//  while (!ptre_global.is_shutdown) {
+//    for (int i = 0; i < glc_flats.size(); i++) {
+//      uint64_t read_state = rdma_cas(3, 4, qp, cq, read_buf_mr, remote_addrs[i],
+//          rkeys[i], pd);
+//      if (read_state == 3) {
+//        Flat target = *glc_flats[i];
+//        Flat buf = *buf_flats[i];
+//        target.device(d) = target + buf;
+//        //agg->CountAgg(names[i]);
+//        while (true) {
+//          uint64_t read_state_inner = rdma_cas(4, 1, qp, cq, read_buf_mr,
+//              remote_addrs[i], rkeys[i], pd);
+//          if (read_state_inner == 4) {
+//            break;
+//          } else {
+//            LOG(INFO) << "[DEBUG] read_state_inner = " << read_state_inner;
+//            usleep(5 * 1000 * 1000);
+//          }
+//        }
+//      }
+//    }
+//  }
+//
+//  ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
+//  auto last_time = std::chrono::system_clock::now();
+//  while (!ptre_global.is_shutdown) {
+//    auto curr_time = std::chrono::system_clock::now();
+//    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//    int ret = ProcessAggregation();
+//    if (ret > 0) {
+//      //LOG(INFO) << "[DEBUG] agg_cnt=" << ret;
+//      last_time = curr_time;
+//    }
+//    std::chrono::duration<double> since_last = curr_time - last_time;
+//    if (since_last.count() > 15) {
+//      LOG(INFO) << "[DEBUG] Agg not performed for a while.";
+//      agg->PrintDebug();
+//      last_time = curr_time;
+//    }
+//  }
+//}
 
 void load_grpc_hosts(const string& grpc_hosts_file) {
   std::string in_line;
@@ -317,19 +484,6 @@ void load_grpc_hosts(const string& grpc_hosts_file) {
     std::cout << ptre_global.grpc_hosts[i] << std::endl;
   }
 }
-
-#if 0
-void PtreBarrier() {
-  if (ptre_global.rank == 0) {
-    while (true) {
-      usleep(1);
-      uint64_t read_val = *ptre_global.barrier_counter;
-      if (read_val == ptre_global.size - 1) {
-      }
-    }
-  }
-}
-#endif
 
 void InitComm(int size, int rank, const string& grpc_hosts_file) {
   /// First Initialization step
@@ -349,7 +503,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.rdma_manager = new RdmaManager(size, rank, false);
   ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
   ptre_global.is_shutdown = false;
-  ptre_global.background_thread = std::thread(BackgroundThreadLoop);
+  ptre_global.rdma_thread = std::thread(CommunicationThreadLoop);
 }
 
 void InitGrpcService() {
@@ -368,11 +522,11 @@ void InitRemoteMRV2() {
   }
 #endif
   for (int i = 0; i < ptre_global.size; i++) {
-    if (i != ptre_global.rank) {
+    //if (i != ptre_global.rank) {
       GrpcClient* grpc_client;
       ptre_global.grpc_client_cache->GetClient(i, &grpc_client);
       grpc_client->SetRdmaManager(ptre_global.rdma_manager);
-    }
+    //}
   }
   bool peer_flag[ptre_global.size] = { };
   //for (int j = 0; j < num_bufs; j++) {
@@ -380,7 +534,7 @@ void InitRemoteMRV2() {
   //  ptre_global.rdma_manager->SetRemoteMRV2(ptre_global.rank, buf_types[j],
   //      names[j], (uint64_t) mr->addr, mr->rkey);
   //}
-  peer_flag[ptre_global.rank] = true;
+  //peer_flag[ptre_global.rank] = true;
   int done_flag = 0;
   while (!done_flag) {
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
@@ -430,7 +584,7 @@ void ConnectQPs() {
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     done_flag = 1;
     for (int i = 0; i < ptre_global.size; i++) {
-#if 1
+#if 0
       if (i != ptre_global.rank) {
 #else
       if (true) {
@@ -522,6 +676,7 @@ class InitGlobalConsensusOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(Name("InitGlobalConsensus").Device(DEVICE_CPU),
                         InitGlobalConsensusOp);
 
+#if 0
 REGISTER_OP("InitRemoteMr")
     .Attr("names: list(string)");
 class InitRemoteMrOp : public OpKernel {
@@ -584,6 +739,7 @@ class InitRemoteMrOp : public OpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("InitRemoteMr").Device(DEVICE_CPU),
                         InitRemoteMrOp);
+#endif
 
 /// MR management V2
 ///
@@ -1443,6 +1599,7 @@ void ptre_enqueue_push() {
         // TODO: Make AttemptPush returns PUSH MODE, e.g. DIRECT_WRITE / BUF_AGG
         bool can_push = grpc_client->AttemptPush(ptre_global.virtual_step);
         if (can_push) {
+          //ptre_global.cm.next_peer();
           ptre_global.q.push(target);
           num_targets++;
         }
@@ -1470,7 +1627,6 @@ void ptre_unset_push() {
 
 void ptre_finalize(unsigned int wait_time) {
   sleep(wait_time);
-  //tensorflow::PtreBarrier();
   tensorflow::ShutdownGrpcServer();
   tensorflow::ptre_global.is_shutdown = true;
 }

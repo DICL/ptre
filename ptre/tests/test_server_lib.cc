@@ -86,11 +86,14 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
       }
       GrpcClient* grpc_client;
       kGrpcClientCache->GetClient(i, &grpc_client);
-      if (rdma_manager->IsDlidSet(i)) {
+      if (!rdma_manager->IsDlidSet(i)) {
         int ret = grpc_client->GetRemoteEnv();
         if (ret < 0) {
           done_flag = 0;
           continue;
+        }
+        if (i == kRank) {
+          std::cout << "local_lid=" << rdma_manager->lid() << ", remote_lid=" << rdma_manager->remote_lid(i) << std::endl;
         }
       }
       int client_status = 0;
