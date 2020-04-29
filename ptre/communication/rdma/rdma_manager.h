@@ -63,6 +63,8 @@ class RdmaManager {
                                     const std::vector<string>& names);
   uint64_t RdmaFetchAndAdd(const int dst_rank, const BufType dst_type,
       const string& name, const uint64_t add, struct ibv_mr* read_mr);
+  int RdmaRead(int dst, const BufType buf_type, const string& name,
+      struct ibv_mr* read_mr, size_t read_length);
 
   void MarkMRInitialized();
   bool IsMRInitialized();

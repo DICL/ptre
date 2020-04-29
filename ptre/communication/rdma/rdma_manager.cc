@@ -613,6 +613,70 @@ uint64_t RdmaManager::RdmaFetchAndAdd(const int dst_rank,
   int ret = ibv_post_send(qp, &wr, &bad_wr);
 }
 
+int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
+    struct ibv_mr* read_mr, size_t read_length) {
+  int ret;
+  // Retrieve remote address
+  RemoteMR rmr = rmrs_[dst_rank][buf_type];
+  uint64_t remote_addr = rmr.remote_addr;
+  uint32_t rkey = rmr.rkey;
+  // Init SGE
+  struct ibv_sge sge;
+  memset(&sge, 0, sizeof(sge));
+  sge.addr = (uint64_t) read_mr->addr;
+  sge.length = read_length;
+  sge.lkey = read_mr->lkey;
+  // Init send WR
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_RDMA_READ;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  wr.wr.rdma.remote_addr = remote_addr;
+  wr.wr.rdma.rkey = rkey;
+  // QP
+  struct ibv_qp* qp = qps_[dst];
+  // Try RDMA read
+  while (true) {
+    // WR ID
+    wr.wr_id = new RdmaWrId(RDMA_WR_ID_READ, nullptr);
+    // Post send
+    struct ibv_send_wr* bad_wr;
+    ret = ibv_post_send(qp, &wr, &bad_wr);
+    if (ret) {
+      LOG(ERROR) << "Failed to ibv_post_send for read " << name << ":"
+          << buf_type << " for rank " << dst;
+      exit(1);
+    }
+    struct ibv_wc wc;
+    ptre_poll_cq(cq_, 1, &wc);
+    if (!wc.status) {
+      break;
+    } else {
+      LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
+    }
+    struct ibv_qp_attr attr;
+    struct ibv_qp_init_attr init_attr;
+    ret = ibv_query_qp(qp, &attr,
+          IBV_QP_STATE
+        | IBV_QP_AV
+        | IBV_QP_DEST_QPN,
+        &init_attr);
+    if (ret) {
+      LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
+      exit(1);
+    }
+    if (attr.qp_state != IBV_QPS_RTS) {
+      uint32_t dest_qp_num = attr.dest_qp_num;
+      uint16_t dlid = attr.ah_attr.dlid;
+      LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
+      rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
+    }
+  }
+  return ret;
+}
+
 struct ibv_mr* RdmaManager::GetMR(const BufType buf_type, const string& name) {
   return mrs_[buf_type][name];
 }
