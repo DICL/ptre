@@ -15,7 +15,6 @@ grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* context,
                                 const GetRemoteAddressRequest* request,
                                 GetRemoteAddressResponse* response) {
   /// need rank
-  /// 
   int rank = rdma_manager_->rank();
   std::string tensor_name = request->tensor_name();
   RemoteMR rmr = rdma_manager_->GetRemoteMR(tensor_name);
@@ -48,7 +47,7 @@ grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
   int src_rank = request->rank();
   int rank = rdma_manager_->rank();
   RdmaEnv* env = rdma_manager_->rdma_env();
-  
+
   response->set_rank(rank);
   response->set_lid(env->port_attr.lid);
   response->set_qpn(rdma_manager_->qp(src_rank)->qp_num);
@@ -72,10 +71,10 @@ grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
-grpc::Status RdmaServiceImpl::AckPushDone(grpc::ServerContext* context,
-                                      const AckPushDoneRequest* request,
-                                      AckPushDoneResponse* response) {
-  //std::cout << "\nServer got AckPushDone\n";
+grpc::Status RdmaServiceImpl::NotifyPushDone(grpc::ServerContext* context,
+                                      const NotifyPushDoneRequest* request,
+                                      NotifyPushDoneResponse* response) {
+  //std::cout << "\nServer got NotifyPushDone\n";
   int src_rank = request->rank();
   cm_->FinalizeRecv(src_rank);
   return grpc::Status::OK;

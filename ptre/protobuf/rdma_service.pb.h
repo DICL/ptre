@@ -56,12 +56,6 @@ struct TableStruct_rdma_5fservice_2eproto {
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto;
 namespace ptre {
-class AckPushDoneRequest;
-class AckPushDoneRequestDefaultTypeInternal;
-extern AckPushDoneRequestDefaultTypeInternal _AckPushDoneRequest_default_instance_;
-class AckPushDoneResponse;
-class AckPushDoneResponseDefaultTypeInternal;
-extern AckPushDoneResponseDefaultTypeInternal _AckPushDoneResponse_default_instance_;
 class AttemptPushRequest;
 class AttemptPushRequestDefaultTypeInternal;
 extern AttemptPushRequestDefaultTypeInternal _AttemptPushRequest_default_instance_;
@@ -104,10 +98,14 @@ extern GetRemoteParamAddressResponseDefaultTypeInternal _GetRemoteParamAddressRe
 class MemoryRegion;
 class MemoryRegionDefaultTypeInternal;
 extern MemoryRegionDefaultTypeInternal _MemoryRegion_default_instance_;
+class NotifyPushDoneRequest;
+class NotifyPushDoneRequestDefaultTypeInternal;
+extern NotifyPushDoneRequestDefaultTypeInternal _NotifyPushDoneRequest_default_instance_;
+class NotifyPushDoneResponse;
+class NotifyPushDoneResponseDefaultTypeInternal;
+extern NotifyPushDoneResponseDefaultTypeInternal _NotifyPushDoneResponse_default_instance_;
 }  // namespace ptre
 PROTOBUF_NAMESPACE_OPEN
-template<> ::ptre::AckPushDoneRequest* Arena::CreateMaybeMessage<::ptre::AckPushDoneRequest>(Arena*);
-template<> ::ptre::AckPushDoneResponse* Arena::CreateMaybeMessage<::ptre::AckPushDoneResponse>(Arena*);
 template<> ::ptre::AttemptPushRequest* Arena::CreateMaybeMessage<::ptre::AttemptPushRequest>(Arena*);
 template<> ::ptre::AttemptPushResponse* Arena::CreateMaybeMessage<::ptre::AttemptPushResponse>(Arena*);
 template<> ::ptre::BarrierRequest* Arena::CreateMaybeMessage<::ptre::BarrierRequest>(Arena*);
@@ -122,6 +120,8 @@ template<> ::ptre::GetRemoteEnvResponse* Arena::CreateMaybeMessage<::ptre::GetRe
 template<> ::ptre::GetRemoteParamAddressRequest* Arena::CreateMaybeMessage<::ptre::GetRemoteParamAddressRequest>(Arena*);
 template<> ::ptre::GetRemoteParamAddressResponse* Arena::CreateMaybeMessage<::ptre::GetRemoteParamAddressResponse>(Arena*);
 template<> ::ptre::MemoryRegion* Arena::CreateMaybeMessage<::ptre::MemoryRegion>(Arena*);
+template<> ::ptre::NotifyPushDoneRequest* Arena::CreateMaybeMessage<::ptre::NotifyPushDoneRequest>(Arena*);
+template<> ::ptre::NotifyPushDoneResponse* Arena::CreateMaybeMessage<::ptre::NotifyPushDoneResponse>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace ptre {
 
@@ -135,12 +135,14 @@ enum BufType : int {
   BUF_TYPE_FLAG_SEND = 6,
   BUF_TYPE_BARRIER_COUNTER = 7,
   BUF_TYPE_BARRIER_RELEASE = 8,
+  BUF_TYPE_PUSH_PERMIT = 9,
+  BUF_TYPE_PUSH_PERMIT_READ = 10,
   BufType_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::min(),
   BufType_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::max()
 };
 bool BufType_IsValid(int value);
 constexpr BufType BufType_MIN = BUF_TYPE_RAW;
-constexpr BufType BufType_MAX = BUF_TYPE_BARRIER_RELEASE;
+constexpr BufType BufType_MAX = BUF_TYPE_PUSH_PERMIT_READ;
 constexpr int BufType_ARRAYSIZE = BufType_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* BufType_descriptor();
@@ -1561,23 +1563,23 @@ class AttemptPushResponse :
 };
 // -------------------------------------------------------------------
 
-class AckPushDoneRequest :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AckPushDoneRequest) */ {
+class NotifyPushDoneRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.NotifyPushDoneRequest) */ {
  public:
-  AckPushDoneRequest();
-  virtual ~AckPushDoneRequest();
+  NotifyPushDoneRequest();
+  virtual ~NotifyPushDoneRequest();
 
-  AckPushDoneRequest(const AckPushDoneRequest& from);
-  AckPushDoneRequest(AckPushDoneRequest&& from) noexcept
-    : AckPushDoneRequest() {
+  NotifyPushDoneRequest(const NotifyPushDoneRequest& from);
+  NotifyPushDoneRequest(NotifyPushDoneRequest&& from) noexcept
+    : NotifyPushDoneRequest() {
     *this = ::std::move(from);
   }
 
-  inline AckPushDoneRequest& operator=(const AckPushDoneRequest& from) {
+  inline NotifyPushDoneRequest& operator=(const NotifyPushDoneRequest& from) {
     CopyFrom(from);
     return *this;
   }
-  inline AckPushDoneRequest& operator=(AckPushDoneRequest&& from) noexcept {
+  inline NotifyPushDoneRequest& operator=(NotifyPushDoneRequest&& from) noexcept {
     if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1595,34 +1597,34 @@ class AckPushDoneRequest :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const AckPushDoneRequest& default_instance();
+  static const NotifyPushDoneRequest& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const AckPushDoneRequest* internal_default_instance() {
-    return reinterpret_cast<const AckPushDoneRequest*>(
-               &_AckPushDoneRequest_default_instance_);
+  static inline const NotifyPushDoneRequest* internal_default_instance() {
+    return reinterpret_cast<const NotifyPushDoneRequest*>(
+               &_NotifyPushDoneRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     10;
 
-  void Swap(AckPushDoneRequest* other);
-  friend void swap(AckPushDoneRequest& a, AckPushDoneRequest& b) {
+  void Swap(NotifyPushDoneRequest* other);
+  friend void swap(NotifyPushDoneRequest& a, NotifyPushDoneRequest& b) {
     a.Swap(&b);
   }
 
   // implements Message ----------------------------------------------
 
-  inline AckPushDoneRequest* New() const final {
-    return CreateMaybeMessage<AckPushDoneRequest>(nullptr);
+  inline NotifyPushDoneRequest* New() const final {
+    return CreateMaybeMessage<NotifyPushDoneRequest>(nullptr);
   }
 
-  AckPushDoneRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<AckPushDoneRequest>(arena);
+  NotifyPushDoneRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<NotifyPushDoneRequest>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const AckPushDoneRequest& from);
-  void MergeFrom(const AckPushDoneRequest& from);
+  void CopyFrom(const NotifyPushDoneRequest& from);
+  void MergeFrom(const NotifyPushDoneRequest& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1643,10 +1645,10 @@ class AckPushDoneRequest :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(AckPushDoneRequest* other);
+  void InternalSwap(NotifyPushDoneRequest* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ptre.AckPushDoneRequest";
+    return "ptre.NotifyPushDoneRequest";
   }
   private:
   inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
@@ -1676,7 +1678,7 @@ class AckPushDoneRequest :
   ::PROTOBUF_NAMESPACE_ID::int32 rank() const;
   void set_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
 
-  // @@protoc_insertion_point(class_scope:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(class_scope:ptre.NotifyPushDoneRequest)
  private:
   class HasBitSetters;
 
@@ -1687,23 +1689,23 @@ class AckPushDoneRequest :
 };
 // -------------------------------------------------------------------
 
-class AckPushDoneResponse :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AckPushDoneResponse) */ {
+class NotifyPushDoneResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.NotifyPushDoneResponse) */ {
  public:
-  AckPushDoneResponse();
-  virtual ~AckPushDoneResponse();
+  NotifyPushDoneResponse();
+  virtual ~NotifyPushDoneResponse();
 
-  AckPushDoneResponse(const AckPushDoneResponse& from);
-  AckPushDoneResponse(AckPushDoneResponse&& from) noexcept
-    : AckPushDoneResponse() {
+  NotifyPushDoneResponse(const NotifyPushDoneResponse& from);
+  NotifyPushDoneResponse(NotifyPushDoneResponse&& from) noexcept
+    : NotifyPushDoneResponse() {
     *this = ::std::move(from);
   }
 
-  inline AckPushDoneResponse& operator=(const AckPushDoneResponse& from) {
+  inline NotifyPushDoneResponse& operator=(const NotifyPushDoneResponse& from) {
     CopyFrom(from);
     return *this;
   }
-  inline AckPushDoneResponse& operator=(AckPushDoneResponse&& from) noexcept {
+  inline NotifyPushDoneResponse& operator=(NotifyPushDoneResponse&& from) noexcept {
     if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1721,34 +1723,34 @@ class AckPushDoneResponse :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const AckPushDoneResponse& default_instance();
+  static const NotifyPushDoneResponse& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const AckPushDoneResponse* internal_default_instance() {
-    return reinterpret_cast<const AckPushDoneResponse*>(
-               &_AckPushDoneResponse_default_instance_);
+  static inline const NotifyPushDoneResponse* internal_default_instance() {
+    return reinterpret_cast<const NotifyPushDoneResponse*>(
+               &_NotifyPushDoneResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     11;
 
-  void Swap(AckPushDoneResponse* other);
-  friend void swap(AckPushDoneResponse& a, AckPushDoneResponse& b) {
+  void Swap(NotifyPushDoneResponse* other);
+  friend void swap(NotifyPushDoneResponse& a, NotifyPushDoneResponse& b) {
     a.Swap(&b);
   }
 
   // implements Message ----------------------------------------------
 
-  inline AckPushDoneResponse* New() const final {
-    return CreateMaybeMessage<AckPushDoneResponse>(nullptr);
+  inline NotifyPushDoneResponse* New() const final {
+    return CreateMaybeMessage<NotifyPushDoneResponse>(nullptr);
   }
 
-  AckPushDoneResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<AckPushDoneResponse>(arena);
+  NotifyPushDoneResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<NotifyPushDoneResponse>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const AckPushDoneResponse& from);
-  void MergeFrom(const AckPushDoneResponse& from);
+  void CopyFrom(const NotifyPushDoneResponse& from);
+  void MergeFrom(const NotifyPushDoneResponse& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1769,10 +1771,10 @@ class AckPushDoneResponse :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(AckPushDoneResponse* other);
+  void InternalSwap(NotifyPushDoneResponse* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "ptre.AckPushDoneResponse";
+    return "ptre.NotifyPushDoneResponse";
   }
   private:
   inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
@@ -1796,7 +1798,7 @@ class AckPushDoneResponse :
 
   // accessors -------------------------------------------------------
 
-  // @@protoc_insertion_point(class_scope:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(class_scope:ptre.NotifyPushDoneResponse)
  private:
   class HasBitSetters;
 
@@ -2947,25 +2949,25 @@ inline void AttemptPushResponse::set_available(bool value) {
 
 // -------------------------------------------------------------------
 
-// AckPushDoneRequest
+// NotifyPushDoneRequest
 
 // int32 rank = 1;
-inline void AckPushDoneRequest::clear_rank() {
+inline void NotifyPushDoneRequest::clear_rank() {
   rank_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 AckPushDoneRequest::rank() const {
-  // @@protoc_insertion_point(field_get:ptre.AckPushDoneRequest.rank)
+inline ::PROTOBUF_NAMESPACE_ID::int32 NotifyPushDoneRequest::rank() const {
+  // @@protoc_insertion_point(field_get:ptre.NotifyPushDoneRequest.rank)
   return rank_;
 }
-inline void AckPushDoneRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void NotifyPushDoneRequest::set_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
   rank_ = value;
-  // @@protoc_insertion_point(field_set:ptre.AckPushDoneRequest.rank)
+  // @@protoc_insertion_point(field_set:ptre.NotifyPushDoneRequest.rank)
 }
 
 // -------------------------------------------------------------------
 
-// AckPushDoneResponse
+// NotifyPushDoneResponse
 
 // -------------------------------------------------------------------
 

@@ -58,14 +58,14 @@ class AttemptPushResponseDefaultTypeInternal {
  public:
   ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<AttemptPushResponse> _instance;
 } _AttemptPushResponse_default_instance_;
-class AckPushDoneRequestDefaultTypeInternal {
+class NotifyPushDoneRequestDefaultTypeInternal {
  public:
-  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<AckPushDoneRequest> _instance;
-} _AckPushDoneRequest_default_instance_;
-class AckPushDoneResponseDefaultTypeInternal {
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<NotifyPushDoneRequest> _instance;
+} _NotifyPushDoneRequest_default_instance_;
+class NotifyPushDoneResponseDefaultTypeInternal {
  public:
-  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<AckPushDoneResponse> _instance;
-} _AckPushDoneResponse_default_instance_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<NotifyPushDoneResponse> _instance;
+} _NotifyPushDoneResponse_default_instance_;
 class BarrierRequestDefaultTypeInternal {
  public:
   ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<BarrierRequest> _instance;
@@ -83,34 +83,6 @@ class GetRemoteAddressV2ResponseDefaultTypeInternal {
   ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<GetRemoteAddressV2Response> _instance;
 } _GetRemoteAddressV2Response_default_instance_;
 }  // namespace ptre
-static void InitDefaultsscc_info_AckPushDoneRequest_rdma_5fservice_2eproto() {
-  GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-  {
-    void* ptr = &::ptre::_AckPushDoneRequest_default_instance_;
-    new (ptr) ::ptre::AckPushDoneRequest();
-    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
-  }
-  ::ptre::AckPushDoneRequest::InitAsDefaultInstance();
-}
-
-::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_AckPushDoneRequest_rdma_5fservice_2eproto =
-    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_AckPushDoneRequest_rdma_5fservice_2eproto}, {}};
-
-static void InitDefaultsscc_info_AckPushDoneResponse_rdma_5fservice_2eproto() {
-  GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-  {
-    void* ptr = &::ptre::_AckPushDoneResponse_default_instance_;
-    new (ptr) ::ptre::AckPushDoneResponse();
-    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
-  }
-  ::ptre::AckPushDoneResponse::InitAsDefaultInstance();
-}
-
-::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_AckPushDoneResponse_rdma_5fservice_2eproto =
-    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_AckPushDoneResponse_rdma_5fservice_2eproto}, {}};
-
 static void InitDefaultsscc_info_AttemptPushRequest_rdma_5fservice_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -312,6 +284,34 @@ static void InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto() {
 ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_MemoryRegion_rdma_5fservice_2eproto =
     {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_MemoryRegion_rdma_5fservice_2eproto}, {}};
 
+static void InitDefaultsscc_info_NotifyPushDoneRequest_rdma_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::ptre::_NotifyPushDoneRequest_default_instance_;
+    new (ptr) ::ptre::NotifyPushDoneRequest();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::ptre::NotifyPushDoneRequest::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_NotifyPushDoneRequest_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_NotifyPushDoneRequest_rdma_5fservice_2eproto}, {}};
+
+static void InitDefaultsscc_info_NotifyPushDoneResponse_rdma_5fservice_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::ptre::_NotifyPushDoneResponse_default_instance_;
+    new (ptr) ::ptre::NotifyPushDoneResponse();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::ptre::NotifyPushDoneResponse::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_NotifyPushDoneResponse_rdma_5fservice_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, InitDefaultsscc_info_NotifyPushDoneResponse_rdma_5fservice_2eproto}, {}};
+
 static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_rdma_5fservice_2eproto[16];
 static const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* file_level_enum_descriptors_rdma_5fservice_2eproto[1];
 static constexpr ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor const** file_level_service_descriptors_rdma_5fservice_2eproto = nullptr;
@@ -394,13 +394,13 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::ptre::AttemptPushResponse, available_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::ptre::AckPushDoneRequest, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::ptre::NotifyPushDoneRequest, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  PROTOBUF_FIELD_OFFSET(::ptre::AckPushDoneRequest, rank_),
+  PROTOBUF_FIELD_OFFSET(::ptre::NotifyPushDoneRequest, rank_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::ptre::AckPushDoneResponse, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::ptre::NotifyPushDoneResponse, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
@@ -444,8 +444,8 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 55, -1, sizeof(::ptre::GetRemoteParamAddressResponse)},
   { 63, -1, sizeof(::ptre::AttemptPushRequest)},
   { 70, -1, sizeof(::ptre::AttemptPushResponse)},
-  { 76, -1, sizeof(::ptre::AckPushDoneRequest)},
-  { 82, -1, sizeof(::ptre::AckPushDoneResponse)},
+  { 76, -1, sizeof(::ptre::NotifyPushDoneRequest)},
+  { 82, -1, sizeof(::ptre::NotifyPushDoneResponse)},
   { 87, -1, sizeof(::ptre::BarrierRequest)},
   { 92, -1, sizeof(::ptre::BarrierResponse)},
   { 98, -1, sizeof(::ptre::GetRemoteAddressV2Request)},
@@ -463,8 +463,8 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteParamAddressResponse_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_AttemptPushRequest_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_AttemptPushResponse_default_instance_),
-  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_AckPushDoneRequest_default_instance_),
-  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_AckPushDoneResponse_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_NotifyPushDoneRequest_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_NotifyPushDoneResponse_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_BarrierRequest_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_BarrierResponse_default_instance_),
   reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::ptre::_GetRemoteAddressV2Request_default_instance_),
@@ -490,40 +490,40 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "\030\003 \003(\0132\022.ptre.MemoryRegion\"1\n\022AttemptPus"
   "hRequest\022\014\n\004rank\030\001 \001(\005\022\r\n\005vstep\030\002 \001(\005\"(\n"
   "\023AttemptPushResponse\022\021\n\tavailable\030\001 \001(\010\""
-  "\"\n\022AckPushDoneRequest\022\014\n\004rank\030\001 \001(\005\"\025\n\023A"
-  "ckPushDoneResponse\"\020\n\016BarrierRequest\"\"\n\017"
-  "BarrierResponse\022\017\n\007entered\030\001 \001(\010\"T\n\031GetR"
-  "emoteAddressV2Request\022\014\n\004rank\030\001 \001(\005\022\033\n\004t"
-  "ype\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030\003 \001(\t\"u"
-  "\n\032GetRemoteAddressV2Response\022\014\n\004rank\030\001 \001"
-  "(\005\022\033\n\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030"
-  "\003 \001(\t\022\036\n\002mr\030\004 \003(\0132\022.ptre.MemoryRegion*\347\001"
-  "\n\007BufType\022\020\n\014BUF_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_"
-  "RECV_BUF\020\001\022\025\n\021BUF_TYPE_SEND_BUF\020\002\022\032\n\026BUF"
-  "_TYPE_AGG_BUF_STATE\020\003\022\024\n\020BUF_TYPE_AGG_BU"
-  "F\020\004\022\026\n\022BUF_TYPE_FLAG_RECV\020\005\022\026\n\022BUF_TYPE_"
-  "FLAG_SEND\020\006\022\034\n\030BUF_TYPE_BARRIER_COUNTER\020"
-  "\007\022\034\n\030BUF_TYPE_BARRIER_RELEASE\020\0102\233\004\n\004Rdma"
-  "\022E\n\014GetRemoteEnv\022\031.ptre.GetRemoteEnvRequ"
-  "est\032\032.ptre.GetRemoteEnvResponse\022Q\n\020GetRe"
-  "moteAddress\022\035.ptre.GetRemoteAddressReque"
-  "st\032\036.ptre.GetRemoteAddressResponse\022`\n\025Ge"
-  "tRemoteParamAddress\022\".ptre.GetRemotePara"
-  "mAddressRequest\032#.ptre.GetRemoteParamAdd"
-  "ressResponse\022B\n\013AttemptPush\022\030.ptre.Attem"
-  "ptPushRequest\032\031.ptre.AttemptPushResponse"
-  "\022B\n\013AckPushDone\022\030.ptre.AckPushDoneReques"
-  "t\032\031.ptre.AckPushDoneResponse\0226\n\007Barrier\022"
-  "\024.ptre.BarrierRequest\032\025.ptre.BarrierResp"
-  "onse\022W\n\022GetRemoteAddressV2\022\037.ptre.GetRem"
-  "oteAddressV2Request\032 .ptre.GetRemoteAddr"
-  "essV2Responseb\006proto3"
+  "%\n\025NotifyPushDoneRequest\022\014\n\004rank\030\001 \001(\005\"\030"
+  "\n\026NotifyPushDoneResponse\"\020\n\016BarrierReque"
+  "st\"\"\n\017BarrierResponse\022\017\n\007entered\030\001 \001(\010\"T"
+  "\n\031GetRemoteAddressV2Request\022\014\n\004rank\030\001 \001("
+  "\005\022\033\n\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030\003"
+  " \001(\t\"u\n\032GetRemoteAddressV2Response\022\014\n\004ra"
+  "nk\030\001 \001(\005\022\033\n\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n"
+  "\004name\030\003 \001(\t\022\036\n\002mr\030\004 \003(\0132\022.ptre.MemoryReg"
+  "ion*\240\002\n\007BufType\022\020\n\014BUF_TYPE_RAW\020\000\022\025\n\021BUF"
+  "_TYPE_RECV_BUF\020\001\022\025\n\021BUF_TYPE_SEND_BUF\020\002\022"
+  "\032\n\026BUF_TYPE_AGG_BUF_STATE\020\003\022\024\n\020BUF_TYPE_"
+  "AGG_BUF\020\004\022\026\n\022BUF_TYPE_FLAG_RECV\020\005\022\026\n\022BUF"
+  "_TYPE_FLAG_SEND\020\006\022\034\n\030BUF_TYPE_BARRIER_CO"
+  "UNTER\020\007\022\034\n\030BUF_TYPE_BARRIER_RELEASE\020\010\022\030\n"
+  "\024BUF_TYPE_PUSH_PERMIT\020\t\022\035\n\031BUF_TYPE_PUSH"
+  "_PERMIT_READ\020\n2\244\004\n\004Rdma\022E\n\014GetRemoteEnv\022"
+  "\031.ptre.GetRemoteEnvRequest\032\032.ptre.GetRem"
+  "oteEnvResponse\022Q\n\020GetRemoteAddress\022\035.ptr"
+  "e.GetRemoteAddressRequest\032\036.ptre.GetRemo"
+  "teAddressResponse\022`\n\025GetRemoteParamAddre"
+  "ss\022\".ptre.GetRemoteParamAddressRequest\032#"
+  ".ptre.GetRemoteParamAddressResponse\022B\n\013A"
+  "ttemptPush\022\030.ptre.AttemptPushRequest\032\031.p"
+  "tre.AttemptPushResponse\022K\n\016NotifyPushDon"
+  "e\022\033.ptre.NotifyPushDoneRequest\032\034.ptre.No"
+  "tifyPushDoneResponse\0226\n\007Barrier\022\024.ptre.B"
+  "arrierRequest\032\025.ptre.BarrierResponse\022W\n\022"
+  "GetRemoteAddressV2\022\037.ptre.GetRemoteAddre"
+  "ssV2Request\032 .ptre.GetRemoteAddressV2Res"
+  "ponseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdma_5fservice_2eproto_sccs[16] = {
-  &scc_info_AckPushDoneRequest_rdma_5fservice_2eproto.base,
-  &scc_info_AckPushDoneResponse_rdma_5fservice_2eproto.base,
   &scc_info_AttemptPushRequest_rdma_5fservice_2eproto.base,
   &scc_info_AttemptPushResponse_rdma_5fservice_2eproto.base,
   &scc_info_BarrierRequest_rdma_5fservice_2eproto.base,
@@ -538,11 +538,13 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
   &scc_info_GetRemoteParamAddressRequest_rdma_5fservice_2eproto.base,
   &scc_info_GetRemoteParamAddressResponse_rdma_5fservice_2eproto.base,
   &scc_info_MemoryRegion_rdma_5fservice_2eproto.base,
+  &scc_info_NotifyPushDoneRequest_rdma_5fservice_2eproto.base,
+  &scc_info_NotifyPushDoneResponse_rdma_5fservice_2eproto.base,
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 1821,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 1893,
   &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 16, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
   file_level_metadata_rdma_5fservice_2eproto, 16, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
@@ -566,6 +568,8 @@ bool BufType_IsValid(int value) {
     case 6:
     case 7:
     case 8:
+    case 9:
+    case 10:
       return true;
     default:
       return false;
@@ -3954,52 +3958,52 @@ void AttemptPushResponse::InternalSwap(AttemptPushResponse* other) {
 
 // ===================================================================
 
-void AckPushDoneRequest::InitAsDefaultInstance() {
+void NotifyPushDoneRequest::InitAsDefaultInstance() {
 }
-class AckPushDoneRequest::HasBitSetters {
+class NotifyPushDoneRequest::HasBitSetters {
  public:
 };
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
-const int AckPushDoneRequest::kRankFieldNumber;
+const int NotifyPushDoneRequest::kRankFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
-AckPushDoneRequest::AckPushDoneRequest()
+NotifyPushDoneRequest::NotifyPushDoneRequest()
   : ::PROTOBUF_NAMESPACE_ID::Message(), _internal_metadata_(nullptr) {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(constructor:ptre.NotifyPushDoneRequest)
 }
-AckPushDoneRequest::AckPushDoneRequest(const AckPushDoneRequest& from)
+NotifyPushDoneRequest::NotifyPushDoneRequest(const NotifyPushDoneRequest& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   rank_ = from.rank_;
-  // @@protoc_insertion_point(copy_constructor:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(copy_constructor:ptre.NotifyPushDoneRequest)
 }
 
-void AckPushDoneRequest::SharedCtor() {
+void NotifyPushDoneRequest::SharedCtor() {
   rank_ = 0;
 }
 
-AckPushDoneRequest::~AckPushDoneRequest() {
-  // @@protoc_insertion_point(destructor:ptre.AckPushDoneRequest)
+NotifyPushDoneRequest::~NotifyPushDoneRequest() {
+  // @@protoc_insertion_point(destructor:ptre.NotifyPushDoneRequest)
   SharedDtor();
 }
 
-void AckPushDoneRequest::SharedDtor() {
+void NotifyPushDoneRequest::SharedDtor() {
 }
 
-void AckPushDoneRequest::SetCachedSize(int size) const {
+void NotifyPushDoneRequest::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
-const AckPushDoneRequest& AckPushDoneRequest::default_instance() {
-  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_AckPushDoneRequest_rdma_5fservice_2eproto.base);
+const NotifyPushDoneRequest& NotifyPushDoneRequest::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_NotifyPushDoneRequest_rdma_5fservice_2eproto.base);
   return *internal_default_instance();
 }
 
 
-void AckPushDoneRequest::Clear() {
-// @@protoc_insertion_point(message_clear_start:ptre.AckPushDoneRequest)
+void NotifyPushDoneRequest::Clear() {
+// @@protoc_insertion_point(message_clear_start:ptre.NotifyPushDoneRequest)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -4009,7 +4013,7 @@ void AckPushDoneRequest::Clear() {
 }
 
 #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
-const char* AckPushDoneRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+const char* NotifyPushDoneRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     ::PROTOBUF_NAMESPACE_ID::uint32 tag;
@@ -4043,11 +4047,11 @@ failure:
 #undef CHK_
 }
 #else  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
-bool AckPushDoneRequest::MergePartialFromCodedStream(
+bool NotifyPushDoneRequest::MergePartialFromCodedStream(
     ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!PROTOBUF_PREDICT_TRUE(EXPRESSION)) goto failure
   ::PROTOBUF_NAMESPACE_ID::uint32 tag;
-  // @@protoc_insertion_point(parse_start:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(parse_start:ptre.NotifyPushDoneRequest)
   for (;;) {
     ::std::pair<::PROTOBUF_NAMESPACE_ID::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
@@ -4078,18 +4082,18 @@ bool AckPushDoneRequest::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(parse_success:ptre.NotifyPushDoneRequest)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(parse_failure:ptre.NotifyPushDoneRequest)
   return false;
 #undef DO_
 }
 #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
 
-void AckPushDoneRequest::SerializeWithCachedSizes(
+void NotifyPushDoneRequest::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(serialize_start:ptre.NotifyPushDoneRequest)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -4102,12 +4106,12 @@ void AckPushDoneRequest::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
         _internal_metadata_.unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(serialize_end:ptre.NotifyPushDoneRequest)
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* AckPushDoneRequest::InternalSerializeWithCachedSizesToArray(
+::PROTOBUF_NAMESPACE_ID::uint8* NotifyPushDoneRequest::InternalSerializeWithCachedSizesToArray(
     ::PROTOBUF_NAMESPACE_ID::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(serialize_to_array_start:ptre.NotifyPushDoneRequest)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -4120,12 +4124,12 @@ void AckPushDoneRequest::SerializeWithCachedSizes(
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(serialize_to_array_end:ptre.NotifyPushDoneRequest)
   return target;
 }
 
-size_t AckPushDoneRequest::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:ptre.AckPushDoneRequest)
+size_t NotifyPushDoneRequest::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ptre.NotifyPushDoneRequest)
   size_t total_size = 0;
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -4149,23 +4153,23 @@ size_t AckPushDoneRequest::ByteSizeLong() const {
   return total_size;
 }
 
-void AckPushDoneRequest::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:ptre.AckPushDoneRequest)
+void NotifyPushDoneRequest::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:ptre.NotifyPushDoneRequest)
   GOOGLE_DCHECK_NE(&from, this);
-  const AckPushDoneRequest* source =
-      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<AckPushDoneRequest>(
+  const NotifyPushDoneRequest* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<NotifyPushDoneRequest>(
           &from);
   if (source == nullptr) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.NotifyPushDoneRequest)
     ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.AckPushDoneRequest)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.NotifyPushDoneRequest)
     MergeFrom(*source);
   }
 }
 
-void AckPushDoneRequest::MergeFrom(const AckPushDoneRequest& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:ptre.AckPushDoneRequest)
+void NotifyPushDoneRequest::MergeFrom(const NotifyPushDoneRequest& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:ptre.NotifyPushDoneRequest)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
@@ -4176,84 +4180,84 @@ void AckPushDoneRequest::MergeFrom(const AckPushDoneRequest& from) {
   }
 }
 
-void AckPushDoneRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:ptre.AckPushDoneRequest)
+void NotifyPushDoneRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:ptre.NotifyPushDoneRequest)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void AckPushDoneRequest::CopyFrom(const AckPushDoneRequest& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:ptre.AckPushDoneRequest)
+void NotifyPushDoneRequest::CopyFrom(const NotifyPushDoneRequest& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ptre.NotifyPushDoneRequest)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool AckPushDoneRequest::IsInitialized() const {
+bool NotifyPushDoneRequest::IsInitialized() const {
   return true;
 }
 
-void AckPushDoneRequest::Swap(AckPushDoneRequest* other) {
+void NotifyPushDoneRequest::Swap(NotifyPushDoneRequest* other) {
   if (other == this) return;
   InternalSwap(other);
 }
-void AckPushDoneRequest::InternalSwap(AckPushDoneRequest* other) {
+void NotifyPushDoneRequest::InternalSwap(NotifyPushDoneRequest* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
   swap(rank_, other->rank_);
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata AckPushDoneRequest::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata NotifyPushDoneRequest::GetMetadata() const {
   return GetMetadataStatic();
 }
 
 
 // ===================================================================
 
-void AckPushDoneResponse::InitAsDefaultInstance() {
+void NotifyPushDoneResponse::InitAsDefaultInstance() {
 }
-class AckPushDoneResponse::HasBitSetters {
+class NotifyPushDoneResponse::HasBitSetters {
  public:
 };
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
-AckPushDoneResponse::AckPushDoneResponse()
+NotifyPushDoneResponse::NotifyPushDoneResponse()
   : ::PROTOBUF_NAMESPACE_ID::Message(), _internal_metadata_(nullptr) {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(constructor:ptre.NotifyPushDoneResponse)
 }
-AckPushDoneResponse::AckPushDoneResponse(const AckPushDoneResponse& from)
+NotifyPushDoneResponse::NotifyPushDoneResponse(const NotifyPushDoneResponse& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  // @@protoc_insertion_point(copy_constructor:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(copy_constructor:ptre.NotifyPushDoneResponse)
 }
 
-void AckPushDoneResponse::SharedCtor() {
+void NotifyPushDoneResponse::SharedCtor() {
 }
 
-AckPushDoneResponse::~AckPushDoneResponse() {
-  // @@protoc_insertion_point(destructor:ptre.AckPushDoneResponse)
+NotifyPushDoneResponse::~NotifyPushDoneResponse() {
+  // @@protoc_insertion_point(destructor:ptre.NotifyPushDoneResponse)
   SharedDtor();
 }
 
-void AckPushDoneResponse::SharedDtor() {
+void NotifyPushDoneResponse::SharedDtor() {
 }
 
-void AckPushDoneResponse::SetCachedSize(int size) const {
+void NotifyPushDoneResponse::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
-const AckPushDoneResponse& AckPushDoneResponse::default_instance() {
-  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_AckPushDoneResponse_rdma_5fservice_2eproto.base);
+const NotifyPushDoneResponse& NotifyPushDoneResponse::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_NotifyPushDoneResponse_rdma_5fservice_2eproto.base);
   return *internal_default_instance();
 }
 
 
-void AckPushDoneResponse::Clear() {
-// @@protoc_insertion_point(message_clear_start:ptre.AckPushDoneResponse)
+void NotifyPushDoneResponse::Clear() {
+// @@protoc_insertion_point(message_clear_start:ptre.NotifyPushDoneResponse)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -4262,7 +4266,7 @@ void AckPushDoneResponse::Clear() {
 }
 
 #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
-const char* AckPushDoneResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+const char* NotifyPushDoneResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     ::PROTOBUF_NAMESPACE_ID::uint32 tag;
@@ -4288,11 +4292,11 @@ failure:
 #undef CHK_
 }
 #else  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
-bool AckPushDoneResponse::MergePartialFromCodedStream(
+bool NotifyPushDoneResponse::MergePartialFromCodedStream(
     ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!PROTOBUF_PREDICT_TRUE(EXPRESSION)) goto failure
   ::PROTOBUF_NAMESPACE_ID::uint32 tag;
-  // @@protoc_insertion_point(parse_start:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(parse_start:ptre.NotifyPushDoneResponse)
   for (;;) {
     ::std::pair<::PROTOBUF_NAMESPACE_ID::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
@@ -4305,18 +4309,18 @@ bool AckPushDoneResponse::MergePartialFromCodedStream(
           input, tag, _internal_metadata_.mutable_unknown_fields()));
   }
 success:
-  // @@protoc_insertion_point(parse_success:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(parse_success:ptre.NotifyPushDoneResponse)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(parse_failure:ptre.NotifyPushDoneResponse)
   return false;
 #undef DO_
 }
 #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
 
-void AckPushDoneResponse::SerializeWithCachedSizes(
+void NotifyPushDoneResponse::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(serialize_start:ptre.NotifyPushDoneResponse)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -4324,12 +4328,12 @@ void AckPushDoneResponse::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
         _internal_metadata_.unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(serialize_end:ptre.NotifyPushDoneResponse)
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* AckPushDoneResponse::InternalSerializeWithCachedSizesToArray(
+::PROTOBUF_NAMESPACE_ID::uint8* NotifyPushDoneResponse::InternalSerializeWithCachedSizesToArray(
     ::PROTOBUF_NAMESPACE_ID::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(serialize_to_array_start:ptre.NotifyPushDoneResponse)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -4337,12 +4341,12 @@ void AckPushDoneResponse::SerializeWithCachedSizes(
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(serialize_to_array_end:ptre.NotifyPushDoneResponse)
   return target;
 }
 
-size_t AckPushDoneResponse::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:ptre.AckPushDoneResponse)
+size_t NotifyPushDoneResponse::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:ptre.NotifyPushDoneResponse)
   size_t total_size = 0;
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -4359,23 +4363,23 @@ size_t AckPushDoneResponse::ByteSizeLong() const {
   return total_size;
 }
 
-void AckPushDoneResponse::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:ptre.AckPushDoneResponse)
+void NotifyPushDoneResponse::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:ptre.NotifyPushDoneResponse)
   GOOGLE_DCHECK_NE(&from, this);
-  const AckPushDoneResponse* source =
-      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<AckPushDoneResponse>(
+  const NotifyPushDoneResponse* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<NotifyPushDoneResponse>(
           &from);
   if (source == nullptr) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:ptre.NotifyPushDoneResponse)
     ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.AckPushDoneResponse)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:ptre.NotifyPushDoneResponse)
     MergeFrom(*source);
   }
 }
 
-void AckPushDoneResponse::MergeFrom(const AckPushDoneResponse& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:ptre.AckPushDoneResponse)
+void NotifyPushDoneResponse::MergeFrom(const NotifyPushDoneResponse& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:ptre.NotifyPushDoneResponse)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
@@ -4383,34 +4387,34 @@ void AckPushDoneResponse::MergeFrom(const AckPushDoneResponse& from) {
 
 }
 
-void AckPushDoneResponse::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:ptre.AckPushDoneResponse)
+void NotifyPushDoneResponse::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:ptre.NotifyPushDoneResponse)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void AckPushDoneResponse::CopyFrom(const AckPushDoneResponse& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:ptre.AckPushDoneResponse)
+void NotifyPushDoneResponse::CopyFrom(const NotifyPushDoneResponse& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:ptre.NotifyPushDoneResponse)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool AckPushDoneResponse::IsInitialized() const {
+bool NotifyPushDoneResponse::IsInitialized() const {
   return true;
 }
 
-void AckPushDoneResponse::Swap(AckPushDoneResponse* other) {
+void NotifyPushDoneResponse::Swap(NotifyPushDoneResponse* other) {
   if (other == this) return;
   InternalSwap(other);
 }
-void AckPushDoneResponse::InternalSwap(AckPushDoneResponse* other) {
+void NotifyPushDoneResponse::InternalSwap(NotifyPushDoneResponse* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata AckPushDoneResponse::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata NotifyPushDoneResponse::GetMetadata() const {
   return GetMetadataStatic();
 }
 
@@ -5711,11 +5715,11 @@ template<> PROTOBUF_NOINLINE ::ptre::AttemptPushRequest* Arena::CreateMaybeMessa
 template<> PROTOBUF_NOINLINE ::ptre::AttemptPushResponse* Arena::CreateMaybeMessage< ::ptre::AttemptPushResponse >(Arena* arena) {
   return Arena::CreateInternal< ::ptre::AttemptPushResponse >(arena);
 }
-template<> PROTOBUF_NOINLINE ::ptre::AckPushDoneRequest* Arena::CreateMaybeMessage< ::ptre::AckPushDoneRequest >(Arena* arena) {
-  return Arena::CreateInternal< ::ptre::AckPushDoneRequest >(arena);
+template<> PROTOBUF_NOINLINE ::ptre::NotifyPushDoneRequest* Arena::CreateMaybeMessage< ::ptre::NotifyPushDoneRequest >(Arena* arena) {
+  return Arena::CreateInternal< ::ptre::NotifyPushDoneRequest >(arena);
 }
-template<> PROTOBUF_NOINLINE ::ptre::AckPushDoneResponse* Arena::CreateMaybeMessage< ::ptre::AckPushDoneResponse >(Arena* arena) {
-  return Arena::CreateInternal< ::ptre::AckPushDoneResponse >(arena);
+template<> PROTOBUF_NOINLINE ::ptre::NotifyPushDoneResponse* Arena::CreateMaybeMessage< ::ptre::NotifyPushDoneResponse >(Arena* arena) {
+  return Arena::CreateInternal< ::ptre::NotifyPushDoneResponse >(arena);
 }
 template<> PROTOBUF_NOINLINE ::ptre::BarrierRequest* Arena::CreateMaybeMessage< ::ptre::BarrierRequest >(Arena* arena) {
   return Arena::CreateInternal< ::ptre::BarrierRequest >(arena);

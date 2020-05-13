@@ -29,9 +29,9 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status AttemptPush(grpc::ServerContext* context,
       const AttemptPushRequest* request,
       AttemptPushResponse* response) override;
-  grpc::Status AckPushDone(grpc::ServerContext* context,
-      const AckPushDoneRequest* request,
-      AckPushDoneResponse* response) override;
+  grpc::Status NotifyPushDone(grpc::ServerContext* context,
+      const NotifyPushDoneRequest* request,
+      NotifyPushDoneResponse* response) override;
   grpc::Status Barrier(grpc::ServerContext* context,
       const BarrierRequest* request,
       BarrierResponse* response) override;

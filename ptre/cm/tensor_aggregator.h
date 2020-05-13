@@ -55,6 +55,7 @@ class TensorAggregator {
       const std::vector<string>& names,
       const std::vector<Flat>& flats);
   ~TensorAggregator();
+  void InitReceive();
 
   void SetStateMR(const string& name, struct ibv_mr* state_mr);
 
@@ -81,14 +82,16 @@ class TensorAggregator {
   // Utility Functions
   void PrintDebug(int compare = 1);
 
- protected:
-  void BackgroundThreadLoop();
+  // Load Balancing
+  void EnqueuePeer(int src_rank);
+  void ReceiveWriteDone(int dst);
 
-  std::thread background_thread_;
+ protected:
   Eigen::ThreadPool* pool_;
   //Eigen::ThreadPoolDevice* d_;
   int pool_size_;  // number of threads for Eigen::ThreadPool
 
+  std::mutex state_mu_;
   enum State {
     kInit,
     kReady,
@@ -113,16 +116,29 @@ class TensorAggregator {
 #endif
   std::vector<struct ibv_mr*> buf_state_mrs_;
 
-  /// RdmaEnv
+  // RdmaEnv
   RdmaEnv* rdma_env_;
-  /// Completion Queue
+  // Completion Queue
   /// TODO: const?
-  //struct ibv_cq* cq0_;
   struct ibv_cq* cq_ = nullptr;
-  /// QP
+  // QP
   /// TODO: const?
-  //struct ibv_qp* qp0_;
   struct ibv_qp* qp_ = nullptr;
+
+  /// 1. Enqueue peers with EnqueuePeer()
+  /// 2. Init peer queue with StartReceive()
+  /// 3. Finalize Aggregation
+  int NextPeerToReceive(int idx);
+
+  int comm_size_;
+  int* done_tensor_cnts_;
+  std::mutex peer_q_mu_;
+  std::vector<int, std::queue<int>> peer_q_;
+  std::mutex done_arr_mu_;
+  int* done_arr_;
+  std::map<int, struct ibv_qp*> qps_;
+  std::map<int, struct ibv_cq*> recv_cqs_;
+  std::map<int, struct ibv_mr*> recv_mrs_;
 };
 
 }  // namespace ptre

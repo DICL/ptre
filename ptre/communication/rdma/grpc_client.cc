@@ -112,13 +112,13 @@ bool GrpcClient::AttemptPush(int vstep) {
   }
 }
 
-int GrpcClient::AckPushDone() {
-  AckPushDoneRequest request;
-  AckPushDoneResponse response;
+int GrpcClient::NotifyPushDone() {
+  NotifyPushDoneRequest request;
+  NotifyPushDoneResponse response;
   ClientContext context;
   request.set_rank(src_rank_);
-  grpc::Status status = stub_->AckPushDone(&context, request, &response);
-  //std::cout << "\n Client AckPushDone\n";
+  grpc::Status status = stub_->NotifyPushDone(&context, request, &response);
+  //std::cout << "\n Client NotifyPushDone\n";
 }
 
 bool GrpcClient::Barrier() {

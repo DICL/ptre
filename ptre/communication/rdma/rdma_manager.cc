@@ -21,7 +21,6 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank, bool add)
     //LOG(INFO) << "[DEBUG] num_comp_vectors=" << rdma_env_.context->num_comp_vectors;
     //std::cout << "init_rdma_env done." << std::endl;
   }
-  //InitLocalQP();
   CreateCQs();
   CreateQPs();
   //polling_thread_ = std::thread([this] { ProcessCQ(); });
@@ -33,95 +32,6 @@ RdmaManager::~RdmaManager() {
   //}
 }
 
-void RdmaManager::InitLocalQP() {
-  int ret;
-  // Create local CQ
-  cq_local_ = ibv_create_cq(rdma_env_.context, 100, NULL, NULL, 0);
-  if (!cq_local_) {
-    LOG(ERROR) << "Failed to create local CQ";
-    exit(1);
-  }
-  // Create local QP with local CQ
-  struct ibv_qp_init_attr qp_init_attr;
-  memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
-  qp_init_attr.send_cq = cq_local_;
-  qp_init_attr.recv_cq = cq_local_;
-  qp_init_attr.qp_type = IBV_QPT_RC;
-  qp_init_attr.cap.max_send_wr = 16;
-  qp_init_attr.cap.max_recv_wr = 16;
-  qp_init_attr.cap.max_send_sge = 1;
-  qp_init_attr.cap.max_recv_sge = 1;
-  qp_local_ = ibv_create_qp(rdma_env_.pd, &qp_init_attr);
-  if (!qp_local_) {
-    LOG(ERROR) << "Failed to create local QP";
-    exit(1);
-  }
-  // Init QP
-  struct ibv_qp_attr attr;
-  memset(&attr, 0, sizeof(attr));
-  attr.qp_state = IBV_QPS_INIT;
-  attr.pkey_index = 0;
-  attr.port_num = 1;
-  attr.qp_access_flags =
-        IBV_ACCESS_LOCAL_WRITE
-      | IBV_ACCESS_REMOTE_WRITE
-      | IBV_ACCESS_REMOTE_READ
-      | IBV_ACCESS_REMOTE_ATOMIC;
-  ret = ibv_modify_qp(qp_local_, &attr,
-        IBV_QP_STATE
-      | IBV_QP_PKEY_INDEX
-      | IBV_QP_PORT
-      | IBV_QP_ACCESS_FLAGS);
-  if (ret) {
-    LOG(ERROR) << "Failed to modify local QP to INIT: " << std::strerror(ret);
-    exit(1);
-  }
-  // INIT -> RTR
-  memset(&attr, 0, sizeof(attr));
-  attr.qp_state = IBV_QPS_RTR;
-  attr.path_mtu = IBV_MTU_4096;
-  attr.dest_qp_num = qp_local_->qp_num;
-  attr.rq_psn = 0;
-  attr.max_dest_rd_atomic = 1;
-  attr.min_rnr_timer = 12;
-  attr.ah_attr.dlid = rdma_env_.port_attr.lid;
-  attr.ah_attr.sl = 0;
-  attr.ah_attr.src_path_bits = 0;
-  attr.ah_attr.port_num  = IB_PORT;
-  ret = ibv_modify_qp(qp_local_, &attr,
-        IBV_QP_STATE
-      | IBV_QP_AV
-      | IBV_QP_PATH_MTU
-      | IBV_QP_DEST_QPN
-      | IBV_QP_RQ_PSN
-      | IBV_QP_MAX_DEST_RD_ATOMIC
-      | IBV_QP_MIN_RNR_TIMER);
-  if (ret) {
-    LOG(ERROR) << "Failed to modify local QP to RTR: " << std::strerror(ret);
-    exit(1);
-  }
-
-  /// INIT -> RTS
-  memset(&attr, 0, sizeof(attr));
-  attr.qp_state = IBV_QPS_RTS;
-  attr.sq_psn = 0;
-  attr.timeout = 14;
-  attr.retry_cnt = 7;
-  attr.rnr_retry = 7;
-  attr.max_rd_atomic = 1;
-  ret = ibv_modify_qp(qp_local_, &attr,
-        IBV_QP_STATE
-      | IBV_QP_TIMEOUT
-      | IBV_QP_RETRY_CNT
-      | IBV_QP_RNR_RETRY
-      | IBV_QP_SQ_PSN
-      | IBV_QP_MAX_QP_RD_ATOMIC);
-  if (ret) {
-    LOG(ERROR) << "Failed to modify local QP to RTS: " << std::strerror(ret);
-    exit(1);
-  }
-}
-
 void RdmaManager::CreateCQs() {
 #if 0
   event_channel_ = ibv_create_comp_channel(rdma_env_.context);
@@ -130,24 +40,29 @@ void RdmaManager::CreateCQs() {
   }
   cq_ = ibv_create_cq(rdma_env_.context, MAX_CONCURRENT_WRITES * 2,
                              NULL, event_channel_, 0);
-#else
-  cq_ = ibv_create_cq(rdma_env_.context, 100,
-                             NULL, NULL, 0);
-#endif
   if (cq_ == NULL) {
     std::cout << "Failed to create CQ" << std::endl;
   }
-  //for (int i = 0; i < ptre_size_; i++) {
-  //  if (i == ptre_rank_) {
-  //    continue;
-  //  }
-  //  ibv_cq* cq = ibv_create_cq(rdma_env_.context, rdma_env_.dev_attr.max_cqe,
-  //                             NULL, NULL, 0);
-  //  if (cq == NULL) {
-  //    std::cout << "Failed to create CQ for rank=" << i << std::endl;
-  //  }
-  //  cqs_.emplace(i, cq);
-  //}
+#elif 0
+  cq_ = ibv_create_cq(rdma_env_.context, 100, NULL, NULL, 0);
+  if (cq_ == NULL) {
+    std::cout << "Failed to create CQ" << std::endl;
+  }
+#else
+  struct ibv_context* ctx = rdma_env_.context;
+  for (int i = 0; i < ptre_size_; i++) {
+    struct ibv_cq* send_cq = ibv_create_cq(ctx, 100, NULL, NULL, 0);
+    if (!send_cq) {
+      LOG(ERROR) << "Failed to create send CQ for rank=" << i;
+    }
+    send_cqs_[i] = send_cq;
+    struct ibv_cq* recv_cq = ibv_create_cq(ctx, 100, NULL, NULL, 0);
+    if (!recv_cq) {
+      LOG(ERROR) << "Failed to create send CQ for rank=" << i;
+    }
+    recv_cqs_[i] = recv_cq;
+  }
+#endif
 }
 
 void RdmaManager::CreateQPs() {
@@ -163,8 +78,8 @@ void RdmaManager::CreateQPs() {
     {
       struct ibv_qp_init_attr qp_init_attr;
       memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
-      qp_init_attr.send_cq = cq_;
-      qp_init_attr.recv_cq = cq_;
+      qp_init_attr.send_cq = send_cqs_[i];
+      qp_init_attr.recv_cq = recv_cqs_[i];
       qp_init_attr.qp_type = IBV_QPT_RC;
       qp_init_attr.cap.max_send_wr = 16;
       qp_init_attr.cap.max_recv_wr = 16;
@@ -439,7 +354,7 @@ int RdmaManager::RdmaWriteBufRemote(const int dst_rank, const BufType src_type,
     }
 #else
     struct ibv_wc wc;
-    ptre_poll_cq(cq_, 1, &wc);
+    ptre_poll_cq(send_cqs_[dst_rank], 1, &wc);
     if (!wc.status) {
       break;
     } else {
@@ -496,7 +411,7 @@ void RdmaManager::InitAggWriter() {
         agg_buf_rmrs.push_back(agg_buf_rmr_map[recv_tensor_names_[i]]);
       }
       RdmaAggWriter* writer = new RdmaAggWriter(dst, rdma_env_.pd,
-          cq_, qps_[dst],
+          send_cqs_[dst], qps_[dst],
           recv_tensor_names_,
           agg_buf_state_rmrs,
           agg_buf_rmrs,
@@ -617,7 +532,7 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
     struct ibv_mr* read_mr, size_t read_length) {
   int ret;
   // Retrieve remote address
-  RemoteMR rmr = rmrs_[dst_rank][buf_type];
+  RemoteMR rmr = rmrs_[dst][buf_type][name];
   uint64_t remote_addr = rmr.remote_addr;
   uint32_t rkey = rmr.rkey;
   // Init SGE
@@ -640,7 +555,7 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
   // Try RDMA read
   while (true) {
     // WR ID
-    wr.wr_id = new RdmaWrId(RDMA_WR_ID_READ, nullptr);
+    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_READ, nullptr);
     // Post send
     struct ibv_send_wr* bad_wr;
     ret = ibv_post_send(qp, &wr, &bad_wr);
@@ -650,7 +565,77 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
       exit(1);
     }
     struct ibv_wc wc;
-    ptre_poll_cq(cq_, 1, &wc);
+    ptre_poll_cq(send_cqs_[dst], 1, &wc);
+    if (!wc.status) {
+      break;
+    } else {
+      LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
+    }
+    struct ibv_qp_attr attr;
+    struct ibv_qp_init_attr init_attr;
+    ret = ibv_query_qp(qp, &attr,
+          IBV_QP_STATE
+        | IBV_QP_AV
+        | IBV_QP_DEST_QPN,
+        &init_attr);
+    if (ret) {
+      LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
+      exit(1);
+    }
+    if (attr.qp_state != IBV_QPS_RTS) {
+      uint32_t dest_qp_num = attr.dest_qp_num;
+      uint16_t dlid = attr.ah_attr.dlid;
+      LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
+      rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
+    }
+  }
+  return ret;
+}
+
+int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
+    const string& var_name, struct ibv_mr* send_mr, size_t send_length,
+    uint32_t* imm_data) {
+  int ret;
+  // Retrieve remote address
+  RemoteMR rmr = rmrs_[dst][buf_type][var_name];
+  uint64_t remote_addr = rmr.remote_addr;
+  uint32_t rkey = rmr.rkey;
+  // Init SGE
+  struct ibv_sge sge;
+  memset(&sge, 0, sizeof(sge));
+  sge.addr = (uint64_t) send_mr->addr;
+  sge.length = send_length;
+  sge.lkey = send_mr->lkey;
+  // Init send WR
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  if (imm_data == nullptr) {
+    wr.opcode = IBV_WR_RDMA_WRITE;
+  } else {
+    wr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
+    wr.imm_data = *imm_data;
+  }
+  wr.send_flags = IBV_SEND_SIGNALED;
+  wr.wr.rdma.remote_addr = remote_addr;
+  wr.wr.rdma.rkey = rkey;
+  // QP
+  struct ibv_qp* qp = qps_[dst];
+  // Try RDMA read
+  while (true) {
+    // WR ID
+    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_READ, nullptr);
+    // Post send
+    struct ibv_send_wr* bad_wr;
+    ret = ibv_post_send(qp, &wr, &bad_wr);
+    if (ret) {
+      LOG(ERROR) << "Failed to ibv_post_send for write " << var_name << ":"
+          << buf_type << " for rank " << dst;
+      exit(1);
+    }
+    struct ibv_wc wc;
+    ptre_poll_cq(send_cqs_[dst], 1, &wc);
     if (!wc.status) {
       break;
     } else {
@@ -726,8 +711,10 @@ void RdmaManager::ProcessCQ() {
 }
 
 void RdmaManager::Poll(int num_comps) {
+  LOG(ERROR) << "Not Implemented.";
+  exit(1);
   struct ibv_wc wcs[num_comps];
-  ptre_poll_cq(cq_, num_comps, wcs);
+  //ptre_poll_cq(cq_, num_comps, wcs);
 }
 
 //void RdmaManager::InitTensorMRs(int dst_rank, const std::string& name,
@@ -878,7 +865,7 @@ int RdmaManager::PushTensorAtomicAdd(int dst_rank, const std::string& name,
       if (ret) {
         std::cout << "post_atomic_cmp_and_swp failed." << std::endl;
       }
-      ptre_poll_cq(cq_, 1, &wc);
+      ptre_poll_cq(send_cqs_[dst_rank], 1, &wc);
       if (compare_add == read_buf_base) {
         break;
       } else {
@@ -935,7 +922,7 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
   uint64_t wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_CAS_TWO, nullptr);
   post_read(length, read_buf_addr, mr->lkey, remote_addr_base, rkey, wr_id, qp);
   struct ibv_wc wc;
-  ptre_poll_cq(cq_, 1, &wc);
+  ptre_poll_cq(send_cqs_[dst_rank], 1, &wc);
   int cnt = 0;
   bool checker[batch_size_tot] = {};
   while (true) {
@@ -1001,7 +988,7 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
     }
     struct ibv_send_wr* bad_wr;
     int ret = ibv_post_send(qp, &wr[0], &bad_wr);
-    ptre_poll_cq(cq_, 1, &wc);
+    ptre_poll_cq(send_cqs_[dst_rank], 1, &wc);
     j = 0;
     for (int i = 0; i < batch_size_tot; i++) {
       if (checker[i]) {
@@ -1082,6 +1069,48 @@ int RdmaManager::PushTensor(int dst_rank, string name, const Tensor& tensor) {
     std::cout << "post_write failed." << std::endl;
   }
 }
-int RdmaManager::AckPushDone(int dst_rank) {
+int RdmaManager::NotifyPushDone(int dst_rank) {
 }
+
+int RdmaManager::PushAndNotify(int dst, const string& var_name) {
+  int ret;
+  // 1. Read Permit Table
+  struct ibv_mr* read_mr = mrs_[BUF_TYPE_PUSH_PERMIT_READ][var_name];
+  ret = RdmaRead(dst, BUF_TYPE_PUSH_PERMIT, var_name, read_mr, sizeof(int));
+  ret = *((int*) read_mr->addr);
+  // 2. RDMA Write with IMM Data
+  if (ret != ptre_rank_) {
+    return 1;
+  } else {
+    ibv_mr* send_mr = mrs_[BUF_TYPE_SEND_BUF][var_name];
+    uint32_t imm_data = var_name_to_index_[var_name];
+    ret = RdmaWrite(dst, BUF_TYPE_RECV_BUF, var_name, send_mr, send_mr->length,
+        &imm_data);
+    return ret;
+  }
+}
+
+int RdmaManager::ReceivePushNotify(int dst) {
+  int ret;
+  struct ibv_qp* qp = qps_[dst];
+  struct ibv_cq* cq = recv_cqs_[dst];
+  struct ibv_recv_wr* wr = recv_wrs_[dst];
+  struct ibv_recv_wr* bad_wr;
+  ret = ibv_post_recv(qp, wr, &bad_wr);
+  struct ibv_wc wc;
+  ret = ibv_poll_cq(cq, 1, &wc);
+  if (ret > 0) {
+    if (wc.status == IBV_WC_SUCCESS) {
+      // Write done
+      uint32_t idx = wc.imm_data;
+      return idx;
+    } else {
+      LOG(ERROR) << "Failed to poll recv CQ for rank=" << dst << ": status="
+          << wc.status;
+      exit(EXIT_FAILURE);
+    }
+  }
+  return -1;
+}
+
 }  // namespace ptre

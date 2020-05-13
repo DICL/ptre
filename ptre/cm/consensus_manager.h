@@ -48,8 +48,6 @@ class ConsensusManager {
   void SetPushReady() { ready_to_push_ = true; }
   bool IsPushReady() { return ready_to_push_; }
   void UnsetPushReady() { ready_to_push_ = false; }
-  int GetRandomTarget();
-  int GetIncNeighbor();
   int get_peer();
   void next_peer();
   int get_peers(int num_peer, int* peers);
@@ -59,6 +57,8 @@ class ConsensusManager {
   const std::vector<Tensor*>& GetGlobalConsensusList();
   const std::vector<Tensor*>& GetSendTensorsList();
   const std::vector<string>& GetGlcNameList();
+  int GetGlcTensor(const int& idx, Tensor*& out);
+  int GetGlcTensor(const string& var_name, Tensor*& out);
 
   const Tensor& global_consensus(int index);
   const Tensor& global_consensus(const std::string& name);
@@ -82,13 +82,23 @@ class ConsensusManager {
   /// Must Open Receive after this preparation done
   int PrepareReceive();
   int OpenReceive();
+  void OpenReceive(int idx);
+  void OpenReceive(const string& var_name);
   int CloseReceive();
+  void CloseReceive(int idx);
+  void CloseReceive(const string& var_name);
   bool IsReceiveDone();
   int WaitAndGetNumIncomings();
+  int GetNumIncomings(int idx);
+  int GetNumIncomings(const string& var_name);
+  int GetNumIncomings();
   int CountReduceAndOpenRecv(std::string& name);
+  void CountReduce(int idx);
+  void CountReduce(const string& var_name);
   bool IsInitNumApplyOps();
   int InitNumRecvTensors();
   int ProcessAggregation();
+  int ProcessReceive();
 
   void set_rcv_done_cnt(int cnt) { rcv_done_cnt_ = cnt; }
 
@@ -134,7 +144,7 @@ class ConsensusManager {
   bool* is_new_incoming_ = nullptr;
   bool flag_to_send_ = true;
 
-  /// Buffers
+  /// Data Buffers
   int num_bufs_ = 0;
   std::map<string, int> buf_name_to_index_;
   std::map<BufType, std::map<string, int>> buf_type_name_index_map_;
@@ -144,6 +154,16 @@ class ConsensusManager {
   std::vector<uint64_t*> agg_buf_states_;
   // To be deprecated.
   std::vector<string> buf_names_;
+
+  // Receive lock with variable granularity
+  std::vector<std::mutex> var_rcv_mus_;
+  std::vector<std::condition_variable> var_rcv_cvs_;
+  /// 0: Closed
+  /// 1: Open
+  int* var_rcv_doors_;
+  int* var_rcv_ing_cnts_;
+  int* var_rcv_done_cnts_;
+  int* var_reduce_dones_;
 
   std::mutex rcv_mu_;
   std::condition_variable rcv_cv_;
@@ -174,6 +194,12 @@ class ConsensusManager {
   //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
   TensorAggregator* tensor_aggregator_ = nullptr;
+  /// size = num_trainable_vars
+  std::vector<Flat*> glc_flats_;
+  std::vector<Flat*> agg_flats_;
+  std::vector<int> var_agg_done_cnts_;
+  std::vector<int> recv_status_;
+  /// size = comm_size
 };
 
 }  // namespace ptre

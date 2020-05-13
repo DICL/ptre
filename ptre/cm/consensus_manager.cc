@@ -90,6 +90,7 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
   for (int i = 0; i < num_vars_; i++) {
     recv_flats.push_back(global_consensus_[i]->flat<float>());
   }
+  // TODO: Poll RECV CQ and get IMM DATA in TensorAggregator?
   struct ibv_cq* local_cq = rdma_manager_->local_cq();
   struct ibv_qp* local_qp = rdma_manager_->local_qp();
   tensor_aggregator_ = new TensorAggregator(nullptr, 0,
@@ -126,7 +127,14 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
     struct ibv_mr* mr = rdma_manager_->GetMR(BUF_TYPE_AGG_BUF_STATE, names[i]);
     tensor_aggregator_->SetStateMR(names[i], mr);
   }
-  //tensor_aggregator_->Start();
+  /// 4. Push Permit Array
+  push_permits_.resize(num_vars);
+  for (int i = 0; i < num_vars; i++) {
+    int* elem = new int(-1);
+    push_permits_[i] = elem;
+    rdma_manager_->RegisterMR(BUF_TYPE_PUSH_PERMIT_SRC, names[i], (void*) elem,
+        sizeof(int), true);
+  }
 
   /// For Backward-Compatibility
   /// TODO: This logic should be deprecated and replaced by counting logic.
@@ -237,7 +245,7 @@ void ConsensusManager::PushModel(int dst_rank) {
     rdma_manager_->PushTensor(dst_rank, name, *t);  // num_comps + 1
   }
 
-  rdma_manager_->AckPushDone(dst_rank);
+  rdma_manager_->NotifyPushDone(dst_rank);
 }
 
 void ConsensusManager::PushTensors(int dst_rank) {
@@ -327,7 +335,18 @@ Tensor* ConsensusManager::send_tensor(const string& name) {
 }
 
 bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
-  //LOG(INFO) << "[DEBUG] src_rank=" << src_rank << ", src_vstep=" << src_vstep << ", local_vstep=" << virtual_step_ << ", rcv_open=" << rcv_open_;
+#if 0
+  std::lock_guard<std::mutex> rcv_guard(rcv_mu_);
+  if (rcv_open_) {
+    rcv_ing_cnt_++;
+    for (int i = 0; i < num_vars_; i++) {
+      std::lock_guard<std::mutex> guard(var_rcv_mus_);
+      if (var_rcv_doors_[i]) {
+        permit_manager_->EnqueuePeer(src_rank);
+      }
+    }
+  }
+#endif
   if (virtual_step_ > src_vstep) {
     return false;
   }
@@ -346,9 +365,10 @@ bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
     if (!ret.second) {
       return false;
     }
+    // Push available
     rcv_ing_cnt_++;
     rcv_steps_sum_ += src_vstep;
-    //std::cout << "\n[RANK=" << ptre_rank_ << "]: rcv_ing_cnt=" << rcv_ing_cnt_ << std::endl;
+    tensor_aggregator_->EnqueuePeer(src_rank);
     return true;
   }
   return false;
@@ -363,6 +383,10 @@ int ConsensusManager::FinalizeRecv(int src_rank) {
   rcv_cv_.notify_all();
   rcv_mu_.unlock();
   return 0;
+}
+
+int ConsensusManager::EnqueueRecvTask(int from, int idx) {
+  permit_scheduler_->EnqueueRecvTask(from, idx);
 }
 
 int ConsensusManager::PrepareReceive() {
@@ -383,6 +407,54 @@ int ConsensusManager::OpenReceive() {
   return 0;
 }
 
+int ConsensusManager::GetGlcTensor(const int& idx, Tensor*& out) {
+  auto&& var = REMOTE_VARIABLES_[idx];
+  int ret = var->GetGlcTensor(out);
+  return ret;
+}
+
+int ConsensusManager::GetGlcTensor(const string& var_name, Tensor*& out) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    exit(EXIT_FAILURE);
+  }
+  int idx = search->second;
+  int ret = GetGlcTensor(idx, out);
+  return ret;
+}
+
+void ConsensusManager::OpenReceive(int idx) {
+  auto&& var = REMOTE_VARIABLES_[idx];
+  var->StartRecv();
+#if 0
+  auto&& mu = var_rcv_mus_[idx];
+  auto&& cv = var_rcv_cvs_[idx];
+  mu.lock();
+  // Init Global Consensus Buffer
+  char* buf = (char*) glc_flats_[idx]->data();
+  size_t size = glc_flats_[idx]->size() * sizeof(float);
+  memset(buf, 0, size);
+  // Init agg done count
+  var_agg_done_cnts_[idx] = 0;
+  // Init Receive Counters
+  var_rcv_ing_cnts_[idx] = 0;
+  var_rcv_done_cnts_[idx] = 0;
+  var_rcv_doors_[idx] = 1;
+  mu.unlock();
+#endif
+}
+
+void ConsensusManager::OpenReceive(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    exit(EXIT_FAILURE);
+  }
+  int idx = search->second;
+  OpenReceive(idx);
+}
+
 int ConsensusManager::CloseReceive() {
   // TODO: DO NOT OPEN AGAIN BEFORE REDUCE FINISHES.
   //std::lock_guard<std::mutex> guard(rcv_mu_);
@@ -391,6 +463,25 @@ int ConsensusManager::CloseReceive() {
   rcv_cv_.notify_all();
   rcv_mu_.unlock();
   return 0;
+}
+
+void ConsensusManager::CloseReceive(int idx) {
+  auto&& mu = var_rcv_mus_[idx];
+  auto&& cv = var_rcv_cvs_[idx];
+  mu.lock();
+  var_rcv_doors_[idx] = 0;
+  cv.notify_all();
+  mu.unlock();
+}
+
+void ConsensusManager::CloseReceive(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    exit(EXIT_FAILURE);
+  }
+  int idx = search->second;
+  CloseReceive(idx);
 }
 
 bool ConsensusManager::IsReceiveDone() {
@@ -455,6 +546,40 @@ int ConsensusManager::WaitAndGetNumIncomings() {
   return rcv_done_cnt_;
 }
 
+int ConsensusManager::GetNumIncomings(int idx) {
+  auto&& var = REMOTE_VARIABLES_[idx];
+  var->StopRecv();
+  int ret = var->AggCount();
+  return ret;
+#if 0
+  auto&& mu = var_rcv_mus_[idx];
+  mu.lock();
+  int ret = var_agg_done_cnts_[idx];
+  mu.unlock();
+  return ret;
+#endif
+}
+
+int ConsensusManager::GetNumIncomings(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    exit(EXIT_FAILURE);
+  }
+  int idx = search->second;
+  int ret = GetNumIncomings(idx);
+  return ret;
+}
+
+int ConsensusManager::GetNumIncomings() {
+  LOG(ERROR) << "Not implemented. Terminating.";
+  exit(1);
+  int num_incomings = 0;
+  rcv_mu_.lock();
+  rcv_mu_.unlock();
+  return num_incomings;
+}
+
 int ConsensusManager::CountReduceAndOpenRecv(std::string& name) {
   rcv_mu_.lock();
   reduce_cnt_++;
@@ -474,6 +599,24 @@ int ConsensusManager::CountReduceAndOpenRecv(std::string& name) {
   }
   rcv_mu_.unlock();
   return 0;
+}
+
+void ConsensusManager::CountReduce(int idx) {
+  auto&& mu = var_rcv_mus_[idx];
+  mu.lock();
+  var_reduce_dones_[idx] = 1;
+  reduce_cnt_++;
+  mu.unlock();
+}
+
+void ConsensusManager::CountReduce(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    exit(EXIT_FAILURE);
+  }
+  int idx = search->second;
+  CountReduce(idx);
 }
 
 bool ConsensusManager::IsInitNumApplyOps() {
@@ -511,22 +654,10 @@ int ConsensusManager::ProcessAggregation() {
   //return tensor_aggregator_->ProcessAggregationNoVerbs();
 }
 
-int ConsensusManager::GetRandomTarget() {
-  std::default_random_engine generator;
-  std::uniform_int_distribution<int> distribution(0, ptre_size_ - 1);
-  int ret = ptre_rank_;
-  while (ret == ptre_rank_) {
-    ret = distribution(generator);
-  }
-  return ret;
-}
-
-int ConsensusManager::GetIncNeighbor() {
-  int ret = ptre_rank_ + 1;
-  if (ret >= ptre_size_) {
-    ret = 0;
-  }
-  return ret;
+int ConsensusManager::ProcessReceive() {
+  LOG(ERROR) << "NOT IMPLEMENTED.";
+  exit(1);
+  //return rdma_manager_->ProcessReceive();
 }
 
 int ConsensusManager::get_peer() {
@@ -601,6 +732,47 @@ void* ConsensusManager::buf_ptr(const BufType type, const string& name) {
   if (idx >= 0) {
     return bufs_[idx];
   }
+}
+
+void ConsensusManager::ReceivePushNotify(int dst) {
+  int ret = rdma_manager_->ReceivePushNotify(dst);
+#if 0
+  if (ret >= 0) {
+    int idx = ret;
+    // Set state to init aggregation
+    auto&& mu = var_rcv_mus_[idx];
+    mu.lock();
+    var_rcv_done_cnts_[idx]++;
+    if (var_rcv_ing_cnts_[idx] >= var_rcv_done_cnts_[idx]) {
+      recv_status_[idx] = 1;
+    } else {
+      // Stale incoming. NOT USE THIS
+    }
+    mu.unlock();
+  }
+#endif
+  if (ret >= 0) {
+    int idx = ret;
+    auto&& var = REMOTE_VARIABLES_[idx];
+    var->RecvDone();
+  }
+}
+
+void ConsensusManager::ProcessAggregation(int idx) {
+  auto&& var = REMOTE_VARIABLES_[idx];
+  var->Aggregate();
+#if 0
+  auto&& mu = var_rcv_mus_[idx];
+  //auto&& cv = var_rcv_cvs_[idx];
+  mu.lock();
+  if (var_rcv_doors_[idx] && recv_status_[idx]) {
+    AggregateSum(d, *glc_flats_[idx], *agg_flats_[idx]);
+    var_agg_done_cnts_[idx]++;
+    recv_status_[idx] = 0;
+    permit_manager_->NextPeer(idx);
+  }
+  mu.unlock();
+#endif
 }
 
 }  // namespace ptre

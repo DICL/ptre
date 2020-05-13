@@ -15,8 +15,8 @@ service Rdma {
   rpc AttemptPush(AttemptPushRequest)
     returns (AttemptPushResponse);
 
-  rpc AckPushDone(AckPushDoneRequest)
-    returns (AckPushDoneResponse);
+  rpc NotifyPushDone(NotifyPushDoneRequest)
+    returns (NotifyPushDoneResponse);
 
   rpc Barrier(BarrierRequest)
     returns (BarrierResponse);
@@ -83,11 +83,11 @@ message AttemptPushResponse {
   bool available = 1;
 }
 
-message AckPushDoneRequest {
+message NotifyPushDoneRequest {
   int32 rank = 1;
 }
 
-message AckPushDoneResponse {
+message NotifyPushDoneResponse {
 }
 
 message BarrierRequest {
@@ -106,6 +106,8 @@ enum BufType {
   BUF_TYPE_FLAG_SEND = 6;
   BUF_TYPE_BARRIER_COUNTER = 7;
   BUF_TYPE_BARRIER_RELEASE = 8;
+  BUF_TYPE_PUSH_PERMIT = 9;
+  BUF_TYPE_PUSH_PERMIT_READ = 10;
 }
 
 message GetRemoteAddressV2Request {

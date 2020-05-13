@@ -1,22 +1,19 @@
 #ifndef PTRE_COMMUNICATION_RDMA_RDMA_WORKER_H_
 #define PTRE_COMMUNICATION_RDMA_RDMA_WORKER_H_
 
-#include <memory>
-
-#include "ptre/communication/rdma/rdma_task.h"
-#include "ptre/lib/concurrent_queue.h"
+#include <vector>
+#include <infiniband/verbs.h>
 
 namespace ptre {
 
 class RdmaWorker {
  public:
-  RdmaWorker(std::shared_ptr<ConcurrentQueue<RdmaTask*>> q) {
-    q_ = q;
+  RdmaWorker() {
   }
-  void ProcessTaskQueue();
+  void PollReceiveCQ();
+
  private:
-  /// Not owned.
-  std::shared_ptr<ConcurrentQueue<RdmaTask*>> q_;
+  std::vector<struct ibv_cq*> rcv_cqs_;
 };
 
 }  // namespace ptre

@@ -81,7 +81,7 @@ void WriterThreadLoop() {
     if (can_push) {
       //std::cout << "Can push to " << dst_rank << std::endl;
       kCm->PushTensorsV3(dst_rank);
-      grpc_client->AckPushDone();
+      grpc_client->NotifyPushDone();
     }
   }
 }
@@ -121,7 +121,7 @@ void TrainingThreadLoop() {
       bool can_push = grpc_client->AttemptPush(1);
       if (can_push) {
         kCm->PushTensorsV3(dst_rank);
-        grpc_client->AckPushDone();
+        grpc_client->NotifyPushDone();
       }
     }
   }

@@ -33,7 +33,6 @@ class RdmaManager {
  public:
   RdmaManager(int ptre_size, int ptre_rank, bool add);
   ~RdmaManager();
-  void InitLocalQP();
   void CreateCQs();
   void CreateQPs();
   int ConnectQP(int dst_rank);
@@ -65,6 +64,8 @@ class RdmaManager {
       const string& name, const uint64_t add, struct ibv_mr* read_mr);
   int RdmaRead(int dst, const BufType buf_type, const string& name,
       struct ibv_mr* read_mr, size_t read_length);
+  int RdmaWrite(int dst, const BufType buf_type, const string& var_name,
+      struct ibv_mr* send_mr, size_t send_length, uint32_t* imm_data = nullptr);
 
   void MarkMRInitialized();
   bool IsMRInitialized();
@@ -98,17 +99,19 @@ class RdmaManager {
   //void PushTensor(int dst_id, const string& name, const Tensor& tensor);
   void RdmaWriteIncomingFlag(int dst_rank, bool* flag);
 
+  int PushAndNotify(int dst, const string& var_name);
+  int ReceivePushNotify(int dst);
+
   bool AttemptPush(int dst_rank);
   int PushTensor(int dst_rank, string name, const Tensor& tensor);
-  int AckPushDone(int dst_rank);
+  int NotifyPushDone(int dst_rank);
 
   int rank() { return ptre_rank_; }
   struct ibv_context* ctx() { return rdma_env_.context; }
   struct ibv_pd* pd() { return rdma_env_.pd; }
-  struct ibv_cq* cq() { return cq_; }
   struct ibv_qp* qp(int dest_rank) { return qps_[dest_rank]; }
-  struct ibv_cq* local_cq() { return cq_local_; }
-  struct ibv_qp* local_qp() { return qp_local_; }
+  struct ibv_cq* send_cq(int dst) { return send_cqs_[dst]; }
+  struct ibv_cq* recv_cq(int dst) { return recv_cqs_[dst]; }
   uint32_t lid() { return rdma_env_.port_attr.lid; }
   uint32_t remote_lid(int dst_rank) { return dlids_[dst_rank]; }
   RdmaEnv* rdma_env() { return &rdma_env_; }
@@ -141,7 +144,6 @@ class RdmaManager {
   std::map<int, std::map<BufType, std::map<string, RemoteMR>>> rmrs_;
   std::map<int, RdmaAggWriter*> agg_writers_;  // owned.
 
-
   std::map<std::string, ibv_mr*> recv_mrs_;
   std::map<std::string, ibv_mr*> send_mrs_;
   std::map<int, uint32_t> dlids_;
@@ -149,12 +151,9 @@ class RdmaManager {
   std::map<int, uint64_t> snps_;
   std::map<int, uint64_t> iids_;
   ibv_comp_channel* event_channel_;
-  ibv_cq* cq_;
-  struct ibv_cq* cq_local_;
-  struct ibv_qp* qp_local_;
+  //ibv_cq* cq_;
   std::map<int, ibv_comp_channel*> event_channels_;
-  std::map<int, ibv_cq*> cqs_;
-  std::map<int, ibv_qp*> qps_;
+  std::map<int, struct ibv_qp*> qps_;
   std::map<int, bool> connected_;
   //ibv_wc wc_[MAX_CONCURRENT_WRITES * 2];
   ibv_wc wc_[QUEUE_DEPTH_DEFAULT * 2];
@@ -164,6 +163,8 @@ class RdmaManager {
   bool atomic_add_ = false;
   //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
+  std::map<int, struct ibv_cq*> send_cqs_;
+  std::map<int, struct ibv_cq*> recv_cqs_;
 };
 
 }  // namespace ptre

@@ -78,10 +78,13 @@ TensorAggregator::TensorAggregator(Eigen::ThreadPool* pool, int pool_size,
 }
 
 TensorAggregator::~TensorAggregator() {
-  if (background_thread_.joinable()) {
-    background_thread_.join();
-  }
   // TODO: free recv bufs
+}
+
+void TensorAggregator::InitReceive() {
+  for (int i = 0; i < comm_size_; i++) {
+    done_tensor_cnts_[i] = 0;
+  }
 }
 
 void TensorAggregator::SetStateMR(const string& name, struct ibv_mr* state_mr) {
@@ -298,11 +301,6 @@ void TensorAggregator::InitAggBufStates() {
   }
 }
 
-void TensorAggregator::Start() {
-  // Init background aggregation thread.
-  background_thread_ = std::thread([this] { BackgroundThreadLoop(); });
-}
-
 void TensorAggregator::PrintDebug(int compare) {
   for (int i = 0; i < names_.size(); i++) {
     if (*target_buf_pairs_[i].second->state != compare) {
@@ -351,9 +349,84 @@ int TensorAggregator::ProcessAggregation() {
   return agg_cnt;
 }
 
-void TensorAggregator::BackgroundThreadLoop() {
-  while (true) {
-    ProcessAggregation();
+void TensorAggregator::EnqueuePeer(int src_rank) {
+  peer_q_mu_.lock();
+  for (int i = 0; i < n_; i++) {
+    peer_q_[i].push(src_rank);
+  }
+  peer_q_mu_.unlock();
+}
+
+int TensorAggregator::NextPeerToReceive(int idx) {
+  int ret;
+  peer_q_mu_.lock();
+  std::queue<int>& q = peer_q_[idx];
+  if (q.size() == 0) {
+    ret = -1;
+  } else {
+    ret = q.front();
+    q.pop();
+  }
+  peer_q_mu_.unlock();
+  return ret;
+}
+
+void TensorAggregator::StartReceive() {
+  // Shift queue elements for load balancing
+  peer_q_mu_.lock();
+  for (int i = 0; i < n_; i++) {
+    std::queue<int>& q = peer_q_[i];
+    for (int j = 0; j < (i % comm_size_); j++) {
+      int front = q.front();
+      q.pop();
+      q.push(front);
+    }
+  }
+  peer_q_mu_.unlock();
+  // Init done_arr_
+  // Remote peer will read done_arr_ to decide whether it will write or not
+  done_arr_mu_.lock();
+  for (int i = 0; i < n_; i++) {
+    done_arr_[idx] = NextPeerToReceive(idx);
+  }
+  done_arr_mu_.unlock();
+  state_mu_.lock();
+  state_ = kInProgress;
+  state_mu_.unlock();
+}
+
+void TensorAggregator::ReceiveWriteDone(int dst) {
+  if (state_ != kInProgress) {
+    return;
+  }
+  int ret;
+  struct ibv_qp* qp = qps_[dst];
+  struct ibv_cq* cq = recv_cqs_[dst];
+  struct ibv_recv_wr* wr = recv_wrs_[dst];
+  struct ibv_recv_wr* bad_wr;
+  ret = ibv_post_recv(qp, wr, &bad_wr);
+  struct ibv_wc wc;
+  ret = ibv_poll_cq(cq, 1, &wc);
+  if (ret > 0) {
+    if (wc.status == IBV_WC_SUCCESS) {
+      // Write done
+      uint32_t idx = wc.imm_data;
+      AggregateSum(d, *glc_flats_[idx], *buf_flats_[idx]);
+      target_buf_pairs_[i].second->agg_done_cnt++;
+      done_arr_mu_.lock();
+      done_arr_[idx] = NextPeerToReceive(idx);
+      cache_ctl::clflush((char*) done_arr_[idx], sizeof(int));
+
+      done_tensor_cnts_[dst]++;
+      if (done_tensor_cnts_[dst] == n_) {
+        done_peer_cnt_++;
+      }
+      done_arr_mu_.unlock();
+    } else {
+      LOG(ERROR) << "Failed to poll recv CQ for rank=" << dst << ": status="
+          << wc.status;
+      exit(EXIT_FAILURE);
+    }
   }
 }
 

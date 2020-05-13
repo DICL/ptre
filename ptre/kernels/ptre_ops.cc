@@ -22,6 +22,7 @@
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/communication/rdma/rdma_manager.h"
+//#include "ptre/kernels/job_def.h"
 #include "ptre/kernels/ptre_ops.h"
 #include "ptre/lib/cache_ctl.h"
 #include "tensorflow/core/framework/op.h"
@@ -32,6 +33,8 @@
 #include "tensorflow/core/framework/types.h"
 
 #define LOGSTEP LOG(INFO) << "[DEBUG,step=" << ptre_global.local_step << "]: "
+
+//using ptre::PushJob;
 
 namespace tensorflow {
 
@@ -108,7 +111,6 @@ struct PtreGlobal {
   /// 0: None
   /// 1: New
   /// 2: Used
-  int incoming_state = 0;
   int incoming_peer;
 
   bool barrier_variable = false;
@@ -182,7 +184,7 @@ void ProcessRequestQueueInternal1() {
     ptre_global.cm.PushTensors(dst_rank);
     GrpcClient* grpc_client;
     ptre_global.grpc_client_cache->GetClient(dst_rank, &grpc_client);
-    grpc_client->AckPushDone();
+    grpc_client->NotifyPushDone();
   }
 }
 
@@ -206,9 +208,9 @@ void ProcessRequestQueueInternalAtomicAdd() {
     if (can_push) {
       //std::cout << "\n[RANK=" << ptre_global.rank << "]: PushTensors2()\n";
       ptre_global.cm.PushTensorsV3(dst_rank);
-    // TODO: 3. Ack Push done
-      //std::cout << "\n[RANK=" << ptre_global.rank << "]: AckPushDone()\n";
-      grpc_client->AckPushDone();
+    // TODO: 3. Notify Push done
+      //std::cout << "\n[RANK=" << ptre_global.rank << "]: NotifyPushDone()\n";
+      grpc_client->NotifyPushDone();
     }
   }
 }
@@ -228,7 +230,7 @@ void ProcessRequestQueueInternalBufferedAggregation() {
     ptre_global.cm.PushTensorsV3(dst_rank);
     GrpcClient* grpc_client;
     ptre_global.grpc_client_cache->GetClient(dst_rank, &grpc_client);
-    grpc_client->AckPushDone();
+    grpc_client->NotifyPushDone();
   }
 }
 
@@ -241,235 +243,123 @@ void ProcessRequestQueue() {
     //ProcessRequestQueueInternal1();
     ProcessRequestQueueInternalBufferedAggregation();
   } else {
-#if 0
-    ProcessRequestQueueInternalAtomicAdd();
-#else
     ProcessRequestQueueInternalBufferedAggregation();
-#endif
   }
 }
 
-void CommunicationThreadLoop() {
+/*
+void PushThreadLoop() {
   while (!ptre_global.is_shutdown) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ProcessRequestQueue();
   }
 }
+*/
 
-int ProcessAggregation() {
-  return ptre_global.cm.ProcessAggregation();
+int SelectPeer(std::shared_ptr<PushRequest> req) {
+  int attempt_cnt = 0;
+  while (attempt_cnt < ptre_global.size) {
+    attempt_cnt++;
+    int target = ptre_global.cm.get_peer();
+    if (!req->checker(target)) {
+      req->check(target);
+      GrpcClient* grpc_client;
+      ptre_global.grpc_client_cache->GetClient(target, &grpc_client);
+      // TODO: Make AttemptPush returns PUSH MODE, e.g. DIRECT_WRITE / BUF_AGG
+      bool can_push = grpc_client->AttemptPush(req->step());
+      if (can_push) {
+        return target;
+      }
+    }
+  }
+  return -1;
 }
 
-void AggregationThreadLoop() {
-  ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
-  agg->InitQp(ptre_global.rdma_manager->ctx(), ptre_global.rdma_manager->pd());
-  auto last_time = std::chrono::system_clock::now();
-  while (!ptre_global.is_shutdown) {
-    auto curr_time = std::chrono::system_clock::now();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    int ret = ProcessAggregation();
-    if (ret > 0) {
-      //LOG(INFO) << "[DEBUG] agg_cnt=" << ret;
-      last_time = curr_time;
+// Return values
+//  2: Send buffer is not filled.
+//  3: No available peer
+int ProcessPushTask(std::shared_ptr<PushTask> task) {
+  if (ptre_global.cm.IsPushReady(task->var_name())) {
+    int dst = task->dst();
+    if (dst < 0) {
+      auto job = task->job();
+      if (job->dst() < 0) {
+        auto req = job->request();
+        int ret = SelectPeer(req);
+        if (ret < 0) {
+          return 3;  // No remote peer available for push
+        } else {
+          job->set_dst(ret);
+        }
+      }
+      dst = job->dst();
+      task->set_dst(dst);
     }
-    std::chrono::duration<double> since_last = curr_time - last_time;
-    if (since_last.count() > 10) {
-      LOG(INFO) << "[DEBUG] Agg not performed for a while.";
-      agg->PrintDebug();
-      last_time = curr_time;
+    int push_ret = ptre_global.rdma_manager->PushAndNotify(dst, var_name);
+    if (push_ret) {
+      return 4;
+    }
+    return 0;  // Success
+  } else {
+    return 2;  // Send buffer is not ready yet
+  }
+}
+
+void PushThreadLoop() {
+  auto&& req_q = ptre_global.req_q;
+  auto&& req_mu = ptre_global.req_q_mu;
+  while (!ptre_global.is_shutdown) {
+    // Get Recent Job Queue
+    req_mu.lock();
+    if (req_q.size() == 0) {
+      req_mu.unlock();
+      continue;
+    }
+    while (req_q.size() > 1) {
+      req_q.pop();
+    }
+    auto req = req_q.front();
+    auto&& job_q = req->q();
+    if (job_q.size() == 0) {
+      req_q.pop();
+      req_mu.unlock();
+      continue;
+    }
+    req_mu.unlock();
+
+    auto job = job_q.front();
+    job_q.pop();
+
+    auto&& task_q = job->q();
+    auto task = task_q.front();
+    task_q.pop();
+    int ret = ProcessPushTask(task);
+    if (ret) {
+      if (ret == 2) {
+        task_q.push(task);
+      }
+    }
+    if (task_q.size() > 0) {
+      job_q.push(job);
     }
   }
 }
 
-//void AggregationThreadLoopV2() {
-//  int ret;
-//  // Query port attributes
-//  struct ibv_context* ctx = ptre_global.rdma_manager->ctx();
-//  struct ibv_pd* pd = ptre_global.rdma_manager->pd();
-//  struct ibv_port_attr potr_attr;
-//  ret = ibv_query_port(ctx, 1, &port_attr);
-//  if (ret) {
-//    LOG(ERROR) << "Failed to query port";
-//    exit(1);
-//  }
-//  // Create local CQ
-//  cq = ibv_create_cq(ctx, 100, NULL, NULL, 0);
-//  if (!cq) {
-//    LOG(ERROR) << "Failed to create local CQ";
-//    exit(1);
-//  }
-//  // Create local QP with local CQ
-//  struct ibv_qp_init_attr qp_init_attr;
-//  memset(&qp_init_attr, 0, sizeof(ibv_qp_init_attr));
-//  qp_init_attr.send_cq = cq;
-//  qp_init_attr.recv_cq = cq;
-//  qp_init_attr.qp_type = IBV_QPT_RC;
-//  qp_init_attr.cap.max_send_wr = 2;
-//  qp_init_attr.cap.max_recv_wr = 2;
-//  qp_init_attr.cap.max_send_sge = 1;
-//  qp_init_attr.cap.max_recv_sge = 1;
-//  qp = ibv_create_qp(pd, &qp_init_attr);
-//  if (!qp) {
-//    LOG(ERROR) << "Failed to create local QP";
-//    exit(1);
-//  }
-//  // Init QP
-//  struct ibv_qp_attr attr;
-//  memset(&attr, 0, sizeof(attr));
-//  attr.qp_state = IBV_QPS_INIT;
-//  attr.pkey_index = 0;
-//  attr.port_num = 1;
-//  attr.qp_access_flags =
-//        IBV_ACCESS_LOCAL_WRITE
-//      | IBV_ACCESS_REMOTE_WRITE
-//      | IBV_ACCESS_REMOTE_READ
-//      | IBV_ACCESS_REMOTE_ATOMIC;
-//  ret = ibv_modify_qp(qp, &attr,
-//        IBV_QP_STATE
-//      | IBV_QP_PKEY_INDEX
-//      | IBV_QP_PORT
-//      | IBV_QP_ACCESS_FLAGS);
-//  if (ret) {
-//    LOG(ERROR) << "Failed to modify local QP to INIT: " << std::strerror(ret);
-//    exit(1);
-//  }
-//  // INIT -> RTR
-//  memset(&attr, 0, sizeof(attr));
-//  attr.qp_state = IBV_QPS_RTR;
-//  attr.path_mtu = IBV_MTU_4096;
-//  attr.dest_qp_num = qp->qp_num;
-//  attr.rq_psn = 0;
-//  attr.max_dest_rd_atomic = 16;
-//  attr.min_rnr_timer = 12;
-//  attr.ah_attr.dlid = rdma_env_.port_attr.lid;
-//  attr.ah_attr.sl = 0;
-//  attr.ah_attr.src_path_bits = 0;
-//  attr.ah_attr.port_num  = IB_PORT;
-//  ret = ibv_modify_qp(qp, &attr,
-//        IBV_QP_STATE
-//      | IBV_QP_AV
-//      | IBV_QP_PATH_MTU
-//      | IBV_QP_DEST_QPN
-//      | IBV_QP_RQ_PSN
-//      | IBV_QP_MAX_DEST_RD_ATOMIC
-//      | IBV_QP_MIN_RNR_TIMER);
-//  if (ret) {
-//    LOG(ERROR) << "Failed to modify local QP to RTR: " << std::strerror(ret);
-//    exit(1);
-//  }
-//  /// INIT -> RTS
-//  memset(&attr, 0, sizeof(attr));
-//  attr.qp_state = IBV_QPS_RTS;
-//  attr.sq_psn = 0;
-//  attr.timeout = 14;
-//  attr.retry_cnt = 7;
-//  attr.rnr_retry = 7;
-//  attr.max_rd_atomic = 16;
-//  ret = ibv_modify_qp(qp, &attr,
-//        IBV_QP_STATE
-//      | IBV_QP_TIMEOUT
-//      | IBV_QP_RETRY_CNT
-//      | IBV_QP_RNR_RETRY
-//      | IBV_QP_SQ_PSN
-//      | IBV_QP_MAX_QP_RD_ATOMIC);
-//  if (ret) {
-//    LOG(ERROR) << "Failed to modify local QP to RTS: " << std::strerror(ret);
-//    exit(1);
-//  }
-//  // Prepare read buffer and its MR for CAS
-//  uint64_t read_buf;
-//  void* read_buf_addr = (void*) &read_buf;
-//  struct ibv_mr* read_buf_mr;
-//  read_buf_mr = ibv_reg_mr(pd, read_buf_addr, sizeof(read_buf),
-//      IBV_ACCESS_LOCAL_WRITE);
-//  if (!read_buf_mr) {
-//    LOG(ERROR) << "Failed to register MR for read_buf";
-//    exit(1);
-//  }
-//
-//  //int comm_size = ptre_global.size;
-//  //int comm_rank = ptre_global.rank;
-//  std::vector<string> names;
-//  std::vector<Flat*> glc_flats;
-//  std::vector<Flat*> buf_flats;
-//  std::vector<uint64_t*> buf_states;
-//  std::vector<uint64_t> remote_addrs;
-//  std::vector<uint64_t> rkeys;
-//
-//  // Init Flats and states
-//  const std::vector<Tensor*>& glcs = ptre_global.cm.GetGlobalConsensusList();
-//  const std::vector<string>& glc_names = ptre_global.cm.GetGlcNameList();
-//  for (int i = 0; i < glcs.size(); i++) {
-//    string name = glc_names[i];
-//    names.push_back(name);
-//    // Global consensus flat
-//    auto flat = glcs[i]->flat<float>();
-//    Flat* glc_flat = new Flat(flat.data(), flat.size());
-//    glc_flats.push_back(glc_flat);
-//    // Aggregation buffer flat
-//    size_t num_bytes = sizeof(float) * flat.size();
-//    float* buf = (float*) malloc(num_bytes);
-//    memset(buf, 0, num_bytes);
-//    Flat* buf_flat = new Flat(buf, flat.size());
-//    buf_flats.push_back(buf_flat);
-//    // Aggregation buffer state
-//    uint64_t* state = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
-//    *state = 1;
-//    cache_ctl::clflush((char*) state, 8);
-//    buf_states.push_back(state);
-//    // Remote address
-//    uint64_t remote_addr;
-//    uint32_t rkey;
-//    ptre_global.rdma_manager->GetRemoteAddress(ptre_global.rank,
-//        BUF_TYPE_AGG_BUF, name, &remote_addr, &rkey);
-//    remote_addrs.push_back(remote_addr);
-//    rkeys.push_back(rkey);
-//  }
-//
-//  Eigen::ThreadPool pool(8);
-//  Eigen::ThreadPoolDevice d(pool, 8);
-//  ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
-//  while (!ptre_global.is_shutdown) {
-//    for (int i = 0; i < glc_flats.size(); i++) {
-//      uint64_t read_state = rdma_cas(3, 4, qp, cq, read_buf_mr, remote_addrs[i],
-//          rkeys[i], pd);
-//      if (read_state == 3) {
-//        Flat target = *glc_flats[i];
-//        Flat buf = *buf_flats[i];
-//        target.device(d) = target + buf;
-//        //agg->CountAgg(names[i]);
-//        while (true) {
-//          uint64_t read_state_inner = rdma_cas(4, 1, qp, cq, read_buf_mr,
-//              remote_addrs[i], rkeys[i], pd);
-//          if (read_state_inner == 4) {
-//            break;
-//          } else {
-//            LOG(INFO) << "[DEBUG] read_state_inner = " << read_state_inner;
-//            usleep(5 * 1000 * 1000);
-//          }
-//        }
-//      }
-//    }
-//  }
-//
-//  ptre::TensorAggregator* agg = ptre_global.cm.tensor_aggregator();
-//  auto last_time = std::chrono::system_clock::now();
-//  while (!ptre_global.is_shutdown) {
-//    auto curr_time = std::chrono::system_clock::now();
-//    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//    int ret = ProcessAggregation();
-//    if (ret > 0) {
-//      //LOG(INFO) << "[DEBUG] agg_cnt=" << ret;
-//      last_time = curr_time;
-//    }
-//    std::chrono::duration<double> since_last = curr_time - last_time;
-//    if (since_last.count() > 15) {
-//      LOG(INFO) << "[DEBUG] Agg not performed for a while.";
-//      agg->PrintDebug();
-//      last_time = curr_time;
-//    }
-//  }
-//}
+void AggregationThreadLoop() {
+  while (!ptre_global.is_shutdown) {
+    for (int i = 0; i < ptre_global.num_vars; i++) {
+      ptre_global.cm.ProcessAggregation(i);
+    }
+  }
+}
+
+void ReceiveThreadLoop() {
+  while (!ptre_global.is_shutdown) {
+    for (int i = 0; i < ptre_global.size; i++) {
+      ptre_global.cm.ReceivePushNotify(i);
+    }
+  }
+}
 
 void load_grpc_hosts(const string& grpc_hosts_file) {
   std::string in_line;
@@ -503,7 +393,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.rdma_manager = new RdmaManager(size, rank, false);
   ptre_global.cm.SetRdmaManager(ptre_global.rdma_manager);
   ptre_global.is_shutdown = false;
-  ptre_global.rdma_thread = std::thread(CommunicationThreadLoop);
+  ptre_global.rdma_thread = std::thread(PushThreadLoop);
 }
 
 void InitGrpcService() {
@@ -1189,64 +1079,23 @@ class ModelaverageOp : public OpKernel {
     var = *ref->tensor();
 
     bool do_reduce = true;
-    int num_incomings = 1;
-#if 1
-    if (1) {
-      //if (ptre_global.cm.IsInitNumApplyOps() && ptre_global.ever_pushed) {
-      //  LOG(INFO) << "[DEBUG] Waiting for rcv_ing_cnt == num_push";
-      //  while (true) {
-      //    if (ptre_global.cm.rcv_ing_cnt() == ptre_global.num_push) {
-      //      break;
-      //    }
-      //  }
-      //  LOG(INFO) << "[DEBUG] rcv_ing_cnt=" << ptre_global.cm.rcv_ing_cnt();
-      //}
-      if (ptre_global.ever_pushed) {
-        int old;
-        while (1) {
-          old = ptre_global.ma_op_cnt.fetch_add(1);
-          if (old < ptre_global.cm.num_apply_ops()) {
-            break;
-          }
-        }
-        if (old == 0) {
-          LOG(INFO) << "[DEBUG] Waiting for Agg Step=" << ptre_global.local_step;
-        }
-      }
-      num_incomings = ptre_global.cm.WaitAndGetNumIncomings();
-      if (ptre_global.ever_pushed) {
-        int old = ptre_global.ma_op_cnt2.fetch_add(1);
-        if (old == ptre_global.cm.num_apply_ops() - 1) {
-          LOG(INFO) << "[DEBUG] Done Waiting for Aggs" << ptre_global.local_step;
-          ptre_global.ma_op_cnt.store(0);
-          ptre_global.ma_op_cnt2.store(0);
-        }
-      }
-      if (num_incomings > 0) {
-        //LOG(INFO) << "[DEBUG] RECV and AGG all done: num_incomings = " << num_incomings;
-      }
-      if (num_incomings == 0) {
-        do_reduce = false;
-      }
-    } else {
-      bool* ret = ptre_global.cm.is_new_incoming_ptr();
-      if (!*ret) {
-        do_reduce = false;
-      }
+    Tensor* ret;
+    int num_incomings = ptre_global.cm.GetGlcTensor(var_name_, ret);
+    if (num_incomings == 0) {
+      do_reduce = false;
     }
-#else
-    do_reduce = false;
-#endif
     if (do_reduce) {
       const Device& d = ctx->template eigen_device<Device>();
-      const Tensor other(ptre_global.cm.global_consensus(var_name_));
-#if 0
+      const Tensor other(*ret);
+#if 1
+      // No Step Control
       Tensor m_(DataTypeToEnum<T>::v(), TensorShape({ }));
       m_.flat<T>()(0) = T(num_incomings + 1);
       const Tensor m(m_);
       functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
           other.flat<T>());
 #else
+      // Step Control
       int old = ptre_global.reduce_op_cnt0.fetch_add(1);
       Tensor c1_(DataTypeToEnum<T>::v(), TensorShape({ }));
       Tensor c2_(DataTypeToEnum<T>::v(), TensorShape({ }));
@@ -1288,11 +1137,10 @@ class ModelaverageOp : public OpKernel {
         ptre_global.reduce_op_cnt1 = 0;
       }
 #endif
-      ptre_global.incoming_state = 2;  // Used
     }
-    //LOG(INFO) << "CountReduceAndOpenRecv() Entering.";
-    ptre_global.cm.CountReduceAndOpenRecv(var_name_);
-    //LOG(INFO) << "CountReduceAndOpenRecv() Done.";
+    ptre_global.cm.OpenReceive(var_name_);
+    //ptre_global.cm.CountReduce(var_name_);
+    //ptre_global.cm.CountReduceAndOpenRecv(var_name_);
   }
 
  private:
@@ -1356,114 +1204,11 @@ class PushTensorOp : public OpKernel {
     LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
-    int old;
-    while (1) {
-      old = ptre_global.copy_cnt[0].fetch_add(1);
-      if (old < ptre_global.cm.num_apply_ops()) {
-        break;
-      }
-    }
-    if (old == 0) LOGSTEP << "Starting CopyToSendBuf...";
-#if 0
-    ptre_global.q_mu.lock();
-    int old = ptre_global.copy_cnt[0].fetch_add(1);
-    if (old == 0) {
-      LOG(INFO) << "[DEBUG] Starting CopyToSendBuf... (step=" << ptre_global.local_step << ")";
-    }
-    int q_size = ptre_global.q.size();
-    LOGSTEP << "Number of remaining queued send requests=" << q_size;
-    /// Waiting for the on-going send request.
-    if (old == 0) LOGSTEP << "Checking if SendBuf is idle.";
-    std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
-    ptre_global.cm.send_cv_.wait(lk, [&] {
-        return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
-        });
-
     T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
         var_name_);
     typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
-    lk.unlock();
-#elif 0
-    Tensor* send_tensor = ptre_global.cm.send_tensor(var_name_);
-    // TODO: Make it more correct! (locking)
-    std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
-    ptre_global.cm.send_cv_.wait(lk, [&] {
-        return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
-        });
-    lk.unlock();
-    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(),
-        send_tensor->flat<T>());
-#elif 1
-    T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
-        var_name_);
-    // TODO: Make it more correct! (locking)
-    int SKIP_IF_SEND_BUF_IS_BUSY = 2;
-    if (SKIP_IF_SEND_BUF_IS_BUSY == 1) {
-      /// Don't wait for the running send operations at this point.
-      auto& mu = ptre_global.cm.send_mu_;
-      bool skip = false;
-      ptre_global.q_mu.lock();
-      if (!ptre_global.q.empty()) {
-        ptre_global.push_step_state = 2;
-      }
-      ptre_global.q_mu.unlock();
-      mu.lock();
-      if (ptre_global.push_step_state == 1) {  // PUSH
-        if (ptre_global.cm.send_status_ != ConsensusManager::SEND_IDLE) {
-          /// Skip
-          /// NOT ENQUEUEING (NOT ATTEMPT)
-          ptre_global.push_step_state = 2;  // SKIP
-          skip = true;
-        }
-      } else if (ptre_global.push_step_state == 2) {  // SKIP set by another
-        skip = true;
-      } else {
-        LOG(ERROR) << "Something's gone wrong.";
-        exit(EXIT_FAILURE);
-      }
-      mu.unlock();
-      if (skip) {
-        return;
-      }
-    } else if (SKIP_IF_SEND_BUF_IS_BUSY == 0) {
-      /// Wait for the running send operations at this point.
-      std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
-      ptre_global.cm.send_cv_.wait(lk, [&] {
-          return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
-          });
-      lk.unlock();
-    } else {
-      bool q_empty = false;
-      while (!q_empty) {
-        ptre_global.q_mu.lock();
-        if (ptre_global.q.empty()) {
-          q_empty = true;
-        } else {
-          //LOG(INFO) << "[DEBUG] Queue is not empty. size=" << ptre_global.q.size();
-        }
-        ptre_global.q_mu.unlock();
-      }
-      std::unique_lock<std::mutex> lk(ptre_global.cm.send_mu_);
-      ptre_global.cm.send_cv_.wait(lk, [&] {
-          return ptre_global.cm.send_status_ == ConsensusManager::SEND_IDLE;
-          });
-      lk.unlock();
-    }
-    typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
-    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
-#else
-    T* send_buf = (T*) ptre_global.cm.buf_ptr(ptre::BUF_TYPE_SEND_BUF,
-        var_name_);
-    typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
-    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
-#endif
-    int old2 = ptre_global.copy_cnt[1].fetch_add(1);
-    if (old2 == ptre_global.cm.num_apply_ops() - 1) {
-      LOGSTEP << "Done CopyToSendBuf.";
-      ptre_global.copy_cnt[0] = 0;
-      ptre_global.copy_cnt[1] = 0;
-    }
+    ptre_global.cm.SetPushReady(var_name_);
   }
  private:
   string var_name_;
@@ -1532,14 +1277,6 @@ int ptre_rank() {
 bool ptre_is_new_incoming() {
   bool* ret = tensorflow::ptre_global.cm.is_new_incoming_ptr();
   return *ret;
-}
-
-void ptre_mark_no_new() {
-  bool* ret = tensorflow::ptre_global.cm.is_new_incoming_ptr();
-  if (*ret == true && tensorflow::ptre_global.incoming_state == 2) {
-    *ret = false;
-    tensorflow::ptre_global.incoming_state = 0;
-  }
 }
 
 void ptre_enqueue_push() {
@@ -1618,7 +1355,13 @@ void ptre_set_num_push(int num_push) {
 }
 
 void ptre_set_push() {
-  tensorflow::ptre_global.push_step_state = 1;
+  using tensorflow::ptre_global;
+  auto&& q = ptre_global.req_q;
+  auto&& mu = ptre_global.req_q_mu;
+  mu.lock();
+  ptre_global.push_step_state = 1;
+  q.emplace(ptre_global.num_push, ptre_global.local_step);
+  mu.unlock();
 }
 
 void ptre_unset_push() {

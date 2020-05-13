@@ -23,7 +23,7 @@ static const char* Rdma_method_names[] = {
   "/ptre.Rdma/GetRemoteAddress",
   "/ptre.Rdma/GetRemoteParamAddress",
   "/ptre.Rdma/AttemptPush",
-  "/ptre.Rdma/AckPushDone",
+  "/ptre.Rdma/NotifyPushDone",
   "/ptre.Rdma/Barrier",
   "/ptre.Rdma/GetRemoteAddressV2",
 };
@@ -39,7 +39,7 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   , rpcmethod_GetRemoteAddress_(Rdma_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteParamAddress_(Rdma_method_names[2], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_AttemptPush_(Rdma_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_AckPushDone_(Rdma_method_names[4], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_NotifyPushDone_(Rdma_method_names[4], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_Barrier_(Rdma_method_names[5], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteAddressV2_(Rdma_method_names[6], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
@@ -124,24 +124,24 @@ void Rdma::Stub::experimental_async::AttemptPush(::grpc::ClientContext* context,
   return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPush_, context, request, false);
 }
 
-::grpc::Status Rdma::Stub::AckPushDone(::grpc::ClientContext* context, const ::ptre::AckPushDoneRequest& request, ::ptre::AckPushDoneResponse* response) {
-  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_AckPushDone_, context, request, response);
+::grpc::Status Rdma::Stub::NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::ptre::NotifyPushDoneResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_NotifyPushDone_, context, request, response);
 }
 
-void Rdma::Stub::experimental_async::AckPushDone(::grpc::ClientContext* context, const ::ptre::AckPushDoneRequest* request, ::ptre::AckPushDoneResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AckPushDone_, context, request, response, std::move(f));
+void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, std::move(f));
 }
 
-void Rdma::Stub::experimental_async::AckPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AckPushDoneResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AckPushDone_, context, request, response, std::move(f));
+void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, std::move(f));
 }
 
-::grpc::ClientAsyncResponseReader< ::ptre::AckPushDoneResponse>* Rdma::Stub::AsyncAckPushDoneRaw(::grpc::ClientContext* context, const ::ptre::AckPushDoneRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AckPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_AckPushDone_, context, request, true);
+::grpc::ClientAsyncResponseReader< ::ptre::NotifyPushDoneResponse>* Rdma::Stub::AsyncNotifyPushDoneRaw(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::NotifyPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_NotifyPushDone_, context, request, true);
 }
 
-::grpc::ClientAsyncResponseReader< ::ptre::AckPushDoneResponse>* Rdma::Stub::PrepareAsyncAckPushDoneRaw(::grpc::ClientContext* context, const ::ptre::AckPushDoneRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AckPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_AckPushDone_, context, request, false);
+::grpc::ClientAsyncResponseReader< ::ptre::NotifyPushDoneResponse>* Rdma::Stub::PrepareAsyncNotifyPushDoneRaw(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::NotifyPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_NotifyPushDone_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::ptre::BarrierResponse* response) {
@@ -208,8 +208,8 @@ Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[4],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::AckPushDoneRequest, ::ptre::AckPushDoneResponse>(
-          std::mem_fn(&Rdma::Service::AckPushDone), this)));
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::NotifyPushDoneRequest, ::ptre::NotifyPushDoneResponse>(
+          std::mem_fn(&Rdma::Service::NotifyPushDone), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[5],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
@@ -253,7 +253,7 @@ Rdma::Service::~Service() {
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status Rdma::Service::AckPushDone(::grpc::ServerContext* context, const ::ptre::AckPushDoneRequest* request, ::ptre::AckPushDoneResponse* response) {
+::grpc::Status Rdma::Service::NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) {
   (void) context;
   (void) request;
   (void) response;

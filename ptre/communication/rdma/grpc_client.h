@@ -23,7 +23,7 @@ class GrpcClient {
   int GetRemoteParamAddress();
   int GetRemoteEnv();
   bool AttemptPush(int vstep);
-  int AckPushDone();
+  int NotifyPushDone();
   bool Barrier();
   void SetRdmaManager(RdmaManager* rdma_manager);
 
