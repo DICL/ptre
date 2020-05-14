@@ -30,8 +30,10 @@ class GrpcClient {
   int GetRemoteAddressV2(const BufType type, const string& name,
                          RemoteMR* const rmr);
 
+  int Recv(char* buf, size_t len, const string& name);
+
  private:
-  int src_rank_;
+  int client_rank_;
   int dst_rank_;
   std::string hostname_;
   std::unique_ptr<Rdma::Stub> stub_;

@@ -11,6 +11,7 @@ template <typename T>
 class ConcurrentQueue {
  public:
   void push(const T& value);
+  void push(T&& value);
   void pop();
   void wait_and_pop(T& p);
 
@@ -31,6 +32,16 @@ void ConcurrentQueue<T>::push(const T& value) {
   }
 }
 
+void ConcurrentQueue<T>::push(T&& value) {
+  mu_.lock();
+  const bool was_empty = q_.empty();
+  q_.push(std::move(value));
+  mu_.unlock();
+  if (was_empty) {
+    cv_.notify_one();
+  }
+}
+
 template <typename T>
 void ConcurrentQueue<T>::pop() {
   std::lock_guard<std::mutex> lk(mu_);
@@ -43,7 +54,7 @@ template <typename T>
 void ConcurrentQueue<T>::wait_and_pop(T& p) {
   std::unique_lock<std::mutex> lk(mu_);
   cv_.wait(lk, [&] { return !q_.empty(); });
-  p = q_.front();
+  p = std::move(q_.front());
   q_.pop();
   lk.unlock();
 }

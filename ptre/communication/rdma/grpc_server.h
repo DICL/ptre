@@ -6,6 +6,7 @@
 
 #include <grpcpp/grpcpp.h>
 
+#include "ptre/lib/concurrent_queue.h"
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/protobuf/rdma_service.grpc.pb.h"
 #include "ptre/cm/consensus_manager.h"
@@ -38,15 +39,20 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteAddressV2(grpc::ServerContext* context,
       const GetRemoteAddressV2Request* request,
       GetRemoteAddressV2Response* response) override;
+  grpc::Status RdmaServiceImpl::Recv(grpc::ServerContext* context,
+      const RecvRequest* request, RecvResponse* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);
   void SetBarrierVariable(bool* barrier_variable);
+  void Send(char* buf, size_t len, const string& name);
 
  private:
   bool* barrier_variable_ = nullptr;
   RdmaManager* rdma_manager_ = nullptr;  // not owned.
   ConsensusManager* cm_ = nullptr;  // not owned.
+  std::mutex mu_;
+  std::map<int, std::map<string, ConcurrentQueue<string>>> send_q_cache_;
 
   // Rdma Attributes
   //uint32_t lid_;

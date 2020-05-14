@@ -106,6 +106,28 @@ grpc::Status RdmaServiceImpl::GetRemoteAddressV2(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+grpc::Status RdmaServiceImpl::Recv(grpc::ServerContext* context,
+    const RecvRequest* request, RecvResponse* response) {
+  int dst_rank = request->dst_rank();
+  size_t len = request->len();
+  string name = request->name();
+  mu_.lock();
+  if (send_q_cache_.find(dst_rank) == send_q_cache_.end()) {
+    send_q_cache_.emplace(dst_rank,
+        std::map<string, ConcurrentQueue<string>>());
+  }
+  auto&& q_map = send_q_cache_[dst_rank];
+  if (q_map.find(name) == q_map.end()) {
+    q_map.emplace(name, ConcurrentQueue<string>());
+  }
+  auto&& q = q_map[name];
+  mu_.unlock();
+  string send_buf;
+  q.wait_and_pop(send_buf);
+  response->set_buf(std::move(send_buf));
+  return grpc::Status::OK;
+}
+
 void RdmaServiceImpl::SetRdmaManager(RdmaManager* rdma_manager) {
   rdma_manager_ = rdma_manager;
 }
@@ -116,6 +138,23 @@ void RdmaServiceImpl::SetConsensusManager(ConsensusManager* cm) {
 
 void RdmaServiceImpl::SetBarrierVariable(bool* barrier_variable) {
     barrier_variable_ = barrier_variable;
+}
+
+void RdmaServiceImpl::Send(int dst_rank, char* buf, size_t len,
+    const string& name) {
+  mu_.lock();
+  if (send_q_cache_.find(dst_rank) == send_q_cache_.end()) {
+    send_q_cache_.emplace(dst_rank,
+        std::map<string, ConcurrentQueue<string>>());
+  }
+  auto&& q_map = send_q_cache_[dst_rank];
+  if (q_map.find(name) == q_map.end()) {
+    q_map.emplace(name, ConcurrentQueue<string>());
+  }
+  auto&& q = q_map[name];
+  mu_.unlock();
+  string send_buf(buf, len);
+  q.push(std::move(send_buf));
 }
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
 //  rdma_manager_ = rdma_manager;

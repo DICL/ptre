@@ -88,6 +88,8 @@ struct PtreGlobal {
   std::mutex mu;
   std::mutex q_mu;
   std::queue<int> q;
+  // Grpc Service
+  RdmaServiceImpl grpc_service;
   // Grpc Server
   std::unique_ptr<grpc::Server> grpc_server = nullptr;
   std::atomic<bool> is_shutdown;
@@ -151,7 +153,7 @@ struct PtreGlobal {
 static PtreGlobal ptre_global;
 
 void RunGrpcServer() {
-  RdmaServiceImpl service;
+  auto&& service = ptre_global.grpc_service;
   service.SetRdmaManager(ptre_global.rdma_manager);
   service.SetConsensusManager(&ptre_global.cm);
   service.SetBarrierVariable(&ptre_global.barrier_variable);
@@ -167,6 +169,36 @@ void RunGrpcServer() {
 void ShutdownGrpcServer() {
   if (ptre_global.grpc_server != nullptr) {
     ptre_global.grpc_server->Shutdown();
+  }
+}
+
+// Non-blocking
+void PtreSend(int dst_rank, char* buf, size_t len, const string& name) {
+  ptre_global.grpc_service.Send(dst_rank, buf, len, name);
+}
+
+/*
+void PtreSendZeroCopy(int dst_rank, std::shared_ptr<char> buf, size_t len,
+    const string& name) {
+  ptre_global.grpc_service.SendZeroCopy(dst_rank, buf, len, name);
+}
+*/
+
+// Blocking
+void PtreRecv(int src_rank, char* buf, size_t len) {
+  GrpcClient* grpc_client;
+  ptre_global.grpc_client_cache->GetClient(src_rank, &grpc_client);
+  grpc_client->Recv(buf, len, name);
+}
+
+void PtreBroadcast(char* buf, size_t len, int root_rank, const string name) {
+  if (ptre_global.rank == root_rank) {
+    for (int i = 0; i < ptre_global.size; i++) {
+      if (i == root_rank) continue;
+      PtreSend(i, buf, len, name);
+    }
+  } else {
+    PtreRecv(root_rank, buf, len, name);
   }
 }
 
@@ -754,49 +786,33 @@ class PushModelOp : public OpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("PushModel").Device(DEVICE_CPU), PushModelOp);
 
-REGISTER_OP("BroadcastModel")
-    .Attr("T: {float32}")
-    .Attr("NumTensors: int")
-    .Attr("names: list(string)")
-    .Input("vars: NumTensors * T");
-class BroadcastModelOp : public OpKernel {
+REGISTER_OP("Broadcast")
+    .Input("var: T")
+    .Output("output: T")
+    .Attr("T: numbertype")
+    .Attr("root_rank: int")
+class BroadcastOp : public OpKernel {
  public:
-  explicit BroadcastModelOp(OpKernelConstruction* context) : OpKernel(context) {
-    context->GetAttr("names", &names_);
+  explicit BroadcastOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("root_rank", &root_rank_));
   }
-  void Compute(OpKernelContext* context) override {
-    std::cout << "Broadcasting model" << std::endl;
-    int num_inputs = context->num_inputs();
-    for (int i = 0; i < num_inputs; i++) {
-      ptre_global.cm.CopyTensorSend(names_[i], context->input(i));
+  void Compute(OpKernelContext* ctx) override {
+    auto node_name = name();
+    auto tensor = ctx->input(0);
+    Tensor* output = nullptr;
+    if (ptre_global.rank == root_rank_) {
+      ctx->set_output(0, tensor);
+    } else {
+      OP_REQUIRES_OK(ctx, ctx->allocate_output(0, tensor.shape(), &output));
     }
-    auto& mu = ptre_global.q_mu;
-    for (int target_rank = 0; target_rank < ptre_global.size; target_rank++) {
-      //std::cout << "Queuing for target" << target_rank << std::endl;
-      if (target_rank == ptre_global.rank) {
-        continue;
-      }
-      ptre_global.cm.PushTensors(target_rank);
-      //mu.lock();
-      //ptre_global.q.push(target_rank);
-      //mu.unlock();
-    }
-
-    //std::cout << "Wait for send done." << std::endl;
-    //bool cond = false;
-    //while (!cond) {
-    //  mu.lock();
-    //  //std::cout << "Queue size=" << ptre_global.q.size() << std::endl;
-    //  cond = ptre_global.q.empty();
-    //  mu.unlock();
-    //}
-    //ptre_global.is_broadcast_done = true;
+    PtreBroadcast(output->tensor_data().data(), output->tensor_data().size(),
+        root_rank_, node_name);
   }
 
  private:
-  std::vector<std::string> names_;
+  int root_rank_;
 };
-REGISTER_KERNEL_BUILDER(Name("BroadcastModel").Device(DEVICE_CPU), BroadcastModelOp);
+REGISTER_KERNEL_BUILDER(Name("Broadcast").Device(DEVICE_CPU), BroadcastOp);
 
 REGISTER_OP("GetRemoteVariable")
     .Attr("index: int = -1")

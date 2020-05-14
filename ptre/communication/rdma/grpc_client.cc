@@ -18,7 +18,7 @@ std::string grpc_target(int dst_rank) {
 }
 
 GrpcClient::GrpcClient(int src_rank, int dst_rank, const std::string& hostname)
-    : src_rank_(src_rank), dst_rank_(dst_rank), hostname_(hostname) {
+    : client_rank_(src_rank), dst_rank_(dst_rank), hostname_(hostname) {
   //std::string target(grpc_target(dst_rank_));
   //std::cout << "target: " << hostname << std::endl;
   std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(hostname,
@@ -36,7 +36,7 @@ void GrpcClient::SetRdmaManager(RdmaManager* rdma_manager) {
 
 int GrpcClient::GetRemoteAddress(const std::string& name) {
   GetRemoteAddressRequest request;
-  request.set_rank(src_rank_);
+  request.set_rank(client_rank_);
   request.set_tensor_name(name);
 
   GetRemoteAddressResponse response;
@@ -57,7 +57,7 @@ int GrpcClient::GetRemoteAddress(const std::string& name) {
 
 int GrpcClient::GetRemoteParamAddress() {
   GetRemoteParamAddressRequest request;
-  request.set_rank(src_rank_);
+  request.set_rank(client_rank_);
 
   GetRemoteParamAddressResponse response;
 
@@ -76,7 +76,7 @@ int GrpcClient::GetRemoteParamAddress() {
 
 int GrpcClient::GetRemoteEnv() {
   GetRemoteEnvRequest request;
-  request.set_rank(src_rank_);
+  request.set_rank(client_rank_);
 
   GetRemoteEnvResponse response;
 
@@ -100,7 +100,7 @@ bool GrpcClient::AttemptPush(int vstep) {
   AttemptPushRequest request;
   AttemptPushResponse response;
   ClientContext context;
-  request.set_rank(src_rank_);
+  request.set_rank(client_rank_);
   request.set_vstep(vstep);
   grpc::Status status = stub_->AttemptPush(&context, request, &response);
   if (status.ok()) {
@@ -116,7 +116,7 @@ int GrpcClient::NotifyPushDone() {
   NotifyPushDoneRequest request;
   NotifyPushDoneResponse response;
   ClientContext context;
-  request.set_rank(src_rank_);
+  request.set_rank(client_rank_);
   grpc::Status status = stub_->NotifyPushDone(&context, request, &response);
   //std::cout << "\n Client NotifyPushDone\n";
 }
@@ -142,7 +142,7 @@ int GrpcClient::GetRemoteAddressV2(const BufType type, const string& name,
   GetRemoteAddressV2Request request;
   GetRemoteAddressV2Response response;
   ClientContext context;
-  request.set_rank(src_rank_);
+  request.set_rank(client_rank_);
   request.set_type(type);
   request.set_name(name);
   grpc::Status status = stub_->GetRemoteAddressV2(&context, request, &response);
@@ -152,6 +152,24 @@ int GrpcClient::GetRemoteAddressV2(const BufType type, const string& name,
     return 0;
   } else {
     LOG(INFO) << "dst_rank=" << dst_rank_ << " error_code="
+        << status.error_code() << ": " << status.error_message();
+    return -1;
+  }
+}
+
+int GrpcClient::Recv(char* buf, size_t len, const string& name) {
+  RecvRequest request;
+  RecvResponse response;
+  ClientContext context;
+  request.set_dst_rank(client_rank_);
+  request.set_len(len);
+  request.set_name(name);
+  grpc::Status status = stub_->Recv(&context, request, &response);
+  if (status.ok()) {
+    strncpy(buf, response.buf().data(), len);
+    return 0;
+  } else {
+    LOG(ERROR) << "dst_rank=" << dst_rank_ << " error_code="
         << status.error_code() << ": " << status.error_message();
     return -1;
   }

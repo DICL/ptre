@@ -48,7 +48,7 @@ struct TableStruct_rdma_5fservice_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[16]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[18]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -104,6 +104,12 @@ extern NotifyPushDoneRequestDefaultTypeInternal _NotifyPushDoneRequest_default_i
 class NotifyPushDoneResponse;
 class NotifyPushDoneResponseDefaultTypeInternal;
 extern NotifyPushDoneResponseDefaultTypeInternal _NotifyPushDoneResponse_default_instance_;
+class RecvRequest;
+class RecvRequestDefaultTypeInternal;
+extern RecvRequestDefaultTypeInternal _RecvRequest_default_instance_;
+class RecvResponse;
+class RecvResponseDefaultTypeInternal;
+extern RecvResponseDefaultTypeInternal _RecvResponse_default_instance_;
 }  // namespace ptre
 PROTOBUF_NAMESPACE_OPEN
 template<> ::ptre::AttemptPushRequest* Arena::CreateMaybeMessage<::ptre::AttemptPushRequest>(Arena*);
@@ -122,6 +128,8 @@ template<> ::ptre::GetRemoteParamAddressResponse* Arena::CreateMaybeMessage<::pt
 template<> ::ptre::MemoryRegion* Arena::CreateMaybeMessage<::ptre::MemoryRegion>(Arena*);
 template<> ::ptre::NotifyPushDoneRequest* Arena::CreateMaybeMessage<::ptre::NotifyPushDoneRequest>(Arena*);
 template<> ::ptre::NotifyPushDoneResponse* Arena::CreateMaybeMessage<::ptre::NotifyPushDoneResponse>(Arena*);
+template<> ::ptre::RecvRequest* Arena::CreateMaybeMessage<::ptre::RecvRequest>(Arena*);
+template<> ::ptre::RecvResponse* Arena::CreateMaybeMessage<::ptre::RecvResponse>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace ptre {
 
@@ -2356,6 +2364,271 @@ class GetRemoteAddressV2Response :
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
+// -------------------------------------------------------------------
+
+class RecvRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.RecvRequest) */ {
+ public:
+  RecvRequest();
+  virtual ~RecvRequest();
+
+  RecvRequest(const RecvRequest& from);
+  RecvRequest(RecvRequest&& from) noexcept
+    : RecvRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline RecvRequest& operator=(const RecvRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RecvRequest& operator=(RecvRequest&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const RecvRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const RecvRequest* internal_default_instance() {
+    return reinterpret_cast<const RecvRequest*>(
+               &_RecvRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    16;
+
+  void Swap(RecvRequest* other);
+  friend void swap(RecvRequest& a, RecvRequest& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline RecvRequest* New() const final {
+    return CreateMaybeMessage<RecvRequest>(nullptr);
+  }
+
+  RecvRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<RecvRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const RecvRequest& from);
+  void MergeFrom(const RecvRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(RecvRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.RecvRequest";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // int32 dst_rank = 1;
+  void clear_dst_rank();
+  static const int kDstRankFieldNumber = 1;
+  ::PROTOBUF_NAMESPACE_ID::int32 dst_rank() const;
+  void set_dst_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // uint32 len = 2;
+  void clear_len();
+  static const int kLenFieldNumber = 2;
+  ::PROTOBUF_NAMESPACE_ID::uint32 len() const;
+  void set_len(::PROTOBUF_NAMESPACE_ID::uint32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.RecvRequest)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::int32 dst_rank_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 len_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
+class RecvResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.RecvResponse) */ {
+ public:
+  RecvResponse();
+  virtual ~RecvResponse();
+
+  RecvResponse(const RecvResponse& from);
+  RecvResponse(RecvResponse&& from) noexcept
+    : RecvResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline RecvResponse& operator=(const RecvResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RecvResponse& operator=(RecvResponse&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const RecvResponse& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const RecvResponse* internal_default_instance() {
+    return reinterpret_cast<const RecvResponse*>(
+               &_RecvResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    17;
+
+  void Swap(RecvResponse* other);
+  friend void swap(RecvResponse& a, RecvResponse& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline RecvResponse* New() const final {
+    return CreateMaybeMessage<RecvResponse>(nullptr);
+  }
+
+  RecvResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<RecvResponse>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const RecvResponse& from);
+  void MergeFrom(const RecvResponse& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(RecvResponse* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.RecvResponse";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // bytes buf = 1;
+  void clear_buf();
+  static const int kBufFieldNumber = 1;
+  const std::string& buf() const;
+  void set_buf(const std::string& value);
+  void set_buf(std::string&& value);
+  void set_buf(const char* value);
+  void set_buf(const void* value, size_t size);
+  std::string* mutable_buf();
+  std::string* release_buf();
+  void set_allocated_buf(std::string* buf);
+
+  // @@protoc_insertion_point(class_scope:ptre.RecvResponse)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr buf_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
 // ===================================================================
 
 
@@ -3187,9 +3460,100 @@ GetRemoteAddressV2Response::mr() const {
   return mr_;
 }
 
+// -------------------------------------------------------------------
+
+// RecvRequest
+
+// int32 dst_rank = 1;
+inline void RecvRequest::clear_dst_rank() {
+  dst_rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 RecvRequest::dst_rank() const {
+  // @@protoc_insertion_point(field_get:ptre.RecvRequest.dst_rank)
+  return dst_rank_;
+}
+inline void RecvRequest::set_dst_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  dst_rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.RecvRequest.dst_rank)
+}
+
+// uint32 len = 2;
+inline void RecvRequest::clear_len() {
+  len_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 RecvRequest::len() const {
+  // @@protoc_insertion_point(field_get:ptre.RecvRequest.len)
+  return len_;
+}
+inline void RecvRequest::set_len(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  len_ = value;
+  // @@protoc_insertion_point(field_set:ptre.RecvRequest.len)
+}
+
+// -------------------------------------------------------------------
+
+// RecvResponse
+
+// bytes buf = 1;
+inline void RecvResponse::clear_buf() {
+  buf_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& RecvResponse::buf() const {
+  // @@protoc_insertion_point(field_get:ptre.RecvResponse.buf)
+  return buf_.GetNoArena();
+}
+inline void RecvResponse::set_buf(const std::string& value) {
+  
+  buf_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:ptre.RecvResponse.buf)
+}
+inline void RecvResponse::set_buf(std::string&& value) {
+  
+  buf_.SetNoArena(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:ptre.RecvResponse.buf)
+}
+inline void RecvResponse::set_buf(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  buf_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:ptre.RecvResponse.buf)
+}
+inline void RecvResponse::set_buf(const void* value, size_t size) {
+  
+  buf_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:ptre.RecvResponse.buf)
+}
+inline std::string* RecvResponse::mutable_buf() {
+  
+  // @@protoc_insertion_point(field_mutable:ptre.RecvResponse.buf)
+  return buf_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline std::string* RecvResponse::release_buf() {
+  // @@protoc_insertion_point(field_release:ptre.RecvResponse.buf)
+  
+  return buf_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline void RecvResponse::set_allocated_buf(std::string* buf) {
+  if (buf != nullptr) {
+    
+  } else {
+    
+  }
+  buf_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), buf);
+  // @@protoc_insertion_point(field_set_allocated:ptre.RecvResponse.buf)
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

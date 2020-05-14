@@ -122,3 +122,12 @@ message GetRemoteAddressV2Response {
   string name = 3;
   repeated MemoryRegion mr = 4;
 }
+
+message RecvRequest {
+  int32 dst_rank = 1;
+  uint32 len = 2;
+}
+
+message RecvResponse {
+  bytes buf = 1;
+}
