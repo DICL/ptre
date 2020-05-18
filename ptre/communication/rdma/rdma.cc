@@ -4,40 +4,6 @@
 
 namespace ptre {
 
-int init_rdma_env(RdmaEnv& env) {
-  int ret = 0;
-
-  env.dev_list = ibv_get_device_list(NULL);
-  env.context = ibv_open_device(*env.dev_list);
-  env.pd = ibv_alloc_pd(env.context);
-
-  ret = ibv_query_port(env.context, IB_PORT, &env.port_attr);
-  if (ret) {
-    std::cout << "ibv_query_port failed. ret=" << ret << std::endl;
-    return ret;
-  } else {
-    //std::cout << "ibv_query_port done." << std::endl;
-  }
-
-  /// Local address
-  {
-    //union ibv_gid gid;
-    int r = ibv_query_gid(env.context, IB_PORT, 0, &env.gid);
-    if (r < 0) std::cout << "Failed to ibv_query_gid\n";
-    //else std::cout << "GID: " << env.gid.global.subnet_prefix << ", " << env.gid.global.interface_id << std::endl;
-  }
-
-  ret = ibv_query_device(env.context, &env.dev_attr);
-  if (ret) {
-    std::cout << "ibv_query_device failed. ret=" << ret << std::endl;
-    return ret;
-  } else {
-    //std::cout << "ibv_query_device done." << std::endl;
-  }
-
-  return ret;
-}
-
 struct ibv_cq* ptre_rdma_create_cq(RdmaEnv* rdma_env, int comp_vector) {
   struct ibv_cq* cq = ibv_create_cq(rdma_env->context, QUEUE_DEPTH_DEFAULT * 2,
                              NULL, NULL, comp_vector);

@@ -8,7 +8,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include "ptre/protobuf/rdma_service.grpc.pb.h"
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "tensorflow/core/platform/logging.h"
 
 namespace ptre {
 
@@ -19,25 +19,23 @@ class GrpcClient {
   //GrpcClient(std::shared_ptr<::grpc::Channel> channel);
   GrpcClient(int src_rank, int dst_rank, const std::string& hostname);
   ~GrpcClient();
-  int GetRemoteAddress(const std::string& name);
+  int GetLID(uint16_t* remote_lid);
+  int GetQPAttr(uint32_t* remote_qpn, uint32_t* remote_psn);
+  int GetRemoteAddress(const BufType type, const std::string& name,
+      uint64_t* out_remote_addr, uint32_t* out_rkey);
   int GetRemoteParamAddress();
   int GetRemoteEnv();
   bool AttemptPush(int vstep);
   int NotifyPushDone();
   bool Barrier();
-  void SetRdmaManager(RdmaManager* rdma_manager);
-
-  int GetRemoteAddressV2(const BufType type, const string& name,
-                         RemoteMR* const rmr);
 
   int Recv(char* buf, size_t len, const string& name);
 
  private:
-  int client_rank_;
+  int comm_rank_;
   int dst_rank_;
   std::string hostname_;
   std::unique_ptr<Rdma::Stub> stub_;
-  RdmaManager* rdma_manager_ = nullptr;
 };
 
 //class GrpcClientCache {

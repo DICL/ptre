@@ -3,8 +3,11 @@ syntax = "proto3";
 package ptre;
 
 service Rdma {
-  rpc GetRemoteEnv(GetRemoteEnvRequest)
-    returns (GetRemoteEnvResponse);
+  rpc GetLID(GetLIDRequest)
+    returns (GetLIDResponse);
+
+  rpc GetQPAttr(GetQPAttrRequest)
+    returns (GetQPAttrResponse);
 
   rpc GetRemoteAddress(GetRemoteAddressRequest)
     returns (GetRemoteAddressResponse);
@@ -21,19 +24,40 @@ service Rdma {
   rpc Barrier(BarrierRequest)
     returns (BarrierResponse);
 
+  rpc Recv(RecvRequest)
+    returns (RecvResponse);
+
   rpc GetRemoteAddressV2(GetRemoteAddressV2Request)
     returns (GetRemoteAddressV2Response);
 }
 
-message Channel {
-  int32 lid = 1;
-  int32 qpn = 2;
-  int32 psn = 3;
-  uint64 snp = 4;
-  uint64 iid = 5;
+message MemoryRegion {
+  uint64 remote_addr = 1;
+  uint32 rkey = 2;
 }
 
-message MemoryRegion {
+// GetLID
+message GetLIDRequest { }
+message GetLIDResponse {
+  int32 lid = 1;
+}
+
+// GetQPAttr
+message GetQPAttrRequest {
+  int32 src_rank = 1;
+}
+message GetQPAttrResponse {
+  uint32 qpn = 1;
+  uint32 psn = 2;
+}
+
+// GetRemoteAddress
+message GetRemoteAddressRequest {
+  BufType buf_type = 1;
+  string var_name = 2;
+}
+
+message GetRemoteAddressResponse {
   uint64 remote_addr = 1;
   uint32 rkey = 2;
 }
@@ -50,27 +74,12 @@ message GetRemoteEnvResponse {
   uint64 iid = 5;  // global interface id
 }
 
-message GetRemoteAddressRequest {
-  int32 rank = 1;
-  string tensor_name = 2;
-  //Channel channel = 3;
-  //repeated MemoryRegion mr = 4;
-}
-
-message GetRemoteAddressResponse {
-  int32 rank = 1;
-  string tensor_name = 2;
-  Channel channel = 3;
-  repeated MemoryRegion mr = 4;
-}
-
 message GetRemoteParamAddressRequest {
   int32 rank = 1;
 }
 
 message GetRemoteParamAddressResponse {
   int32 rank = 1;
-  Channel channel = 2;
   repeated MemoryRegion mr = 3;
 }
 
@@ -126,6 +135,7 @@ message GetRemoteAddressV2Response {
 message RecvRequest {
   int32 dst_rank = 1;
   uint32 len = 2;
+  string name = 3;
 }
 
 message RecvResponse {

@@ -9,7 +9,8 @@
 #include <iostream>
 
 #include "ptre/cm/peer_selector.h"
-#include "ptre/cm/tensor_aggregator.h"
+#include "ptre/cm/remote_variable.h"
+//#include "ptre/cm/tensor_aggregator.h"
 #include "ptre/communication/rdma/rdma_manager.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
 //#include "ptre/communication/tcp/tcp_manager.h"
@@ -28,22 +29,28 @@ using tensorflow::Tensor;
 
 class ConsensusManager {
  public:
+  ConsensusManager(int ptre_size, int ptre_rank,
+    const std::vector<const Tensor*>& vars, const std::vector<string>& names);
   ~ConsensusManager();
   /// NOT USED at least until 5f1352f07118881c8c5319e341fde8633905b42f
   void InitGlobalConsensus(std::vector<const Tensor*>& vars);
+#if 0
   int InitGlobalConsensusV2(const std::vector<string>& names,
                             const std::vector<const Tensor*>& vars);
   void InitBufTensor(const std::string& name, const Tensor& tensor);
   void InitBufParam();
+#endif
   bool IsInitialized() { return is_initialized_; }
   void SetRdmaManager(RdmaManager* rdma_manager);
   void EnqueuePushList(std::vector<const Tensor*>& vars);
 
   void CopyTensorSend(const std::string& name, const Tensor& tensor);
+#if 0
   void PushModel(int dst_rank);
   void PushTensors(int dst_rank);
   void PushTensors2(int dst_rank);
   void PushTensorsV3(int dst_rank);
+#endif
   void TcpPushTensors(int dst_rank);
   void SetPushReady() { ready_to_push_ = true; }
   bool IsPushReady() { return ready_to_push_; }
@@ -80,24 +87,32 @@ class ConsensusManager {
   /// Init recv_tensor buf and agg_done counts
   /// and all related states
   /// Must Open Receive after this preparation done
+#if 0
   int PrepareReceive();
   int OpenReceive();
+#endif
   void OpenReceive(int idx);
   void OpenReceive(const string& var_name);
   int CloseReceive();
   void CloseReceive(int idx);
   void CloseReceive(const string& var_name);
   bool IsReceiveDone();
+#if 0
   int WaitAndGetNumIncomings();
+#endif
   int GetNumIncomings(int idx);
   int GetNumIncomings(const string& var_name);
   int GetNumIncomings();
+#if 0
   int CountReduceAndOpenRecv(std::string& name);
   void CountReduce(int idx);
   void CountReduce(const string& var_name);
   bool IsInitNumApplyOps();
   int InitNumRecvTensors();
   int ProcessAggregation();
+#endif
+  void ReceivePushNotify(int dst);
+  void ProcessAggregation(int idx);
   int ProcessReceive();
 
   void set_rcv_done_cnt(int cnt) { rcv_done_cnt_ = cnt; }
@@ -114,7 +129,8 @@ class ConsensusManager {
   int rcv_ing_cnt() { return rcv_ing_cnt_; }
   int rcv_steps_sum() { return rcv_steps_sum_; }
   int num_apply_ops() { return num_rcv_tensors_; }
-  TensorAggregator* tensor_aggregator() { return tensor_aggregator_; }
+  //TensorAggregator* tensor_aggregator() { return tensor_aggregator_; }
+  std::vector<RemoteVariable*>& remote_variables();
 
   std::mutex send_mu_;
   std::condition_variable send_cv_;
@@ -128,11 +144,17 @@ class ConsensusManager {
   int ptre_size_;
   int ptre_rank_;
 
-  /// Training Status
+  // Initialization Status
+
+  /// Training Infos
   int local_step_;
   int virtual_step_ = 1;
 
+  // Variables
   int num_vars_;
+  std::vector<string> var_names_;
+  std::map<string, int> var_name_to_index_;
+  std::vector<RemoteVariable*> remote_variables_;
   //std::map<string, int> name_to_index_;
   std::vector<Tensor*> global_consensus_;
   std::map<std::string, Tensor*> recv_tensors_;
@@ -193,7 +215,7 @@ class ConsensusManager {
   RdmaManager* rdma_manager_ = nullptr;
   //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
-  TensorAggregator* tensor_aggregator_ = nullptr;
+  //TensorAggregator* tensor_aggregator_ = nullptr;
   /// size = num_trainable_vars
   std::vector<Flat*> glc_flats_;
   std::vector<Flat*> agg_flats_;

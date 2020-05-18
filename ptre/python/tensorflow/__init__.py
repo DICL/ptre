@@ -26,6 +26,7 @@ from ptre.tensorflow.ptre_ops import set_broadcast_not_done
 from ptre.tensorflow.ptre_ops import set_local_step
 from ptre.tensorflow.ptre_ops import synchronization_barrier
 from ptre.tensorflow.ptre_ops import init_num_rcv_tensors
+from ptre.tensorflow.ptre_ops import register_variables
 
 from ptre.tensorflow.util import _make_subgraph
 
@@ -40,7 +41,6 @@ def _make_broadcast_group_fn():
       var.assign(broadcast(var, root_rank))
 
   return _make_subgraph(broadcast_group)
-
 
 def broadcast_variables(variables, root_rank):
   broadcast_group = _make_broadcast_group_fn()

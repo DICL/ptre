@@ -15,6 +15,8 @@ find_package(CUDA 10.0 REQUIRED)
 #)
 #cuda_target_compile_definitions(PTRE_OPS_GPU_O PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)
 
+add_library(job_def SHARED job_def.cc)
+
 #add_library(ptre_ops SHARED ptre_ops.cc ${PTRE_OPS_GPU_O})
 add_library(ptre_ops SHARED ptre_ops.cc ptre_ops_gpu.cu.o)
 #add_library(ptre_ops SHARED ptre_ops.cc ptre_ops_gpu.cu.cc)
@@ -25,6 +27,7 @@ target_link_libraries(ptre_ops
                       :libtensorflow_framework.so.2
                       cudart
                       cublas
+                      job_def
                       consensus_manager
                       rdma_manager
                       rdma_grpc_server

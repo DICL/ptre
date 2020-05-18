@@ -32,6 +32,7 @@ void ConcurrentQueue<T>::push(const T& value) {
   }
 }
 
+template <typename T>
 void ConcurrentQueue<T>::push(T&& value) {
   mu_.lock();
   const bool was_empty = q_.empty();

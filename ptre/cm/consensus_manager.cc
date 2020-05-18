@@ -12,6 +12,19 @@
 
 namespace ptre {
 
+ConsensusManager::ConsensusManager(int ptre_size, int ptre_rank,
+    const std::vector<const Tensor*>& vars, const std::vector<string>& names) {
+  ptre_size_ = ptre_size;
+  ptre_rank_ = ptre_rank;
+  num_vars_ = vars.size();
+  for (int i = 0; i < num_vars_; i++) {
+    var_names_.push_back(names[i]);
+    var_name_to_index_[names[i]] = i;
+    RemoteVariable* rvar = new RemoteVariable(*vars[i]);
+    remote_variables_.push_back(rvar);
+  }
+}
+
 ConsensusManager::~ConsensusManager() {
   //if (rdma_manager_ != nullptr) {
   //  delete rdma_manager_;
@@ -19,9 +32,9 @@ ConsensusManager::~ConsensusManager() {
   if (peer_selector_ != nullptr) {
     delete peer_selector_;
   }
-  if (tensor_aggregator_ != nullptr) {
-    tensor_aggregator_->Terminate();
-  }
+  //if (tensor_aggregator_ != nullptr) {
+  //  tensor_aggregator_->Terminate();
+  //}
 }
 
 /// NOT USED at least until 5f1352f07118881c8c5319e341fde8633905b42f
@@ -40,6 +53,7 @@ void ConsensusManager::InitGlobalConsensus(std::vector<const Tensor*>& vars) {
   is_initialized_ = true;
 }
 
+#if 0
 int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
     const std::vector<const Tensor*>& vars) {
 
@@ -159,6 +173,7 @@ int ConsensusManager::InitGlobalConsensusV2(const std::vector<string>& names,
     rdma_manager_->RegisterMR(BUF_TYPE_FLAG_SEND, name, buf, length, false);
   }
 }
+#endif
 
 void ConsensusManager::InitPeerSelector(int strategy, int num_push) {
   PeerSelectorFactory::NewPeerSelector(ptre_size_, ptre_rank_,
@@ -172,6 +187,7 @@ void ConsensusManager::InitPeerSelector(int strategy, int num_push) {
   //exit(EXIT_FAILURE);
 }
 
+#if 0
 void ConsensusManager::InitBufTensor(const std::string& name,
                                      const Tensor& tensor) {
   Tensor* recv_tensor = new Tensor(tensor.dtype(), tensor.shape());
@@ -198,6 +214,7 @@ void ConsensusManager::InitBufParam() {
   is_new_incoming_ = new bool(false);
   rdma_manager_->InitParamMR(is_new_incoming_, &flag_to_send_);
 }
+#endif
 
 void ConsensusManager::SetRdmaManager(RdmaManager* rdma_manager) {
   rdma_manager_ = rdma_manager;
@@ -233,6 +250,7 @@ void ConsensusManager::CopyTensorSend(const std::string& name,
 #endif
 }
 
+#if 0
 void ConsensusManager::PushModel(int dst_rank) {
   bool can_push = rdma_manager_->AttemptPush(dst_rank);
   if (!can_push) {
@@ -247,6 +265,7 @@ void ConsensusManager::PushModel(int dst_rank) {
 
   rdma_manager_->NotifyPushDone(dst_rank);
 }
+
 
 void ConsensusManager::PushTensors(int dst_rank) {
   for (auto it : buf_type_name_index_map_[BUF_TYPE_SEND_BUF]) {
@@ -312,6 +331,7 @@ void ConsensusManager::PushTensorsV3(int dst_rank) {
   send_cv_.notify_all();
   send_mu_.unlock();
 }
+#endif
 
 void ConsensusManager::TcpPushTensors(int dst_rank) {
   for (auto it : send_tensors_) {
@@ -335,6 +355,8 @@ Tensor* ConsensusManager::send_tensor(const string& name) {
 }
 
 bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
+  return false;
+#if 0
 #if 0
   std::lock_guard<std::mutex> rcv_guard(rcv_mu_);
   if (rcv_open_) {
@@ -372,6 +394,7 @@ bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
     return true;
   }
   return false;
+#endif
 }
 
 int ConsensusManager::FinalizeRecv(int src_rank) {
@@ -385,10 +408,13 @@ int ConsensusManager::FinalizeRecv(int src_rank) {
   return 0;
 }
 
+#if 0
 int ConsensusManager::EnqueueRecvTask(int from, int idx) {
   permit_scheduler_->EnqueueRecvTask(from, idx);
 }
+#endif
 
+#if 0
 int ConsensusManager::PrepareReceive() {
   // Init recv bufs (global consensus)
   for (auto& it : recv_tensors_) {
@@ -406,9 +432,10 @@ int ConsensusManager::OpenReceive() {
   rcv_open_ = true;
   return 0;
 }
+#endif
 
 int ConsensusManager::GetGlcTensor(const int& idx, Tensor*& out) {
-  auto&& var = REMOTE_VARIABLES_[idx];
+  auto&& var = remote_variables_[idx];
   int ret = var->GetGlcTensor(out);
   return ret;
 }
@@ -425,7 +452,7 @@ int ConsensusManager::GetGlcTensor(const string& var_name, Tensor*& out) {
 }
 
 void ConsensusManager::OpenReceive(int idx) {
-  auto&& var = REMOTE_VARIABLES_[idx];
+  auto&& var = remote_variables_[idx];
   var->StartRecv();
 #if 0
   auto&& mu = var_rcv_mus_[idx];
@@ -492,6 +519,7 @@ bool ConsensusManager::IsReceiveDone() {
   return false;
 }
 
+#if 0
 int ConsensusManager::WaitAndGetNumIncomings() {
   CloseReceive();
   //if (rcv_ing_cnt_ > 1) {
@@ -545,9 +573,10 @@ int ConsensusManager::WaitAndGetNumIncomings() {
   // TODO: Must return zero and don't average if counts don't match.
   return rcv_done_cnt_;
 }
+#endif
 
 int ConsensusManager::GetNumIncomings(int idx) {
-  auto&& var = REMOTE_VARIABLES_[idx];
+  auto&& var = remote_variables_[idx];
   var->StopRecv();
   int ret = var->AggCount();
   return ret;
@@ -580,6 +609,7 @@ int ConsensusManager::GetNumIncomings() {
   return num_incomings;
 }
 
+#if 0
 int ConsensusManager::CountReduceAndOpenRecv(std::string& name) {
   rcv_mu_.lock();
   reduce_cnt_++;
@@ -653,6 +683,7 @@ int ConsensusManager::ProcessAggregation() {
   return tensor_aggregator_->ProcessAggregation();
   //return tensor_aggregator_->ProcessAggregationNoVerbs();
 }
+#endif
 
 int ConsensusManager::ProcessReceive() {
   LOG(ERROR) << "NOT IMPLEMENTED.";
@@ -753,13 +784,13 @@ void ConsensusManager::ReceivePushNotify(int dst) {
 #endif
   if (ret >= 0) {
     int idx = ret;
-    auto&& var = REMOTE_VARIABLES_[idx];
-    var->RecvDone();
+    auto&& var = remote_variables_[idx];
+    var->SetAggState(1);
   }
 }
 
 void ConsensusManager::ProcessAggregation(int idx) {
-  auto&& var = REMOTE_VARIABLES_[idx];
+  auto&& var = remote_variables_[idx];
   var->Aggregate();
 #if 0
   auto&& mu = var_rcv_mus_[idx];
@@ -773,6 +804,11 @@ void ConsensusManager::ProcessAggregation(int idx) {
   }
   mu.unlock();
 #endif
+}
+
+
+std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
+  return remote_variables_;
 }
 
 }  // namespace ptre

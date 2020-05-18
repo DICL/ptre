@@ -11,49 +11,12 @@ namespace ptre {
 //  }
 //}
 
-grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* context,
-                                const GetRemoteAddressRequest* request,
-                                GetRemoteAddressResponse* response) {
-  /// need rank
-  int rank = rdma_manager_->rank();
-  std::string tensor_name = request->tensor_name();
-  RemoteMR rmr = rdma_manager_->GetRemoteMR(tensor_name);
-
-  response->set_rank(rank);
-  response->set_tensor_name(tensor_name);
-  MemoryRegion* mr_proto = response->add_mr();
-  mr_proto->set_remote_addr(rmr.remote_addr);
-  mr_proto->set_rkey(rmr.rkey);
-  return grpc::Status::OK;
-}
-
-grpc::Status RdmaServiceImpl::GetRemoteParamAddress(grpc::ServerContext* context,
-                                const GetRemoteParamAddressRequest* request,
-                                GetRemoteParamAddressResponse* response) {
-  int src_rank = request->rank();
-  int rank = rdma_manager_->rank();
-  RemoteMR rpmr = rdma_manager_->GetRemoteParamMR();
-
-  response->set_rank(rank);
-  MemoryRegion* mr_proto = response->add_mr();
-  mr_proto->set_remote_addr(rpmr.remote_addr);
-  mr_proto->set_rkey(rpmr.rkey);
-  return grpc::Status::OK;
-}
-
-grpc::Status RdmaServiceImpl::GetRemoteEnv(grpc::ServerContext* context,
-                                           const GetRemoteEnvRequest* request,
-                                           GetRemoteEnvResponse* response) {
-  int src_rank = request->rank();
-  int rank = rdma_manager_->rank();
-  RdmaEnv* env = rdma_manager_->rdma_env();
-
-  response->set_rank(rank);
-  response->set_lid(env->port_attr.lid);
-  response->set_qpn(rdma_manager_->qp(src_rank)->qp_num);
-  response->set_snp(env->gid.global.subnet_prefix);
-  response->set_iid(env->gid.global.interface_id);
-
+grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* ctx,
+                                const GetRemoteAddressRequest* req,
+                                GetRemoteAddressResponse* res) {
+  struct ibv_mr* mr = rdma_manager_->GetMR(req->buf_type(), req->var_name());
+  res->set_remote_addr((uint64_t) mr->addr);
+  res->set_rkey(mr->rkey);
   return grpc::Status::OK;
 }
 
@@ -114,16 +77,16 @@ grpc::Status RdmaServiceImpl::Recv(grpc::ServerContext* context,
   mu_.lock();
   if (send_q_cache_.find(dst_rank) == send_q_cache_.end()) {
     send_q_cache_.emplace(dst_rank,
-        std::map<string, ConcurrentQueue<string>>());
+        std::map<string, ConcurrentQueue<string>*>());
   }
   auto&& q_map = send_q_cache_[dst_rank];
   if (q_map.find(name) == q_map.end()) {
-    q_map.emplace(name, ConcurrentQueue<string>());
+    q_map[name] = new ConcurrentQueue<string>();
   }
   auto&& q = q_map[name];
   mu_.unlock();
   string send_buf;
-  q.wait_and_pop(send_buf);
+  q->wait_and_pop(send_buf);
   response->set_buf(std::move(send_buf));
   return grpc::Status::OK;
 }
@@ -145,16 +108,16 @@ void RdmaServiceImpl::Send(int dst_rank, char* buf, size_t len,
   mu_.lock();
   if (send_q_cache_.find(dst_rank) == send_q_cache_.end()) {
     send_q_cache_.emplace(dst_rank,
-        std::map<string, ConcurrentQueue<string>>());
+        std::map<string, ConcurrentQueue<string>*>());
   }
   auto&& q_map = send_q_cache_[dst_rank];
   if (q_map.find(name) == q_map.end()) {
-    q_map.emplace(name, ConcurrentQueue<string>());
+    q_map[name] = new ConcurrentQueue<string>();
   }
   auto&& q = q_map[name];
   mu_.unlock();
   string send_buf(buf, len);
-  q.push(std::move(send_buf));
+  q->push(std::move(send_buf));
 }
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
 //  rdma_manager_ = rdma_manager;

@@ -18,6 +18,7 @@ namespace ptre {
 #define MAX_CONCURRENT_WRITES 1000
 #define TIMEOUT_DEFAULT 14
 #define RETRY_CNT_DEFAULT 7
+#define QP_MAX_WR_DEFAULT 16
 
 using std::cerr;
 using std::endl;
@@ -32,12 +33,11 @@ bool operator<(const RemoteTensorId& a, const RemoteTensorId& b) {
 }
 
 struct RdmaEnv {
-  ibv_device **dev_list;
-  ibv_context *context;
-  ibv_pd *pd;
-  ibv_port_attr port_attr;
-  ibv_device_attr dev_attr;
-  union ibv_gid gid;
+  struct ibv_device** device_list;
+  struct ibv_context* context;
+  struct ibv_pd* pd;
+  struct ibv_port_attr port_attr;
+  //struct ibv_device_attr dev_attr;
 };
 
 enum RdmaWrIdType {
@@ -89,7 +89,6 @@ class RemoteTensorChannel {
   RemoteMR rmr_;
 };
 
-int init_rdma_env(RdmaEnv& env);
 struct ibv_cq* ptre_rdma_create_cq(RdmaEnv* rdma_env, int comp_vector);
 struct ibv_qp* ptre_rdma_create_qp(RdmaEnv* rdma_env, struct ibv_cq* send_cq,
     struct ibv_cq* recv_cq);

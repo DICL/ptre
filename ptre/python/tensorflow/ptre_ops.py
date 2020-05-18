@@ -34,9 +34,6 @@ def size():
 def rank():
   return PTRE_CDLL.ptre_rank()
 
-def enqueue_push():
-  PTRE_CDLL.ptre_enqueue_push()
-
 def set_push():
   PTRE_CDLL.ptre_set_push()
 
@@ -54,6 +51,10 @@ def resource_push_tensor(var, var_name):
 
 def _get_remote_variable(var_name):
   return PTRE_LIB.get_remote_variable(var_name=var_name)
+
+def register_variables(variables):
+  names = [ v.name for v in var_list ]
+  PTRE_LIB.register_variables(variables, names=names)
 
 def init_global_consensus(var_list):
   names = [ v.name for v in var_list ]

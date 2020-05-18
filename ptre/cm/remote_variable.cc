@@ -24,6 +24,27 @@ namespace ptre {
 }
 #endif
 
+RemoteVariable::RemoteVariable(const Tensor& var) {
+  /// \brief Creates a Tensor of the given `type` and `shape`.  If
+  /// LogMemory::IsEnabled() the allocation is logged as coming from
+  /// an unknown kernel and step. Calling the Tensor constructor
+  /// directly from within an Op is deprecated: use the
+  /// OpKernelConstruction/OpKernelContext allocate_* methods to
+  /// allocate a new tensor, which record the kernel and step.
+  ///
+  /// The underlying buffer is allocated using a `CPUAllocator`.
+  tensor_ = new Tensor(var.dtype(), var.shape());
+  // Receive Buffer
+  rcv_length_ = tensor_->TotalBytes();
+  rcv_buf_ = malloc(rcv_length_);
+
+  rcv_state_ = 0;
+  agg_state_ = 0;
+  agg_cnt_ = 0;
+
+  permit_ = new Permit();
+}
+
 void RemoteVariable::StartRecv() {
   std::lock_guard<std::mutex> guard(mu_);
   tensor_->flat<float>().setZero();
@@ -57,7 +78,7 @@ void RemoteVariable::Aggregate() {
   std::lock_guard<std::mutex> guard(mu_);
   if (agg_state_ == 1 && rcv_state_ == 1) {
     Flat var_flat = tensor_->flat<float>();
-    Flat rcv_flat(rcv_buf_, var_flat.size());
+    Flat rcv_flat((float*) rcv_buf_, var_flat.size());
     var_flat = var_flat + rcv_flat;
     //AggregateSum(d, *glc_flats_[idx], *agg_flats_[idx]);
     agg_cnt_++;
@@ -66,6 +87,12 @@ void RemoteVariable::Aggregate() {
   agg_state_ = 0;
 }
 
+int RemoteVariable::AggCount() {
+  std::lock_guard<std::mutex> guard(mu_);
+  return agg_cnt_;
+}
+
+
 int RemoteVariable::GetGlcTensor(Tensor*& out) {
   std::lock_guard<std::mutex> guard(mu_);
   rcv_state_ = 0;
@@ -73,6 +100,18 @@ int RemoteVariable::GetGlcTensor(Tensor*& out) {
   permit_->SetValue(-1);
   out = tensor_;
   return agg_cnt_;
+}
+
+void* RemoteVariable::rcv_data() {
+  return rcv_buf_;
+}
+
+size_t RemoteVariable::rcv_length() {
+  return rcv_length_;
+}
+
+void* RemoteVariable::permit_data() {
+  return permit_->data();
 }
 
 }  // namespace ptre

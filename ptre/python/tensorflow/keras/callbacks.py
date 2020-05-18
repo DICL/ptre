@@ -14,15 +14,7 @@ class InitTrainableVariablesCallback(Callback):
     self._step = 0
 
   def on_train_begin(self, logs={}):
-    var_list = self.model.variables
-    #self.model.optimizer.init_remotes(var_list)
-    if False:
-      ptre.init_global_consensus(var_list)
-      ptre.init_rdma_grpc_service()
-      ptre.init_remote_mr(var_list)
-      ptre.connect_qps()
-    else:
-      ptre.init_step_one(var_list)
+    ptre.register_variables(self.model.trainable_variables)
 
   def on_batch_begin(self, batch, logs={}):
     ptre.set_local_step(self._step)
@@ -65,19 +57,8 @@ class PushModelCallback(Callback):
       ptre.set_push()
     else:
       ptre.unset_push()
-    #if self._step > 0:
-    #  if self._step % self._period == 0:
-    #    ptre.set_push()
-    #  else:
-    #    ptre.unset_push()
 
   def on_batch_end(self, batch, logs=None):
-    ptre.mark_no_new()
-    if (self._step + 1) % self._period == 0:
-      ptre.enqueue_push()
-    #if self._step > 0:
-    #  if self._step % self._period == 0:
-    #    ptre.enqueue_push()
     self._step = self._step + 1
 
 class PrintVariablesCallback(Callback):

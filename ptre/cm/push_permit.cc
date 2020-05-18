@@ -1,12 +1,15 @@
-#include "ptre/cm/permit_scheduler.h"
+#include "ptre/cm/push_permit.h"
+
+#include <algorithm>
+
 #include "ptre/lib/cache_ctl.h"
 
 namespace ptre {
 
-void PermitScheduler::EnqueueRecvTask(int src_rank, int idx) {
-  auto&& p = permit_table_[idx];
-  p->Enqueue(src_rank);
-}
+//void PermitScheduler::EnqueueRecvTask(int src_rank, int idx) {
+//  auto&& p = permit_table_[idx];
+//  p->Enqueue(src_rank);
+//}
 
 bool Contains(std::deque<int>& dq, int elem) {
   return std::find(dq.begin(), dq.end(), elem) != dq.end();
@@ -20,6 +23,10 @@ void Permit::Enqueue(int src_rank, int rcv_state) {
       dq_pending_.push_back(src_rank);
     }
   }
+}
+
+void Permit::SwapPendingQueue() {
+  dq_.swap(dq_pending_);
 }
 
 void Permit::Next() {

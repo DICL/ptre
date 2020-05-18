@@ -21,12 +21,6 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteAddress(grpc::ServerContext* context,
                                 const GetRemoteAddressRequest* request,
                                 GetRemoteAddressResponse* response) override;
-  grpc::Status GetRemoteParamAddress(grpc::ServerContext* context,
-                            const GetRemoteParamAddressRequest* request,
-                            GetRemoteParamAddressResponse* response) override;
-  grpc::Status GetRemoteEnv(grpc::ServerContext* context,
-                                const GetRemoteEnvRequest* request,
-                                GetRemoteEnvResponse* response) override;
   grpc::Status AttemptPush(grpc::ServerContext* context,
       const AttemptPushRequest* request,
       AttemptPushResponse* response) override;
@@ -39,20 +33,20 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status GetRemoteAddressV2(grpc::ServerContext* context,
       const GetRemoteAddressV2Request* request,
       GetRemoteAddressV2Response* response) override;
-  grpc::Status RdmaServiceImpl::Recv(grpc::ServerContext* context,
+  grpc::Status Recv(grpc::ServerContext* context,
       const RecvRequest* request, RecvResponse* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);
   void SetBarrierVariable(bool* barrier_variable);
-  void Send(char* buf, size_t len, const string& name);
+  void Send(int dst_rank, char* buf, size_t len, const string& name);
 
  private:
   bool* barrier_variable_ = nullptr;
   RdmaManager* rdma_manager_ = nullptr;  // not owned.
   ConsensusManager* cm_ = nullptr;  // not owned.
   std::mutex mu_;
-  std::map<int, std::map<string, ConcurrentQueue<string>>> send_q_cache_;
+  std::map<int, std::map<string, ConcurrentQueue<string>*>> send_q_cache_;
 
   // Rdma Attributes
   //uint32_t lid_;
