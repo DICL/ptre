@@ -1,0 +1,71 @@
+#!/usr/bin/python
+from __future__ import print_function
+
+import argparse
+import os
+import paramiko
+import sys
+
+parser = argparse.ArgumentParser(description='ptre run arguments',
+                                 formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument('--hostfile', required=True, type=str)
+parser.add_argument('-np', required=True, type=int, help='Total number of training processes.')
+parser.add_argument('args', nargs=argparse.REMAINDER)
+args = parser.parse_args()
+cmd_list = args.args
+for i, elem in enumerate(cmd_list):
+  if elem.endswith('.py'):
+    cmd_list[i] = os.path.abspath(elem)
+pypath = os.environ.get('PYTHONPATH')
+pypath_cmds = 'export PYTHONPATH=%s' % pypath
+
+# Hosts
+hosts = []
+with open(args.hostfile, 'r') as hostfile:
+  for i, elem in enumerate(hostfile):
+    hosts.append(elem)
+    if i == args.np -1:
+      break
+cmd_base = '%s; echo $$; exec %s --hostfile %s -np %d' % (pypath_cmds, ' '.join(cmd_list), os.path.abspath(args.hostfile), args.np)
+
+try:
+  ssh_clients = []
+  channels = []
+  pids = []
+  for i in range(args.np):
+    host = hosts[i].split(':')[0]
+    client = paramiko.SSHClient()
+    ssh_clients.append(client)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+    client.connect(host)
+    channel = client.get_transport().open_session()
+    channels.append(channel)
+
+  for i, channel in enumerate(channels):
+    cmd = '%s -rank %d' % (cmd_base, i)
+    channel.exec_command(cmd)
+    pid = int(channel.recv(8))
+    print(pid)
+    pids.append(pid)
+
+  while True:
+    cnt = 0
+    for i, channel in enumerate(channels):
+      if channel.recv_ready():
+        print('[RANK:%d]' % i, channel.recv(1024), end='')
+      if channel.recv_stderr_ready():
+        print('[RANK:%d]' % i, channel.recv_stderr(1024), end='')
+      if not channel.recv_ready() and not channel.recv_stderr_ready():
+        if channel.exit_status_ready():
+          cnt = cnt + 1
+    if cnt == args.np:
+      break
+except KeyboardInterrupt:
+  pass
+
+print("EXIT ALL")
+
+for i, channel in enumerate(channels):
+  channel.close()
+  ssh_clients[i].exec_command('kill -9 %d' % pids[i])
+  ssh_clients[i].close()

@@ -355,7 +355,14 @@ Tensor* ConsensusManager::send_tensor(const string& name) {
 }
 
 bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
-  return false;
+  bool result = false;
+  for (auto rvar : remote_variables_) {
+    int ret = rvar->EnqueueSenderCandidate(src_rank);
+    if (ret >= 0) {
+      result = true;
+    }
+  }
+  return result;
 #if 0
 #if 0
   std::lock_guard<std::mutex> rcv_guard(rcv_mu_);
@@ -435,7 +442,7 @@ int ConsensusManager::OpenReceive() {
 #endif
 
 int ConsensusManager::GetGlcTensor(const int& idx, Tensor*& out) {
-  auto&& var = remote_variables_[idx];
+  auto var = remote_variables_[idx];
   int ret = var->GetGlcTensor(out);
   return ret;
 }
@@ -692,7 +699,10 @@ int ConsensusManager::ProcessReceive() {
 }
 
 int ConsensusManager::get_peer() {
-  return peer_selector_->get_peer();
+  if (peer_selector_ != nullptr) {
+    return peer_selector_->get_peer();
+  }
+  return -1;
 }
 
 void ConsensusManager::next_peer() {
@@ -753,11 +763,11 @@ void* ConsensusManager::buf_ptr(const BufType type, const string& name) {
       idx = it2->second;
     } else {
       LOG(ERROR) << "name not exist: type=" << type << ", name=" << name;
-      exit(EXIT_FAILURE);
+      return NULL;
     }
   } else {
     LOG(ERROR) << "BufType not exist: type=" << type;
-    exit(EXIT_FAILURE);
+    return NULL;
   }
   /// Found
   if (idx >= 0) {
@@ -806,9 +816,29 @@ void ConsensusManager::ProcessAggregation(int idx) {
 #endif
 }
 
+RemoteVariable* ConsensusManager::remote_variable(int idx) {
+  if (idx < ptre_size_) {
+    return remote_variables_[idx];
+  }
+  return NULL;
+}
+
+RemoteVariable* ConsensusManager::remote_variable(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    return NULL;
+  }
+  int idx = search->second;
+  return remote_variable(idx);
+}
 
 std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
   return remote_variables_;
+}
+
+const std::vector<string>& ConsensusManager::variable_names() {
+  return var_names_;
 }
 
 }  // namespace ptre

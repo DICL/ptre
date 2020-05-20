@@ -53,7 +53,7 @@ def _get_remote_variable(var_name):
   return PTRE_LIB.get_remote_variable(var_name=var_name)
 
 def register_variables(variables):
-  names = [ v.name for v in var_list ]
+  names = [ v.name for v in variables ]
   PTRE_LIB.register_variables(variables, names=names)
 
 def init_global_consensus(var_list):
@@ -81,9 +81,6 @@ def set_broadcast_not_done():
 
 def synchronization_barrier():
   PTRE_CDLL.ptre_synchronization_barrier()
-
-def init_num_rcv_tensors():
-  PTRE_CDLL.ptre_init_num_rcv_tensors()
 
 def count_step():
   PTRE_CDLL.ptre_count_step()

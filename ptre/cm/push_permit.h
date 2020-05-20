@@ -2,6 +2,7 @@
 #define PTRE_CM_PUSH_PERMIT_H_
 
 #include <deque>
+#include <map>
 
 namespace ptre {
 
@@ -14,7 +15,7 @@ class Permit {
  public:
   int* data() { return &permit_; }
   int value() { return permit_; }
-  void Enqueue(int src_rank, int rcv_state);
+  int Enqueue(int src_rank, int rcv_state);
   void SwapPendingQueue();
   void Next();
   void SetValue(int value);
@@ -23,6 +24,7 @@ class Permit {
   int permit_;
   std::deque<int> dq_;
   std::deque<int> dq_pending_;
+  std::map<int, bool> checker_;
 };
 
 }  // namespace ptre

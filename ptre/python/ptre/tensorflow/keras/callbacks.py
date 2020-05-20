@@ -16,35 +16,49 @@ class InitTrainableVariablesCallback(Callback):
   def on_train_begin(self, logs={}):
     ptre.register_variables(self.model.trainable_variables)
 
-  def on_batch_begin(self, batch, logs={}):
-    ptre.set_local_step(self._step)
-
-  def on_batch_end(self, batch, logs={}):
-    ptre.count_step()
-    if self._step == 0:
-      ptre.init_num_rcv_tensors()
-    self._step = self._step + 1
-
 class BroadcastModelCallback(Callback):
   def __init__(self, root_rank):
     super(BroadcastModelCallback, self).__init__()
     self._broadcast_done = False
     self._root_rank = root_rank
 
-  def on_batch_end(self, batch, logs=None):
+  #def on_batch_end(self, batch, logs=None):
+  def on_train_begin(self, logs={}):
     if self._broadcast_done:
       return
-    elem_before = self.model.variables[0].numpy()[0][0][0][0]
     #self.model.variables
     #self.model.optimizer.variables()
     ptre.broadcast_variables(self.model.variables, self._root_rank)
-    ptre.synchronization_barrier()
-    elem_after = self.model.variables[0].numpy()[0][0][0][0]
-    print("\n[DEBUG] BroadcastModelCallback"
-          "\nBefore: {}"
-          "\nAfter : {}".format(elem_before, elem_after))
+    #ptre.synchronization_barrier()
     self._broadcast_done = True
 
+class Print1(Callback):
+  def __init__(self):
+    super(Print1, self).__init__()
+  def on_train_begin(self, logs={}):
+    elem_before = self.model.variables[0].numpy().ravel()[0]
+    print("ELEM BEFORE:", elem_before)
+
+class Print2(Callback):
+  def __init__(self):
+    super(Print2, self).__init__()
+  def on_train_begin(self, logs={}):
+    elem = self.model.variables[0].numpy().ravel()[0]
+    print("ELEM AFTER:", elem)
+
+class Print3(Callback):
+  def __init__(self):
+    super(Print3, self).__init__()
+  def on_batch_end(self, batch, logs={}):
+    elem = self.model.variables[0].numpy().ravel()[0]
+    print("ELEM0:", elem)
+
+class DelayBatchEnd(Callback):
+  def __init__(self, duration_sec):
+    super(DelayBatchEnd, self).__init__()
+    self._duration_sec = duration_sec
+  def on_batch_end(self, batch, logs={}):
+    time.sleep(self._duration_sec)
 
 class PushModelCallback(Callback):
   def __init__(self, period=10):
@@ -53,6 +67,7 @@ class PushModelCallback(Callback):
     self._period = period
 
   def on_batch_begin(self, batch, logs=None):
+    ptre.set_local_step(self._step)
     if (self._step + 1) % self._period == 0:
       ptre.set_push()
     else:

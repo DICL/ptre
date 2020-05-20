@@ -130,7 +130,10 @@ class ConsensusManager {
   int rcv_steps_sum() { return rcv_steps_sum_; }
   int num_apply_ops() { return num_rcv_tensors_; }
   //TensorAggregator* tensor_aggregator() { return tensor_aggregator_; }
+  RemoteVariable* remote_variable(int idx);
+  RemoteVariable* remote_variable(const string& var_name);
   std::vector<RemoteVariable*>& remote_variables();
+  const std::vector<string>& variable_names();
 
   std::mutex send_mu_;
   std::condition_variable send_cv_;

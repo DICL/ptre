@@ -5,7 +5,6 @@ from __future__ import print_function
 from ptre.tensorflow import init
 from ptre.tensorflow import finalize
 from ptre.tensorflow import rank, size
-from ptre.tensorflow import enqueue_push
 from ptre.tensorflow import push_model
 from ptre.tensorflow import is_new_incoming, get_incoming
 from ptre.tensorflow import resource_modelaverage
@@ -282,7 +281,7 @@ def create_modelaverage_optimizer(optimizer, name, apply_after_reduce):
            dict(_Custom2.__dict__))
   return cls(name, optimizer.get_config())
 
-def ModelaverageOptimizer(optimizer, name=None, apply_after_reduce=False):
+def ModelaverageOptimizer(optimizer, name=None, apply_after_reduce=True):
   return create_modelaverage_optimizer(optimizer, name, apply_after_reduce)
 #
 #def modelaverage(tensor):

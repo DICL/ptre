@@ -15,14 +15,17 @@ class RemoteVariable {
  public:
   RemoteVariable(const Tensor& var);
   void StartRecv();
-  void EnqueueSenderCandidate(int src_rank);
+  int EnqueueSenderCandidate(int src_rank);
   void StopRecv();
+  void NewIncoming(int src_rank);
   void SetAggState(int state);
   void Aggregate();
   int AggCount();
   int GetGlcTensor(Tensor*& out);
   void* rcv_data();
   size_t rcv_length();
+  int agg_count();
+  Tensor* tensor();
   void* permit_data();
 
  private:

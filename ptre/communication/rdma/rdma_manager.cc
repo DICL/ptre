@@ -673,7 +673,13 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
 }
 
 struct ibv_mr* RdmaManager::GetMR(const BufType buf_type, const string& name) {
-  return mrs_[buf_type][name];
+  if (mrs_.find(buf_type) != mrs_.end()) {
+    auto&& inner = mrs_[buf_type];
+    if (inner.find(name) != inner.end()) {
+      return inner[name];
+    }
+  }
+  return NULL;
 }
 
 void RdmaManager::SetRemoteAddress(int dst_rank, const BufType buf_type,
@@ -1087,16 +1093,16 @@ int RdmaManager::ReceivePushNotify(int dst) {
   struct ibv_recv_wr* bad_wr;
   ret = ibv_post_recv(qp, wr, &bad_wr);
   struct ibv_wc wc;
-  ret = ibv_poll_cq(cq, 1, &wc);
-  if (ret > 0) {
+  int num_comps = ibv_poll_cq(cq, 1, &wc);
+  if (num_comps > 0) {
     if (wc.status == IBV_WC_SUCCESS) {
+      //LOG(INFO) << "ret=" << ret << ": " << std::strerror(ret) << ", errno=" << errno << ": " << std::strerror(errno);
       // Write done
       uint32_t idx = wc.imm_data;
       return idx;
     } else {
       LOG(ERROR) << "Failed to poll recv CQ for rank=" << dst << ": status="
           << wc.status;
-      exit(EXIT_FAILURE);
     }
   }
   return -1;
@@ -1141,8 +1147,17 @@ bool RdmaManager::IsPushReady(const string& var_name) {
 struct ibv_context* RdmaManager::ctx() {
   return ctx_;
 }
+struct ibv_port_attr RdmaManager::port_attr() {
+  return port_attr_;
+}
 struct ibv_pd* RdmaManager::pd() {
   return pd_;
+}
+struct ibv_qp* RdmaManager::qp(int dst) {
+  if (dst < qps_.size()) {
+    return qps_[dst];
+  }
+  return NULL;
 }
 //struct ibv_qp* RdmaManager::qp(int dest_rank) { return qps_[dest_rank]; }
 //struct ibv_cq* RdmaManager::send_cq(int dst) { return send_cqs_[dst]; }

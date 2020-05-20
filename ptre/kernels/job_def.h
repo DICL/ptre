@@ -30,7 +30,7 @@ class PushTask {
 
 class PushJob {
  public:
-  PushJob(PushRequest* request, int dst);
+  PushJob(PushRequest* request, int dst, const std::vector<string>& var_names);
   std::queue<std::shared_ptr<PushTask>>& q();
   PushRequest* request();
   void set_dst(int dst);
@@ -44,7 +44,8 @@ class PushJob {
 
 class PushRequest {
  public:
-  PushRequest(int num_push, int step, int comm_size);
+  PushRequest(int num_push, int step, int comm_size,
+      const std::vector<string>& var_names);
   std::queue<std::shared_ptr<PushJob>>& q();
   bool checker(int dst);
   void check(int dst);

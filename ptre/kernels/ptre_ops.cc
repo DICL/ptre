@@ -2,6 +2,8 @@
 
 #define EIGEN_USE_THREADS
 
+#include "ptre/kernels/ptre_ops.h"
+
 #include <atomic>
 #include <chrono>
 #include <fstream>
@@ -22,9 +24,7 @@
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/communication/rdma/rdma_manager.h"
-#include "ptre/kernels/ptre_ops.h"
-#include "ptre/tensorflow/types.h"
-//#include "ptre/kernels/job_def.h"
+//#include "ptre/tensorflow/types.h"
 #include "ptre/kernels/job_def.h"
 #include "ptre/lib/cache_ctl.h"
 #include "tensorflow/core/framework/op.h"
@@ -105,6 +105,7 @@ struct PtreGlobal {
   std::thread grpc_server_thread;
   std::thread push_thread;
   std::thread aggregation_thread;
+  std::thread receive_thread;
 
   int rank;
   int size;
@@ -132,6 +133,7 @@ struct PtreGlobal {
   int push_op_cnt = 0;
 
   int num_push = 1;
+  int peer_selector = 0;
   bool ever_pushed = false;
   std::atomic<int> ma_op_cnt;
   std::atomic<int> ma_op_cnt2;
@@ -148,14 +150,16 @@ struct PtreGlobal {
 
   ~PtreGlobal() {
     if (push_thread.joinable()) {
-      //shut_down = true;
       push_thread.join();
     }
     if (grpc_server_thread.joinable()) {
       grpc_server_thread.join();
     }
-    if (push_thread.joinable()) {
+    if (aggregation_thread.joinable()) {
       aggregation_thread.join();
+    }
+    if (receive_thread.joinable()) {
+      receive_thread.join();
     }
     if (rdma_manager != nullptr) {
       delete rdma_manager;
@@ -165,9 +169,10 @@ struct PtreGlobal {
 
 static PtreGlobal ptre_global;
 
+}  // namespace
+
 void RunGrpcServer() {
   auto&& service = ptre_global.grpc_service;
-  service.SetRdmaManager(ptre_global.rdma_manager);
   service.SetBarrierVariable(&ptre_global.barrier_variable);
   std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;
@@ -345,6 +350,7 @@ int ProcessPushTask(std::shared_ptr<PushTask> task) {
     }
     int push_ret = ptre_global.rdma_manager->PushAndNotify(dst,
         task->var_name());
+    //LOG(INFO) << "PUSH " << "step=" << ptre_global.local_step << ", var_name=" << task->var_name() << ", to=" << dst << ", ret=" << push_ret;
     if (push_ret) {
       return 4;
     }
@@ -365,21 +371,30 @@ void PushThreadLoop() {
       continue;
     }
     auto req = req_q.front();
+//LOG(INFO) << "req.use_count()=" << req.use_count();
     auto&& job_q = req->q();
+//LOG(INFO) << "job_q.size()=" << job_q.size();
     if (job_q.size() == 0) {
       req_q.pop();
+//LOG(INFO) << "req.use_count()=" << req.use_count();
       req_mu.unlock();
       continue;
     }
     req_mu.unlock();
 
     auto job = job_q.front();
+//LOG(INFO) << "job.use_count()=" << job.use_count();
     job_q.pop();
+//LOG(INFO) << "job.use_count()=" << job.use_count();
 
     auto&& task_q = job->q();
+//LOG(INFO) << "task_q.size()=" << task_q.size();
     auto task = task_q.front();
+//LOG(INFO) << "task.use_count()=" << task.use_count();
     task_q.pop();
+//LOG(INFO) << "task.use_count()=" << task.use_count();
     int ret = ProcessPushTask(task);
+    //int ret = 0;
     if (ret) {
       if (ret == 2) {
         task_q.push(task);
@@ -394,7 +409,10 @@ void PushThreadLoop() {
 void AggregationThreadLoop() {
   while (!ptre_global.is_shutdown) {
     for (int i = 0; i < ptre_global.num_trainable_variables; i++) {
-      ptre_global.cm->ProcessAggregation(i);
+      auto rvar = ptre_global.cm->remote_variable(i);
+      if (rvar) {
+        rvar->Aggregate();
+      }
     }
   }
 }
@@ -402,7 +420,17 @@ void AggregationThreadLoop() {
 void ReceiveThreadLoop() {
   while (!ptre_global.is_shutdown) {
     for (int i = 0; i < ptre_global.size; i++) {
-      ptre_global.cm->ReceivePushNotify(i);
+      //ptre_global.cm->ReceivePushNotify(i);
+      int ret = ptre_global.rdma_manager->ReceivePushNotify(i);
+      if (ret >= 0) {
+        int idx = ret;
+        //LOG(INFO) << "RECV " << "step=" << ptre_global.local_step << ", idx=" << idx << ", from=" << i;
+        auto rvar = ptre_global.cm->remote_variable(idx);
+        if (rvar) {
+          rvar->NewIncoming(i);
+          //var->SetAggState(1);
+        }
+      }
     }
   }
 }
@@ -436,6 +464,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   // Init RdmaManager
   LOG(INFO) << "Init Rdma Manager";
   ptre_global.rdma_manager = new RdmaManager(size, rank);
+  ptre_global.grpc_service.SetRdmaManager(ptre_global.rdma_manager);
 
   // Connect Queue Pairs
   LOG(INFO) << "Connect Queue Pairs";
@@ -456,6 +485,8 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     }
     ptre_global.rdma_manager->ConnectQP(i, remote_qpn);
   }
+
+  LOG(INFO) << "[1/2] Done InitComm";
 }
 
 //namespace functor {
@@ -489,9 +520,12 @@ class RegisterVariablesOp : public OpKernel {
       inputs.push_back(&input);
     }
     LOG(INFO) << "Init Consensus Manager: num_trainable_vars=" << num_inputs;
+    ptre_global.num_trainable_variables = num_inputs;
     ptre_global.cm = new ConsensusManager(ptre_global.size, ptre_global.rank,
         inputs, names_);
     ptre_global.grpc_service.SetConsensusManager(ptre_global.cm);
+    ptre_global.cm->InitPeerSelector(ptre_global.peer_selector,
+        ptre_global.num_push);
 
     // Register MRs
     LOG(INFO) << "Register Memory Regions";
@@ -522,6 +556,20 @@ class RegisterVariablesOp : public OpKernel {
             ptre::BUF_TYPE_PUSH_PERMIT, names_[j], remote_addr, rkey);
       }
     }
+
+    // Init Aggregation Thread
+    LOG(INFO) << "Starting Aggregation Thread";
+    ptre_global.aggregation_thread = std::thread(AggregationThreadLoop);
+
+    // Init Receive Thread
+    LOG(INFO) << "Starting Receive Thread";
+    ptre_global.receive_thread = std::thread(ReceiveThreadLoop);
+
+    // Init Push Thread
+    LOG(INFO) << "Starting Push Thread";
+    ptre_global.push_thread = std::thread(PushThreadLoop);
+
+    LOG(INFO) << "[2/2] Done Registering Variables";
   }
  private:
   std::vector<string> names_;
@@ -842,11 +890,19 @@ class ModelaverageOp : public OpKernel {
 
     bool do_reduce = true;
     Tensor* ret;
-    int num_incomings = ptre_global.cm->GetGlcTensor(var_name_, ret);
+
+    int num_incomings = 0;
+    auto rvar = ptre_global.cm->remote_variable(var_name_);
+    if (rvar) {
+      rvar->StopRecv();
+      num_incomings = rvar->agg_count();
+      ret = rvar->tensor();
+    }
     if (num_incomings == 0) {
       do_reduce = false;
     }
     if (do_reduce) {
+      LOG(INFO) << "var_name=" << var_name_ << ", num_incomings=" << num_incomings;
       const Device& d = ctx->template eigen_device<Device>();
       const Tensor other(*ret);
 #if 1
@@ -900,7 +956,10 @@ class ModelaverageOp : public OpKernel {
       }
 #endif
     }
-    ptre_global.cm->OpenReceive(var_name_);
+    if (rvar) {
+      rvar->StartRecv();
+    }
+    //ptre_global.cm->OpenReceive(var_name_);
     //ptre_global.cm->CountReduce(var_name_);
     //ptre_global.cm->CountReduceAndOpenRecv(var_name_);
   }
@@ -955,7 +1014,10 @@ void PtreClearQueueAndEnqueueRequest() {
   for (int i = 0; i < ptre_global.num_trainable_variables; i++) {
     ptre_global.rdma_manager->InitPush(i);
   }
-  req_q.emplace(ptre_global.num_push, ptre_global.local_step);
+  auto req = std::make_shared<PushRequest>(ptre_global.num_push,
+      ptre_global.local_step, ptre_global.size,
+      ptre_global.cm->variable_names());
+  req_q.push(req);
   req_mu.unlock();
 }
 
@@ -986,8 +1048,13 @@ class PushTensorOp : public OpKernel {
     LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
-    T* send_buf = (T*) ptre_global.cm->buf_ptr(ptre::BUF_TYPE_SEND_BUF,
+    struct ibv_mr* mr = ptre_global.rdma_manager->GetMR(ptre::BUF_TYPE_SEND_BUF,
         var_name_);
+    if (!mr) {
+      LOG(ERROR) << "buf not found: " << ptre::BUF_TYPE_SEND_BUF << ", " << var_name_;
+      exit(1);
+    }
+    T* send_buf = (T*) mr->addr;
     typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
 
@@ -1040,6 +1107,7 @@ extern "C" {
 int ptre_init(int size, int rank, char* grpc_hosts_file,
               int selection_strategy, int num_push) {
   tensorflow::ptre_global.num_push = num_push;
+  tensorflow::ptre_global.peer_selector = selection_strategy;
   tensorflow::InitComm(size, rank, grpc_hosts_file);
   //tensorflow::ptre_global.cm->InitPeerSelector(selection_strategy, num_push);
   //LOG(INFO) << "Peer selection strategy = " << selection_strategy;
@@ -1072,16 +1140,20 @@ void ptre_set_num_push(int num_push) {
 
 void ptre_set_push() {
   using tensorflow::ptre_global;
-  auto&& q = ptre_global.req_q;
+  //auto&& q = ptre_global.req_q;
   auto&& mu = ptre_global.req_q_mu;
   mu.lock();
   ptre_global.push_step_state = 1;
-  q.emplace(ptre_global.num_push, ptre_global.local_step);
+  //q.emplace(ptre_global.num_push, ptre_global.local_step);
   mu.unlock();
 }
 
 void ptre_unset_push() {
+  using tensorflow::ptre_global;
+  auto&& mu = ptre_global.req_q_mu;
+  mu.lock();
   tensorflow::ptre_global.push_step_state = 0;
+  mu.unlock();
 }
 
 void ptre_finalize(unsigned int wait_time) {

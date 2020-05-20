@@ -18,6 +18,12 @@ using std::string;
 
 class RdmaServiceImpl final : public Rdma::Service {
  public:
+  grpc::Status GetLID(grpc::ServerContext* context,
+                                const GetLIDRequest* request,
+                                GetLIDResponse* response) override;
+  grpc::Status GetQPAttr(grpc::ServerContext* context,
+                                const GetQPAttrRequest* request,
+                                GetQPAttrResponse* response) override;
   grpc::Status GetRemoteAddress(grpc::ServerContext* context,
                                 const GetRemoteAddressRequest* request,
                                 GetRemoteAddressResponse* response) override;

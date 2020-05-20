@@ -10,14 +10,45 @@ namespace ptre {
 //    t_->join();
 //  }
 //}
+grpc::Status RdmaServiceImpl::GetLID(grpc::ServerContext* ctx,
+                                const GetLIDRequest* req,
+                                GetLIDResponse* res) {
+  if (rdma_manager_ != nullptr) {
+    res->set_lid(rdma_manager_->port_attr().lid);
+    return grpc::Status::OK;
+  } else {
+    return grpc::Status::CANCELLED;
+  }
+}
+
+grpc::Status RdmaServiceImpl::GetQPAttr(grpc::ServerContext* ctx,
+                                const GetQPAttrRequest* req,
+                                GetQPAttrResponse* res) {
+  if (rdma_manager_ != nullptr) {
+    int src_rank = req->src_rank();
+    struct ibv_qp* qp = rdma_manager_->qp(src_rank);
+    if (qp) {
+      res->set_qpn(qp->qp_num);
+      // TODO: Support Custom PSN
+      res->set_psn(0);
+      return grpc::Status::OK;
+    }
+  }
+  return grpc::Status::CANCELLED;
+}
 
 grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* ctx,
                                 const GetRemoteAddressRequest* req,
                                 GetRemoteAddressResponse* res) {
-  struct ibv_mr* mr = rdma_manager_->GetMR(req->buf_type(), req->var_name());
-  res->set_remote_addr((uint64_t) mr->addr);
-  res->set_rkey(mr->rkey);
-  return grpc::Status::OK;
+  if (rdma_manager_ != nullptr) {
+    struct ibv_mr* mr = rdma_manager_->GetMR(req->buf_type(), req->var_name());
+    if (mr) {
+      res->set_remote_addr((uint64_t) mr->addr);
+      res->set_rkey(mr->rkey);
+      return grpc::Status::OK;
+    }
+  }
+  return grpc::Status::CANCELLED;
 }
 
 grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,

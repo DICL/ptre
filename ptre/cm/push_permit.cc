@@ -15,17 +15,26 @@ bool Contains(std::deque<int>& dq, int elem) {
   return std::find(dq.begin(), dq.end(), elem) != dq.end();
 }
 
-void Permit::Enqueue(int src_rank, int rcv_state) {
+int Permit::Enqueue(int src_rank, int rcv_state) {
   if (rcv_state == 1 && !Contains(dq_, src_rank)) {
-    dq_.push_back(src_rank);
+    if (checker_.find(src_rank) == checker_.end()) {
+      checker_[src_rank] = true;
+      dq_.push_back(src_rank);
+      return 0;
+    }
   } else {
     if (!Contains(dq_pending_, src_rank)) {
       dq_pending_.push_back(src_rank);
+      return 1;
+    } else {
+      return 2;
     }
   }
+  return -1;
 }
 
 void Permit::SwapPendingQueue() {
+  checker_.clear();
   dq_.swap(dq_pending_);
 }
 
@@ -42,6 +51,7 @@ void Permit::Next() {
 
 void Permit::SetValue(int value) {
   permit_ = value;
+  cache_ctl::clflush((char*) &permit_, sizeof(permit_));
 }
 
 }  // namespace ptre

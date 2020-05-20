@@ -114,8 +114,9 @@ class RdmaManager {
 
   int rank() { return ptre_rank_; }
   struct ibv_context* ctx();
+  struct ibv_port_attr port_attr();
   struct ibv_pd* pd();
-  struct ibv_qp* qp(int dest_rank) { return qps_[dest_rank]; }
+  struct ibv_qp* qp(int dst);
   struct ibv_cq* send_cq(int dst) { return send_cqs_[dst]; }
   struct ibv_cq* recv_cq(int dst) { return recv_cqs_[dst]; }
 #if 0

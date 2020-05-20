@@ -55,17 +55,26 @@ void RemoteVariable::StartRecv() {
   permit_->Next();
 }
 
-void RemoteVariable::EnqueueSenderCandidate(int src_rank) {
+int RemoteVariable::EnqueueSenderCandidate(int src_rank) {
   std::lock_guard<std::mutex> guard(mu_);
-  permit_->Enqueue(src_rank, rcv_state_);
-  if (rcv_state_ == 1 && permit_->value() == -1) {
+  int ret = permit_->Enqueue(src_rank, rcv_state_);
+  if (!ret && rcv_state_ == 1 && permit_->value() == -1) {
     permit_->Next();
   }
+  return ret;
 }
 
 void RemoteVariable::StopRecv() {
   std::lock_guard<std::mutex> guard(mu_);
   rcv_state_ = 0;
+  permit_->SetValue(-1);
+}
+
+void RemoteVariable::NewIncoming(int src_rank) {
+  std::lock_guard<std::mutex> guard(mu_);
+  if (rcv_state_ == 1 && permit_->value() == src_rank) {
+    agg_state_ = 1;
+  }
   permit_->SetValue(-1);
 }
 
@@ -108,6 +117,14 @@ void* RemoteVariable::rcv_data() {
 
 size_t RemoteVariable::rcv_length() {
   return rcv_length_;
+}
+
+int RemoteVariable::agg_count() {
+  return agg_cnt_;
+}
+
+Tensor* RemoteVariable::tensor() {
+  return tensor_;
 }
 
 void* RemoteVariable::permit_data() {

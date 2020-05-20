@@ -35,9 +35,14 @@ int PushJob::dst() {
   return dst_;
 }
 
-PushJob::PushJob(PushRequest* request, int dst) {
+PushJob::PushJob(PushRequest* request, int dst,
+    const std::vector<string>& var_names) {
   dst_ = dst;
   request_ = request;
+  for (auto&& name : var_names) {
+    auto task = std::make_shared<PushTask>(this, -1, name);
+    q_.push(task);
+  }
 }
 
 std::queue<std::shared_ptr<PushTask>>& PushJob::q() {
@@ -48,13 +53,14 @@ PushRequest* PushJob::request() {
   return request_;
 }
 
-PushRequest::PushRequest(int num_push, int step, int comm_size) {
+PushRequest::PushRequest(int num_push, int step, int comm_size,
+    const std::vector<string>& var_names) {
   num_push_ = num_push;
   step_ = step;
   comm_size_ = comm_size;
   checker_.resize(comm_size_);
   for (int i = 0; i < num_push; i++) {
-    std::shared_ptr<PushJob> job(new PushJob(this, -1));
+    std::shared_ptr<PushJob> job(new PushJob(this, -1, var_names));
     q_.push(job);
   }
 }
