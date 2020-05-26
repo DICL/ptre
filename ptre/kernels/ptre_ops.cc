@@ -4,6 +4,7 @@
 
 #include "ptre/kernels/ptre_ops.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <fstream>
@@ -15,6 +16,7 @@
 #include <typeinfo>
 #include <unistd.h>
 #include <vector>
+#include <functional>
 
 #include <infiniband/verbs.h>
 
@@ -83,12 +85,31 @@ struct PtreGlobal {
     }
     //push_op_cnt[0] = 0;
 
-    /// Init barrier variables
-    barrier_counter = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
-    barrier_release = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
-    memset(barrier_counter, 0, 8);
-    memset(barrier_release, 0, 8);
+
+    // Counters
+    agg_cnt_total = 0;
+    rcv_cnt_total = 0;
+    send_cnt_total = 0;
   }
+
+  ~PtreGlobal() {
+    if (push_thread.joinable()) {
+      push_thread.join();
+    }
+    if (grpc_server_thread.joinable()) {
+      grpc_server_thread.join();
+    }
+    if (aggregation_thread.joinable()) {
+      aggregation_thread.join();
+    }
+    if (receive_thread.joinable()) {
+      receive_thread.join();
+    }
+    if (rdma_manager != nullptr) {
+      delete rdma_manager;
+    }
+  }
+
   ConsensusManager* cm = nullptr;
   RdmaManager* rdma_manager = nullptr;
   std::mutex mu;
@@ -127,8 +148,10 @@ struct PtreGlobal {
 
   bool barrier_variable = false;
   bool is_broadcast_done = true;
+  std::vector<string> trainable_var_names;
 
   // PushOp
+  std::map<string, std::mutex> push_var_mus;
   std::mutex push_op_mu;
   int push_op_cnt = 0;
 
@@ -144,27 +167,14 @@ struct PtreGlobal {
 
   std::mutex push_mu;
 
-  /// Barrier variables
-  uint64_t* barrier_counter;
-  uint64_t* barrier_release;
+  // Counter
+  std::vector<std::vector<int>> rcv_cnts;
+  std::atomic<int> agg_cnt_total;
+  std::atomic<int> rcv_cnt_total;
+  std::atomic<int> send_cnt_total;
+  std::vector<std::map<string, int>> agg_cnts;
 
-  ~PtreGlobal() {
-    if (push_thread.joinable()) {
-      push_thread.join();
-    }
-    if (grpc_server_thread.joinable()) {
-      grpc_server_thread.join();
-    }
-    if (aggregation_thread.joinable()) {
-      aggregation_thread.join();
-    }
-    if (receive_thread.joinable()) {
-      receive_thread.join();
-    }
-    if (rdma_manager != nullptr) {
-      delete rdma_manager;
-    }
-  }
+  std::map<string, int> push_success_cnt;
 };
 
 static PtreGlobal ptre_global;
@@ -178,8 +188,9 @@ void RunGrpcServer() {
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
+  //builder.SetMaxMessageSize(1 * 1024 * 1024 * 1024);
   ptre_global.grpc_server = builder.BuildAndStart();
-  std::cout << "Grpc server listening on " << server_address << std::endl;
+  //std::cout << "Grpc server listening on " << server_address << std::endl;
   ptre_global.grpc_server->Wait();
 }
 
@@ -205,17 +216,36 @@ void PtreSendZeroCopy(int dst_rank, std::shared_ptr<char> buf, size_t len,
 void PtreRecv(int src_rank, char* buf, size_t len, const string& name) {
   GrpcClient* grpc_client;
   ptre_global.grpc_client_cache->GetClient(src_rank, &grpc_client);
-  grpc_client->Recv(buf, len, name);
+  int ret = -1;
+  while (ret) {
+    ret = grpc_client->Recv(buf, len, name);
+  }
 }
 
 void PtreBroadcast(char* buf, size_t len, int root_rank, const string& name) {
   if (ptre_global.rank == root_rank) {
+    //LOG(INFO) << "BCASTSEND " << name << ": var[0]=" << ((float*) buf)[0];
     for (int i = 0; i < ptre_global.size; i++) {
       if (i == root_rank) continue;
       PtreSend(i, buf, len, name);
     }
   } else {
     PtreRecv(root_rank, buf, len, name);
+    //LOG(INFO) << "BCASTRECV " << name << ": var[0]=" << ((float*) buf)[0];
+  }
+}
+
+void PtreBarrier() {
+  int size = ptre_global.size;
+  if (size == 1) return;
+  int my_rank = ptre_global.rank;
+  int mask = 0x1;
+  while (mask < size) {
+    int dst = (my_rank + mask) % size;
+    PtreSend(dst, NULL, 0, "PtreBarrier");
+    int src = (my_rank - mask + size) % size;
+    PtreRecv(src, NULL, 0, "PtreBarrier");
+    mask <<= 1;
   }
 }
 
@@ -331,7 +361,8 @@ int SelectPeer(PushRequest* req) {
 //  3: No available peer
 int ProcessPushTask(std::shared_ptr<PushTask> task) {
   // TODO: fix not to use this coarse-grained lock
-  std::lock_guard<std::mutex> guard(ptre_global.push_op_mu);
+  //std::lock_guard<std::mutex> guard(ptre_global.push_op_mu);
+  std::lock_guard<std::mutex> guard(ptre_global.push_var_mus[task->var_name()]);
   if (ptre_global.rdma_manager->IsPushReady(task->var_name())) {
     int dst = task->dst();
     if (dst < 0) {
@@ -348,13 +379,85 @@ int ProcessPushTask(std::shared_ptr<PushTask> task) {
       dst = job->dst();
       task->set_dst(dst);
     }
+#if 1
     int push_ret = ptre_global.rdma_manager->PushAndNotify(dst,
         task->var_name());
-    //LOG(INFO) << "PUSH " << "step=" << ptre_global.local_step << ", var_name=" << task->var_name() << ", to=" << dst << ", ret=" << push_ret;
-    if (push_ret) {
-      return 4;
+#else
+    int push_ret = 1;
+    GrpcClient* client;
+    ptre_global.grpc_client_cache->GetClient(dst, &client);
+    int read_permit = client->GetPermit(task->var_name());
+    if (read_permit == ptre_global.rank) {
+      struct ibv_mr* send_mr = ptre_global.rdma_manager->GetMR(
+          ptre::BUF_TYPE_SEND_BUF, task->var_name());
+      uint64_t remote_addr;
+      uint32_t rkey;
+      ptre_global.rdma_manager->GetRemoteAddress(dst, ptre::BUF_TYPE_RECV_BUF,
+          task->var_name(), &remote_addr, &rkey);
+
+      void* before_push = malloc(send_mr->length);
+      int bp_ret = ptre_global.rdma_manager->RdmaRead(dst,
+          ptre::BUF_TYPE_RECV_BUF, task->var_name(), before_push,
+          send_mr->length);
+
+      //uint32_t imm_data = ptre_global.cm->var_name_to_index(task->var_name());
+      push_ret = ptre_global.rdma_manager->RdmaWrite(dst,
+          ptre::BUF_TYPE_RECV_BUF, task->var_name(), send_mr, send_mr->length);
+
+      void* read_buf = malloc(send_mr->length);
+      int read_ret = ptre_global.rdma_manager->RdmaRead(dst,
+          ptre::BUF_TYPE_RECV_BUF, task->var_name(), read_buf, send_mr->length);
+
+      int cmp_ret = -1;
+      if (!read_ret) {
+        cmp_ret = memcmp((void*) send_mr->addr, read_buf, send_mr->length);
+        if (cmp_ret) {
+          int idx = cmp_ret;
+          if (idx < 0) {
+            idx *= -1;
+          }
+          idx = idx / sizeof(float);
+          for (int i = (idx < 1) ? 0 : idx - 1; i <= idx; i++) {
+            if (((float*) send_mr->addr)[i] != ((float*) read_buf)[i]) {
+              LOG(INFO) << "\n"
+                  << task->var_name() << ": cmp_ret=" << cmp_ret << "\n"
+                  << "READ1: read[" << i << "]=" << ((float*) before_push)[i] << "\n"
+                  << "PUSH:  send[" << i << "]=" << ((float*) send_mr->addr)[i] << "\n"
+                  << "READ2: read[" << i << "]=" << ((float*) read_buf)[i] << "\n";
+              break;
+            }
+          }
+        }
+      } else {
+        LOG(INFO) << "\n"
+            << "READ PUSH " << task->var_name() << ":\n"
+            << "FAILED";
+      }
+      free(read_buf);
+      free(before_push);
+      if (read_ret) {
+        LOG(ERROR) << "Read Failed: " << task->var_name() << ", rank=" << dst << " (ret=" << read_ret << ")";
+        return 2;  // Retry
+      }
+      if (cmp_ret) {
+        return 2;  // Retry
+      }
     }
-    return 0;  // Success
+#endif
+    //LOG(INFO) << "PUSH " << "step=" << ptre_global.local_step << ", var_name=" << task->var_name() << ", to=" << dst << ", ret=" << push_ret;
+    if (!push_ret) {
+      //client->NotifyPushDone(task->var_name());
+      //ptre_global.push_success_cnt[task->var_name()]++;
+      return 0;  // Success
+    } else {
+      if (push_ret == 1) {
+        // 1: Permit Not Match
+        //LOG (INFO) << "Failed PushAndNotify for " << task->var_name() << ", " << push_ret;
+        return 2;
+      }
+      LOG(ERROR) << "Push Failed " << task->var_name() << ": ret=" << push_ret;
+      return 2;
+    }
   } else {
     return 2;  // Send buffer is not ready yet
   }
@@ -371,38 +474,40 @@ void PushThreadLoop() {
       continue;
     }
     auto req = req_q.front();
-//LOG(INFO) << "req.use_count()=" << req.use_count();
     auto&& job_q = req->q();
-//LOG(INFO) << "job_q.size()=" << job_q.size();
     if (job_q.size() == 0) {
       req_q.pop();
-//LOG(INFO) << "req.use_count()=" << req.use_count();
       req_mu.unlock();
       continue;
     }
     req_mu.unlock();
 
     auto job = job_q.front();
-//LOG(INFO) << "job.use_count()=" << job.use_count();
+    /*
     job_q.pop();
-//LOG(INFO) << "job.use_count()=" << job.use_count();
-
+    */
     auto&& task_q = job->q();
-//LOG(INFO) << "task_q.size()=" << task_q.size();
+    if (task_q.size() == 0) {
+      job_q.pop();
+      continue;
+    }
     auto task = task_q.front();
-//LOG(INFO) << "task.use_count()=" << task.use_count();
     task_q.pop();
-//LOG(INFO) << "task.use_count()=" << task.use_count();
     int ret = ProcessPushTask(task);
     //int ret = 0;
     if (ret) {
       if (ret == 2) {
         task_q.push(task);
       }
+    } else {
+      // Success
+      //ptre_global.send_cnt_total.fetch_add(1);
     }
+    /*
     if (task_q.size() > 0) {
       job_q.push(job);
     }
+    */
   }
 }
 
@@ -423,11 +528,13 @@ void ReceiveThreadLoop() {
       //ptre_global.cm->ReceivePushNotify(i);
       int ret = ptre_global.rdma_manager->ReceivePushNotify(i);
       if (ret >= 0) {
+        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
         int idx = ret;
         //LOG(INFO) << "RECV " << "step=" << ptre_global.local_step << ", idx=" << idx << ", from=" << i;
         auto rvar = ptre_global.cm->remote_variable(idx);
         if (rvar) {
           rvar->NewIncoming(i);
+          //ptre_global.rcv_cnt_total.fetch_add(1);
           //var->SetAggState(1);
         }
       }
@@ -444,9 +551,11 @@ void load_grpc_hosts(const string& grpc_hosts_file) {
     ptre_global.grpc_hosts.emplace_back(in_line);
   }
   in.close();
+  /*
   for (int i = 0; i < ptre_global.size; i++) {
     std::cout << ptre_global.grpc_hosts[i] << std::endl;
   }
+  */
 }
 
 void InitComm(int size, int rank, const string& grpc_hosts_file) {
@@ -521,6 +630,15 @@ class RegisterVariablesOp : public OpKernel {
     }
     LOG(INFO) << "Init Consensus Manager: num_trainable_vars=" << num_inputs;
     ptre_global.num_trainable_variables = num_inputs;
+    ptre_global.trainable_var_names = names_;
+    for (int i = 0; i < num_inputs; i++) {
+      ptre_global.push_success_cnt[names_[i]] = 0;
+      //ptre_global.push_var_mus.emplace(names_[i], std::mutex());
+      ptre_global.push_var_mus[names_[i]];
+    }
+
+    //ptre_global.rcv_cnts.resize(ptre_global.local_step + 1);
+    //ptre_global.rcv_cnts.back().resize(num_inputs);
     ptre_global.cm = new ConsensusManager(ptre_global.size, ptre_global.rank,
         inputs, names_);
     ptre_global.grpc_service.SetConsensusManager(ptre_global.cm);
@@ -894,15 +1012,23 @@ class ModelaverageOp : public OpKernel {
     int num_incomings = 0;
     auto rvar = ptre_global.cm->remote_variable(var_name_);
     if (rvar) {
+      //std::this_thread::sleep_for(std::chrono::seconds(1));
       rvar->StopRecv();
+      /*
+      int permit = rvar->permit();
+      ptre_global.rdma_manager->RdmaWrite(ptre_global.rank,
+          BUF_TYPE_PUSH_PERMIT, var_name_, (void*) &permit, sizeof(int));
+      */
       num_incomings = rvar->agg_count();
       ret = rvar->tensor();
     }
+    //ptre_global.rcv_cnts[ptre_global.local_step][ptre_global.cm->var_name_to_index(var_name_)]++;
+    //ptre_global.agg_cnt_total.fetch_add(num_incomings);
+    ptre_global.agg_cnts[ptre_global.local_step][var_name_] = num_incomings;
     if (num_incomings == 0) {
       do_reduce = false;
     }
     if (do_reduce) {
-      LOG(INFO) << "var_name=" << var_name_ << ", num_incomings=" << num_incomings;
       const Device& d = ctx->template eigen_device<Device>();
       const Tensor other(*ret);
 #if 1
@@ -910,6 +1036,10 @@ class ModelaverageOp : public OpKernel {
       Tensor m_(DataTypeToEnum<T>::v(), TensorShape({ }));
       m_.flat<T>()(0) = T(num_incomings + 1);
       const Tensor m(m_);
+      /*
+      LOG(INFO) << "\n" << "MAVG " << var_name_;
+      */
+      //usleep(100);
       functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
           other.flat<T>());
 #else
@@ -958,6 +1088,11 @@ class ModelaverageOp : public OpKernel {
     }
     if (rvar) {
       rvar->StartRecv();
+      /*
+      int permit = rvar->permit();
+      ptre_global.rdma_manager->RdmaWrite(ptre_global.rank,
+          BUF_TYPE_PUSH_PERMIT, var_name_, (void*) &permit, sizeof(int));
+      */
     }
     //ptre_global.cm->OpenReceive(var_name_);
     //ptre_global.cm->CountReduce(var_name_);
@@ -1018,6 +1153,10 @@ void PtreClearQueueAndEnqueueRequest() {
       ptre_global.local_step, ptre_global.size,
       ptre_global.cm->variable_names());
   req_q.push(req);
+  /*
+  LOG(INFO) << "SEND COUNT TOTAL = " << ptre_global.send_cnt_total;
+  ptre_global.send_cnt_total = 0;
+  */
   req_mu.unlock();
 }
 
@@ -1056,9 +1195,14 @@ class PushTensorOp : public OpKernel {
     }
     T* send_buf = (T*) mr->addr;
     typename TTypes<T>::Flat send_flat(send_buf, var.flat<T>().size());
+    /*
+    LOG(INFO) << "\n" << "COPYTOSENDBUF " << var_name_;
+    */
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
 
+    ptre_global.push_var_mus[var_name_].lock();
     ptre_global.rdma_manager->SetPushReady(var_name_);
+    ptre_global.push_var_mus[var_name_].unlock();
   }
  private:
   string var_name_;
@@ -1103,6 +1247,8 @@ REGISTER_KERNELS(GPU, double);
 
 
 extern "C" {
+
+using tensorflow::ptre_global;
 
 int ptre_init(int size, int rank, char* grpc_hosts_file,
               int selection_strategy, int num_push) {
@@ -1158,6 +1304,11 @@ void ptre_unset_push() {
 
 void ptre_finalize(unsigned int wait_time) {
   sleep(wait_time);
+  /*
+  for (auto it : ptre_global.push_success_cnt) {
+    LOG(INFO) << it.first << ": push_success_cnt=" << it.second;
+  }
+  */
   tensorflow::ShutdownGrpcServer();
   tensorflow::ptre_global.is_shutdown = true;
 }
@@ -1201,6 +1352,16 @@ void ptre_set_broadcast_not_done() {
 }
 #endif
 
+int rcv_cnt_last = 0;
+
+void ptre_print_recv_count() {
+  LOG(INFO) << "rcv_count(step=" << ptre_global.local_step << ") = "
+      << ptre_global.rcv_cnt_total - rcv_cnt_last;
+  rcv_cnt_last = ptre_global.rcv_cnt_total;
+  LOG(INFO) << "agg_count(step=" << ptre_global.local_step << ") = "
+      << ptre_global.agg_cnt_total;
+}
+
 void ptre_count_step() {
   //tensorflow::ptre_global.local_step++;
   tensorflow::ptre_global.virtual_step++;
@@ -1208,8 +1369,44 @@ void ptre_count_step() {
 }
 
 void ptre_set_local_step(int local_step) {
+  using tensorflow::ptre_global;
+  ptre_global.agg_cnt_total = 0;
+  /*
+  using std::string;
+  string a;
+  int sum = 0;
+  for (int i = 0; i < tensorflow::ptre_global.num_trainable_variables; i++) {
+    a.append(" " + std::to_string(tensorflow::ptre_global.rcv_cnts[tensorflow::ptre_global.local_step][i]));
+    sum += tensorflow::ptre_global.rcv_cnts[tensorflow::ptre_global.local_step][i];
+  }
+  LOG(INFO) << "rcv_cnts =" << a;
+  LOG(INFO) << "total = " << sum;
+  tensorflow::ptre_global.rcv_cnts.resize(local_step + 1);
+  tensorflow::ptre_global.rcv_cnts.back().resize(tensorflow::ptre_global.num_trainable_variables);
+  */
+
   tensorflow::ptre_global.local_step = local_step;
   tensorflow::ptre_global.cm->set_local_step(local_step);
+  ptre_global.agg_cnts.resize(local_step + 1);
+}
+
+void ptre_barrier() {
+  tensorflow::PtreBarrier();
+}
+
+void ptre_print_counter_summary() {
+  int n = ptre_global.agg_cnts.size();
+  for (auto&& name : ptre_global.trainable_var_names) {
+    int sum = 0;
+    std::vector<int> l;
+    for (int i = 1; i < n; i++) {
+      sum += ptre_global.agg_cnts[i][name];
+      l.push_back(ptre_global.agg_cnts[i][name]);
+    }
+    std::sort(l.begin(), l.end(), std::greater<int>());
+    LOG(INFO) << name << ": avg=" << (float) sum / (n - 1)
+        << ", mid=" << l[(n - 1) / 2];
+  }
 }
 
 }

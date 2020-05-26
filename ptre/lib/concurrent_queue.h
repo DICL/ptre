@@ -55,7 +55,8 @@ template <typename T>
 void ConcurrentQueue<T>::wait_and_pop(T& p) {
   std::unique_lock<std::mutex> lk(mu_);
   cv_.wait(lk, [&] { return !q_.empty(); });
-  p = std::move(q_.front());
+  //p = std::move(q_.front());
+  p = q_.front();
   q_.pop();
   lk.unlock();
 }

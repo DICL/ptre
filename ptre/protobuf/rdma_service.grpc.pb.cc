@@ -28,6 +28,7 @@ static const char* Rdma_method_names[] = {
   "/ptre.Rdma/Barrier",
   "/ptre.Rdma/Recv",
   "/ptre.Rdma/GetRemoteAddressV2",
+  "/ptre.Rdma/GetPermit",
 };
 
 std::unique_ptr< Rdma::Stub> Rdma::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -46,6 +47,7 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   , rpcmethod_Barrier_(Rdma_method_names[6], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_Recv_(Rdma_method_names[7], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetRemoteAddressV2_(Rdma_method_names[8], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetPermit_(Rdma_method_names[9], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Rdma::Stub::GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest& request, ::ptre::GetLIDResponse* response) {
@@ -228,6 +230,26 @@ void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* c
   return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, false);
 }
 
+::grpc::Status Rdma::Stub::GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::ptre::GetPermitResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_GetPermit_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>* Rdma::Stub::AsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetPermitResponse>::Create(channel_.get(), cq, rpcmethod_GetPermit_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>* Rdma::Stub::PrepareAsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetPermitResponse>::Create(channel_.get(), cq, rpcmethod_GetPermit_, context, request, false);
+}
+
 Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[0],
@@ -274,6 +296,11 @@ Rdma::Service::Service() {
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>(
           std::mem_fn(&Rdma::Service::GetRemoteAddressV2), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[9],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>(
+          std::mem_fn(&Rdma::Service::GetPermit), this)));
 }
 
 Rdma::Service::~Service() {
@@ -336,6 +363,13 @@ Rdma::Service::~Service() {
 }
 
 ::grpc::Status Rdma::Service::GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Rdma::Service::GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) {
   (void) context;
   (void) request;
   (void) response;

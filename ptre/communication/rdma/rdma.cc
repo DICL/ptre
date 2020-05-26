@@ -192,7 +192,7 @@ void rdma_qp_reset_to_rts(struct ibv_qp* qp, uint32_t remote_qpn,
       | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS);
   if (ret) {
     LOG(ERROR) << "Failed to modify QP to INIT: " << std::strerror(ret) << "(code=" << ret << ")";
-    exit(1);
+    return;  //exit(1);
   }
 
   /// INIT -> RTR
@@ -217,7 +217,8 @@ void rdma_qp_reset_to_rts(struct ibv_qp* qp, uint32_t remote_qpn,
       | IBV_QP_MIN_RNR_TIMER);
   if (ret) {
     LOG(ERROR) << "Failed to modify QP to RTR: " << std::strerror(ret) << "(code=" << ret << ")";
-    exit(1);
+    return;
+    //exit(1);
   }
 
   /// INIT -> RTS
@@ -247,7 +248,6 @@ void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
   while (cnt < num_comps) {
     struct ibv_wc& wc = wcs[cnt];
     int new_comps = ibv_poll_cq(cq, num_comps - cnt, &wc);
-    usleep(1);
     if (new_comps > 0) {
       for (int i = 0; i < new_comps; i++) {
         struct ibv_wc& curr_wc = wcs[cnt + i];

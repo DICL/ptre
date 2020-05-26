@@ -4,8 +4,9 @@
 #include <mutex>
 
 #include "ptre/cm/push_permit.h"
-#include "tensorflow/core/framework/tensor.h"
+#include "ptre/core/allocator.h"
 #include "ptre/tensorflow/types.h"
+#include "tensorflow/core/framework/tensor.h"
 
 namespace ptre {
 
@@ -14,6 +15,7 @@ using ::tensorflow::Tensor;
 class RemoteVariable {
  public:
   RemoteVariable(const Tensor& var);
+  RemoteVariable(const Tensor& var, Allocator* a);
   void StartRecv();
   int EnqueueSenderCandidate(int src_rank);
   void StopRecv();
@@ -26,6 +28,7 @@ class RemoteVariable {
   size_t rcv_length();
   int agg_count();
   Tensor* tensor();
+  int permit();
   void* permit_data();
 
  private:
@@ -33,6 +36,7 @@ class RemoteVariable {
   // Storage
   Tensor* tensor_;
   // Receive Buffer
+  Tensor* rcv_tensor_;
   void* rcv_buf_;
   size_t rcv_length_;
 

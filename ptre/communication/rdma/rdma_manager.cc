@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <chrono>
+#include <arpa/inet.h>
 
 #include "ptre/communication/rdma/rdma.h"
 //#include "ptre/cm/tensor_aggregator.h"
@@ -24,10 +25,12 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank) {
   // Create Completion Queues and Queue Pairs
   for (int i = 0; i < ptre_size_; i++) {
     // Send CQ
-    struct ibv_cq* send_cq = ibv_create_cq(ctx_, 100, NULL, NULL, 0);
+    struct ibv_cq* send_cq = ibv_create_cq(ctx_, MAX_CQE_DEFAULT,
+        NULL, NULL, 0);
     send_cqs_.push_back(send_cq);
     // Recv CQ
-    struct ibv_cq* recv_cq = ibv_create_cq(ctx_, 100, NULL, NULL, 0);
+    struct ibv_cq* recv_cq = ibv_create_cq(ctx_, MAX_CQE_DEFAULT,
+        NULL, NULL, 0);
     recv_cqs_.push_back(recv_cq);
     // QP
     struct ibv_qp* qp;
@@ -36,8 +39,8 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank) {
     qp_init_attr.send_cq = send_cq;
     qp_init_attr.recv_cq = recv_cq;
     qp_init_attr.qp_type = IBV_QPT_RC;
-    qp_init_attr.cap.max_send_wr = QP_MAX_WR_DEFAULT;
-    qp_init_attr.cap.max_recv_wr = QP_MAX_WR_DEFAULT;
+    qp_init_attr.cap.max_send_wr = MAX_QP_WR_DEFAULT;
+    qp_init_attr.cap.max_recv_wr = MAX_QP_WR_DEFAULT;
     qp_init_attr.cap.max_send_sge = 16;
     qp_init_attr.cap.max_recv_sge = 16;
     qp = ibv_create_qp(pd_, &qp_init_attr);
@@ -163,23 +166,38 @@ void RdmaManager::ConnectQP(int dst, uint32_t remote_qpn) {
 
 void RdmaManager::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
     const std::vector<string>& names) {
+  std::vector<size_t> sizes;
   for (int i = 0; i < vars.size(); i++) {
-    var_name_to_index_[names[i]] = i;
+    sizes.push_back(vars[i]->rcv_length());
+    sizes.push_back(sizeof(int));
+  }
+  allocator_ = new Allocator(sizes);
+
+  for (int i = 0; i < vars.size(); i++) {
     // Send/Recv Buffer for Variables
     size_t length = vars[i]->rcv_length();
     RegisterMR(BUF_TYPE_RECV_BUF, names[i], vars[i]->rcv_data(), length,
-        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-    PushVariable* pvar = new PushVariable(length);
+        IBV_ACCESS_LOCAL_WRITE
+        | IBV_ACCESS_REMOTE_WRITE
+        | IBV_ACCESS_REMOTE_READ);
+    /*
+    LOG(INFO) << names[i] << ": mr->length="
+        << GetMR(BUF_TYPE_RECV_BUF, names[i])->length;
+    */
+    PushVariable* pvar = new PushVariable(*vars[i]->tensor(), allocator_);
     push_variables_.push_back(pvar);
-    void* send_buf = push_variables_.back()->data();
-    RegisterMR(BUF_TYPE_SEND_BUF, names[i], send_buf, length,
-        IBV_ACCESS_LOCAL_WRITE);
+    void* send_buf = pvar->data();
+    RegisterMR(BUF_TYPE_SEND_BUF, names[i], send_buf, length, 0);
+        //IBV_ACCESS_LOCAL_WRITE);
     // Permit
     RegisterMR(BUF_TYPE_PUSH_PERMIT, names[i], vars[i]->permit_data(),
-        sizeof(int), IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ);
-    void* permit_read_buf = malloc(sizeof(int));
+        sizeof(int), IBV_ACCESS_REMOTE_READ);
+    //void* permit_read_buf = malloc(sizeof(int));
+    void* permit_read_buf = allocator_->Allocate(sizeof(int));
     RegisterMR(BUF_TYPE_PUSH_PERMIT_READ, names[i], permit_read_buf,
         sizeof(int), IBV_ACCESS_LOCAL_WRITE);
+
+    var_name_to_index_[names[i]] = i;
   }
 }
 
@@ -538,13 +556,18 @@ uint64_t RdmaManager::RdmaFetchAndAdd(const int dst_rank,
 }
 #endif
 
-int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
-    struct ibv_mr* read_mr, size_t read_length) {
+int RdmaManager::RdmaRead(int dst, const BufType buf_type,
+    const string& var_name, struct ibv_mr* read_mr, size_t read_length) {
   int ret;
   // Retrieve remote address
-  RemoteMR rmr = rmrs_[dst][buf_type][name];
-  uint64_t remote_addr = rmr.remote_addr;
-  uint32_t rkey = rmr.rkey;
+  uint64_t remote_addr;
+  uint32_t rkey;
+  ret = GetRemoteAddress(dst, buf_type, var_name, &remote_addr, &rkey);
+  if (ret) {
+    LOG(ERROR) << "Not found remote address for dst=" << dst
+        << "buf_type=" << buf_type << ", var_name=" << var_name;
+    return 1;
+  }
   // Init SGE
   struct ibv_sge sge;
   memset(&sge, 0, sizeof(sge));
@@ -570,16 +593,16 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
     struct ibv_send_wr* bad_wr;
     ret = ibv_post_send(qp, &wr, &bad_wr);
     if (ret) {
-      LOG(ERROR) << "Failed to ibv_post_send for read " << name << ":"
+      LOG(ERROR) << "Failed to ibv_post_send for read " << var_name << ":"
           << buf_type << " for rank " << dst;
-      exit(1);
+      return 2;
     }
     struct ibv_wc wc;
     ptre_poll_cq(send_cqs_[dst], 1, &wc);
     if (!wc.status) {
-      break;
+      return 0;
     } else {
-      LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
+      LOG(ERROR) << "Bad WC status=" << wc.status << " from Send CQ of RANK=" << dst << ", Starting to reset QP";
     }
     struct ibv_qp_attr attr;
     struct ibv_qp_init_attr init_attr;
@@ -590,7 +613,7 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
         &init_attr);
     if (ret) {
       LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
-      exit(1);
+      return 3;
     }
     if (attr.qp_state != IBV_QPS_RTS) {
       uint32_t dest_qp_num = attr.dest_qp_num;
@@ -598,7 +621,21 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
       LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
       rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
     }
+    return 5;
   }
+  return -1;
+}
+
+int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
+    void* read_buf, size_t read_length) {
+  struct ibv_mr* mr = ibv_reg_mr(pd_, read_buf, read_length,
+      IBV_ACCESS_LOCAL_WRITE);
+  if (!mr) {
+    LOG(ERROR) << "Failed to Register MR";
+    return 4;
+  }
+  int ret = RdmaRead(dst, buf_type, name, mr, read_length);
+  ibv_dereg_mr(mr);
   return ret;
 }
 
@@ -607,9 +644,14 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
     uint32_t* imm_data) {
   int ret;
   // Retrieve remote address
-  RemoteMR rmr = rmrs_[dst][buf_type][var_name];
-  uint64_t remote_addr = rmr.remote_addr;
-  uint32_t rkey = rmr.rkey;
+  uint64_t remote_addr;
+  uint32_t rkey;
+  ret = GetRemoteAddress(dst, buf_type, var_name, &remote_addr, &rkey);
+  if (ret) {
+    LOG(ERROR) << "Not found remote address for dst=" << dst
+        << "buf_type=" << buf_type << ", var_name=" << var_name;
+    return 1;
+  }
   // Init SGE
   struct ibv_sge sge;
   memset(&sge, 0, sizeof(sge));
@@ -625,32 +667,30 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
     wr.opcode = IBV_WR_RDMA_WRITE;
   } else {
     wr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
-    wr.imm_data = *imm_data;
+    wr.imm_data = htonl(*imm_data);
   }
   wr.send_flags = IBV_SEND_SIGNALED;
   wr.wr.rdma.remote_addr = remote_addr;
   wr.wr.rdma.rkey = rkey;
   // QP
   struct ibv_qp* qp = qps_[dst];
-  // Try RDMA read
   while (true) {
     // WR ID
-    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_READ, nullptr);
+    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_WRITE, nullptr);
     // Post send
     struct ibv_send_wr* bad_wr;
     ret = ibv_post_send(qp, &wr, &bad_wr);
     if (ret) {
       LOG(ERROR) << "Failed to ibv_post_send for write " << var_name << ":"
           << buf_type << " for rank " << dst;
-      exit(1);
+      return 2;
     }
     struct ibv_wc wc;
     ptre_poll_cq(send_cqs_[dst], 1, &wc);
     if (!wc.status) {
-      break;
-    } else {
-      LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
+      return 0;
     }
+    LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
     struct ibv_qp_attr attr;
     struct ibv_qp_init_attr init_attr;
     ret = ibv_query_qp(qp, &attr,
@@ -660,7 +700,7 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
         &init_attr);
     if (ret) {
       LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
-      exit(1);
+      return 3;
     }
     if (attr.qp_state != IBV_QPS_RTS) {
       uint32_t dest_qp_num = attr.dest_qp_num;
@@ -668,7 +708,21 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
       LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
       rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
     }
+    return 5;
   }
+  return -1;
+}
+
+int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
+    const string& var_name, void* send_buf, size_t send_length,
+    uint32_t* imm_data) {
+  struct ibv_mr* mr = ibv_reg_mr(pd_, send_buf, send_length, 0);
+  if (!mr) {
+    LOG(ERROR) << "Failed to register memory region";
+    return 4;
+  }
+  int ret = RdmaWrite(dst, buf_type, var_name, mr, send_length, imm_data);
+  ibv_dereg_mr(mr);
   return ret;
 }
 
@@ -687,11 +741,26 @@ void RdmaManager::SetRemoteAddress(int dst_rank, const BufType buf_type,
   rmrs_[dst_rank][buf_type].emplace(name, RemoteMR { remote_addr, rkey });
 }
 
-void RdmaManager::GetRemoteAddress(int dst_rank, const BufType buf_type,
+int RdmaManager::GetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, uint64_t* out_addr, uint32_t* out_rkey) {
-  RemoteMR rmr = rmrs_[dst_rank][buf_type][name];
+  auto dst_search = rmrs_.find(dst_rank);
+  if (dst_search == rmrs_.end()) {
+    return 1;
+  }
+  auto&& type_map = dst_search->second;
+  auto type_search = type_map.find(buf_type);
+  if (type_search == type_map.end()) {
+    return 2;
+  }
+  auto&& name_map = type_search->second;
+  auto name_search = name_map.find(name);
+  if (name_search == name_map.end()) {
+    return 3;
+  }
+  RemoteMR rmr = name_search->second;
   *out_addr = rmr.remote_addr;
   *out_rkey = rmr.rkey;
+  return 0;
 }
 
 void RdmaManager::ProcessCQ() {
@@ -1069,19 +1138,32 @@ int RdmaManager::NotifyPushDone(int dst_rank) {
 
 int RdmaManager::PushAndNotify(int dst, const string& var_name) {
   int ret;
+  int read_permit = -1;
   // 1. Read Permit Table
   struct ibv_mr* read_mr = mrs_[BUF_TYPE_PUSH_PERMIT_READ][var_name];
   ret = RdmaRead(dst, BUF_TYPE_PUSH_PERMIT, var_name, read_mr, sizeof(int));
-  ret = *((int*) read_mr->addr);
-  // 2. RDMA Write with IMM Data
-  if (ret != ptre_rank_) {
-    return 1;
+  //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  if (!ret) {
+    read_permit = *((int*) read_mr->addr);
   } else {
-    ibv_mr* send_mr = mrs_[BUF_TYPE_SEND_BUF][var_name];
+    LOG(ERROR) << "RDMA READ failed";
+    return -1;  // RDMA READ Failed
+  }
+  // 2. RDMA Write with IMM Data
+  if (read_permit == ptre_rank_) {
+    struct ibv_mr* send_mr = mrs_[BUF_TYPE_SEND_BUF][var_name];
     uint32_t imm_data = var_name_to_index_[var_name];
     ret = RdmaWrite(dst, BUF_TYPE_RECV_BUF, var_name, send_mr, send_mr->length,
         &imm_data);
-    return ret;
+    if (!ret) {
+      return 0;
+    } else {
+      LOG(ERROR) << "RDMA WRITE failed";
+      return -2;  // RDMA WRITE Failed
+    }
+  } else {
+    //LOG(ERROR) << "Permit Not Match: read_permit=" << read_permit;
+    return 1;  // permit differ
   }
 }
 
@@ -1098,11 +1180,27 @@ int RdmaManager::ReceivePushNotify(int dst) {
     if (wc.status == IBV_WC_SUCCESS) {
       //LOG(INFO) << "ret=" << ret << ": " << std::strerror(ret) << ", errno=" << errno << ": " << std::strerror(errno);
       // Write done
-      uint32_t idx = wc.imm_data;
+      uint32_t idx = ntohl(wc.imm_data);
       return idx;
     } else {
-      LOG(ERROR) << "Failed to poll recv CQ for rank=" << dst << ": status="
-          << wc.status;
+      LOG(ERROR) << "Bad WC status=" << wc.status << " from RECV CQ of RANK=" << dst << ", Starting to reset QP";
+      struct ibv_qp_attr attr;
+      struct ibv_qp_init_attr init_attr;
+      ret = ibv_query_qp(qp, &attr,
+            IBV_QP_STATE
+          | IBV_QP_AV
+          | IBV_QP_DEST_QPN,
+          &init_attr);
+      if (ret) {
+        LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
+        return 3;
+      }
+      if (attr.qp_state != IBV_QPS_RTS) {
+        uint32_t dest_qp_num = attr.dest_qp_num;
+        uint16_t dlid = attr.ah_attr.dlid;
+        LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
+        rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
+      }
     }
   }
   return -1;

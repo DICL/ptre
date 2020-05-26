@@ -1,15 +1,27 @@
 #include "ptre/cm/push_permit.h"
 
 #include <algorithm>
+#include <thread>
+#include <chrono>
 
 #include "ptre/lib/cache_ctl.h"
 
 namespace ptre {
 
 //void PermitScheduler::EnqueueRecvTask(int src_rank, int idx) {
-//  auto&& p = permit_table_[idx];
+//  auto&& p = buf_table_[idx];
 //  p->Enqueue(src_rank);
 //}
+
+Permit::Permit() {
+  buf_ = (int*) malloc(sizeof(int));
+  *buf_ = -1;
+}
+
+Permit::Permit(Allocator* a) {
+  buf_ = (int*) a->Allocate(sizeof(int));
+  *buf_ = -1;
+}
 
 bool Contains(std::deque<int>& dq, int elem) {
   return std::find(dq.begin(), dq.end(), elem) != dq.end();
@@ -40,18 +52,18 @@ void Permit::SwapPendingQueue() {
 
 void Permit::Next() {
   if (dq_.size() > 0) {
-    permit_ = dq_.front();
-    cache_ctl::clflush((char*) &permit_, sizeof(permit_));
+    *buf_ = dq_.front();
+    //cache_ctl::clflush((char*) &buf_, sizeof(buf_));
     dq_.pop_front();
   } else {
-    permit_ = -1;
-    cache_ctl::clflush((char*) &permit_, sizeof(permit_));
+    *buf_ = -1;
+    //cache_ctl::clflush((char*) &buf_, sizeof(buf_));
   }
 }
 
 void Permit::SetValue(int value) {
-  permit_ = value;
-  cache_ctl::clflush((char*) &permit_, sizeof(permit_));
+  *buf_ = value;
+  //cache_ctl::clflush((char*) &buf_, sizeof(buf_));
 }
 
 }  // namespace ptre

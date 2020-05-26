@@ -4,6 +4,8 @@
 #include <deque>
 #include <map>
 
+#include "ptre/core/allocator.h"
+
 namespace ptre {
 
 //class PermitScheduler {
@@ -13,15 +15,17 @@ namespace ptre {
 
 class Permit {
  public:
-  int* data() { return &permit_; }
-  int value() { return permit_; }
+  Permit();
+  Permit(Allocator* a);
+  int* data() { return buf_; }
+  int value() { return *buf_; }
   int Enqueue(int src_rank, int rcv_state);
   void SwapPendingQueue();
   void Next();
   void SetValue(int value);
 
  private:
-  int permit_;
+  int* buf_;
   std::deque<int> dq_;
   std::deque<int> dq_pending_;
   std::map<int, bool> checker_;

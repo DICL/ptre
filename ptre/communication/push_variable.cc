@@ -2,9 +2,16 @@
 
 namespace ptre {
 
-PushVariable::PushVariable(size_t length) {
-  buf_ = malloc(length);
-  length_ = length;
+PushVariable::PushVariable(const Tensor& var) {
+  //tensor_ = new Tensor(var.dtype(), var.shape());
+  length_ = var.AllocatedBytes();
+  buf_ = malloc(length_);
+  state_ = 0;
+}
+
+PushVariable::PushVariable(const Tensor& var, Allocator* a) {
+  length_ = var.AllocatedBytes();
+  buf_ = a->Allocate(length_);
   state_ = 0;
 }
 

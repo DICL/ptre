@@ -69,8 +69,19 @@ grpc::Status RdmaServiceImpl::NotifyPushDone(grpc::ServerContext* context,
                                       const NotifyPushDoneRequest* request,
                                       NotifyPushDoneResponse* response) {
   //std::cout << "\nServer got NotifyPushDone\n";
-  int src_rank = request->rank();
-  cm_->FinalizeRecv(src_rank);
+  usleep(100);
+  int src_rank = request->src_rank();
+  auto rvar = cm_->remote_variable(request->var_name());
+  if (rvar) {
+    struct ibv_mr* mr = rdma_manager_->GetMR(ptre::BUF_TYPE_RECV_BUF, request->var_name());
+    LOG(INFO) << "\n"
+        << "WRITTEN " << request->var_name() << ":\n"
+        << "rcv[0]=" << ((float*) rvar->rcv_data())[0] <<"\n"
+        << "rcv[15]=" << ((float*) rvar->rcv_data())[15] <<"\n"
+        << "rcv[16]=" << ((float*) rvar->rcv_data())[16] <<"\n"
+        << "addr=" << mr->addr << ", rkey=" << mr->rkey << ", rcv_buf=" << rvar->rcv_data();
+    rvar->NewIncoming(src_rank);
+  }
   return grpc::Status::OK;
 }
 
@@ -118,7 +129,18 @@ grpc::Status RdmaServiceImpl::Recv(grpc::ServerContext* context,
   mu_.unlock();
   string send_buf;
   q->wait_and_pop(send_buf);
-  response->set_buf(std::move(send_buf));
+  //LOG(INFO) << "WILLBESENT " << name << ": var[0]=" << ((float*) send_buf.data())[0];
+  response->set_buf(send_buf);
+  return grpc::Status::OK;
+}
+
+
+grpc::Status RdmaServiceImpl::GetPermit(grpc::ServerContext* context,
+    const GetPermitRequest* request, GetPermitResponse* response) {
+  auto rvar = cm_->remote_variable(request->var_name());
+  if (rvar) {
+    response->set_permit(rvar->permit());
+  }
   return grpc::Status::OK;
 }
 
@@ -148,7 +170,8 @@ void RdmaServiceImpl::Send(int dst_rank, char* buf, size_t len,
   auto&& q = q_map[name];
   mu_.unlock();
   string send_buf(buf, len);
-  q->push(std::move(send_buf));
+  //q->push(std::move(send_buf));
+  q->push(send_buf);
 }
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
 //  rdma_manager_ = rdma_manager;

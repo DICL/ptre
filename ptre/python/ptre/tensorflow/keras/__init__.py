@@ -4,6 +4,8 @@ from __future__ import print_function
 
 from ptre.tensorflow import init
 from ptre.tensorflow import finalize
+from ptre.tensorflow import barrier
+from ptre.tensorflow import print_counter_summary
 from ptre.tensorflow import rank, size
 from ptre.tensorflow import push_model
 from ptre.tensorflow import is_new_incoming, get_incoming

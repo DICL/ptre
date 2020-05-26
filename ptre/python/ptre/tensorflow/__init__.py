@@ -4,6 +4,8 @@ from __future__ import print_function
 
 from ptre.tensorflow.ptre_ops import _get_remote_variable
 from ptre.tensorflow.ptre_ops import broadcast
+from ptre.tensorflow.ptre_ops import barrier
+from ptre.tensorflow.ptre_ops import print_counter_summary
 from ptre.tensorflow.ptre_ops import connect_qps
 from ptre.tensorflow.ptre_ops import count_step
 from ptre.tensorflow.ptre_ops import finalize
@@ -24,6 +26,7 @@ from ptre.tensorflow.ptre_ops import set_broadcast_not_done
 from ptre.tensorflow.ptre_ops import set_local_step
 from ptre.tensorflow.ptre_ops import synchronization_barrier
 from ptre.tensorflow.ptre_ops import register_variables
+from ptre.tensorflow.ptre_ops import print_recv_count
 
 from ptre.tensorflow.util import _make_subgraph
 
@@ -48,9 +51,10 @@ def broadcast_variables(variables, root_rank):
 def init():
   parser = argparse.ArgumentParser(description='ptre run arguments',
       formatter_class=argparse.RawTextHelpFormatter)
-  parser.add_argument('--hostfile', required=True, type=str)
+  parser.add_argument('-hostfile', required=True, type=str)
   parser.add_argument('-np', required=True, type=int)
   parser.add_argument('-rank', required=True, type=int)
+  parser.add_argument('-num_push', default=1, type=int)
   args = parser.parse_args()
-  #ptre.init(1, 0, 'hosts', selection_strategy=0, num_push=1)
-  _init(args.np, args.rank, args.hostfile, selection_strategy=0, num_push=4)
+  _init(args.np, args.rank, args.hostfile, selection_strategy=0,
+      num_push=args.num_push)

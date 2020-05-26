@@ -2,12 +2,17 @@
 #define PTRE_COMMUNICATION_PUSH_VARIABLE_H_
 
 #include <mutex>
+#include "ptre/core/allocator.h"
+#include "tensorflow/core/framework/tensor.h"
 
 namespace ptre {
 
+using ::tensorflow::Tensor;
+
 class PushVariable {
  public:
-  PushVariable(size_t length);
+  PushVariable(const Tensor& var);
+  PushVariable(const Tensor& var, Allocator* a);
 
   void StartPush();
   void StopPush();
@@ -18,6 +23,7 @@ class PushVariable {
  private:
   std::mutex mu_;
   // Send Buffer
+  //Tensor* tensor_;
   void* buf_;
   size_t length_;
   // State

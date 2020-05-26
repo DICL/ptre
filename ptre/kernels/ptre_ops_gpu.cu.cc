@@ -14,6 +14,18 @@ struct Modelaverage<GPUDevice, T> {
   void operator()(const GPUDevice& d, typename TTypes<T>::Flat var,
                   typename TTypes<T>::ConstScalar m,
                   typename TTypes<T>::ConstFlat other) {
+    /*
+    T first_elem[17];
+    void* src_ptr = var.data();
+    d.memcpyDeviceToHost(&first_elem, static_cast<const T*>(src_ptr),
+        sizeof(T) * 17);
+    LOG(INFO) << "\n"
+        << "var[0]=" << first_elem[0] << ", other[0]=" << other(0) << "\n"
+        << "var[15]=" << first_elem[15] << ", other[15]=" << other(15) << "\n"
+        << "var[16]=" << first_elem[16] << ", other[16]=" << other(16) << "\n"
+        << "m=" << m();
+    */
+
     auto other_bytes = sizeof(T) * other.size();
     auto other_buf = d.allocate(other_bytes);
     d.memcpyHostToDevice(other_buf, other.data(), other_bytes);
@@ -30,6 +42,16 @@ struct Modelaverage<GPUDevice, T> {
     var.device(d) = (var + other_gpu) / m_gpu.reshape(single).broadcast(bcast);
     d.deallocate(m_buf);
     d.deallocate(other_buf);
+
+    /*
+    d.memcpyDeviceToHost(&first_elem, static_cast<const T*>(src_ptr),
+        sizeof(T) * 17);
+    LOG(INFO) << "\n"
+        << "result[0]=" << first_elem[0] << "\n"
+        << "result[15]=" << first_elem[15] << "\n"
+        << "result[16]=" << first_elem[16] << "\n"
+        << "m=" << m();
+    */
   }
 };
 
@@ -93,8 +115,23 @@ struct CopyTensorToSendBuf<GPUDevice, T> {
   void operator()(const GPUDevice& d,
                   typename TTypes<T>::Flat src,
                   typename TTypes<T>::Flat dst) {
+    /*
+    T first_elem[17];  // 64 + 4 bytes
+    void* src_ptr = src.data();
+    d.memcpyDeviceToHost(&first_elem, static_cast<const T*>(src_ptr),
+        sizeof(T) * 17);
+    */
+
     auto bytes = sizeof(T) * src.size();
     d.memcpyDeviceToHost(dst.data(), src.data(), bytes);
+
+
+    /*
+    LOG(INFO) << "\n"
+        << "var[0]=" << first_elem[0] << ", send[0]=" << dst(0) << "\n"
+        << "var[15]=" << first_elem[15] << ", send[15]=" << dst(15) << "\n"
+        << "var[16]=" << first_elem[16] << ", send[16]=" << dst(16);
+    */
   }
 };
 }  // namespace functor

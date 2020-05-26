@@ -4,16 +4,22 @@ from __future__ import print_function
 import argparse
 import os
 import paramiko
+import re
 import sys
+import subprocess
+from threading import Thread
 
 parser = argparse.ArgumentParser(description='ptre run arguments',
                                  formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument('--hostfile', required=True, type=str)
+parser.add_argument('-hostfile', required=True, type=str)
 parser.add_argument('-np', required=True, type=int, help='Total number of training processes.')
+parser.add_argument('-printall',action='store_true', default=False)
 parser.add_argument('args', nargs=argparse.REMAINDER)
 args = parser.parse_args()
 cmd_list = args.args
 for i, elem in enumerate(cmd_list):
+  if elem == 'python':
+    cmd_list[i] = subprocess.check_output(['which', 'python']).decode('utf-8').rstrip("\n")
   if elem.endswith('.py'):
     cmd_list[i] = os.path.abspath(elem)
 pypath = os.environ.get('PYTHONPATH')
@@ -21,40 +27,87 @@ pypath_cmds = 'export PYTHONPATH=%s' % pypath
 
 # Hosts
 hosts = []
+hostnames = []
 with open(args.hostfile, 'r') as hostfile:
   for i, elem in enumerate(hostfile):
     hosts.append(elem)
+    hostnames.append(elem.split(':')[0])
     if i == args.np -1:
       break
-cmd_base = '%s; echo $$; exec %s --hostfile %s -np %d' % (pypath_cmds, ' '.join(cmd_list), os.path.abspath(args.hostfile), args.np)
+cmd_base = '%s; echo $$; exec %s -hostfile %s -np %d' % (pypath_cmds, ' '.join(cmd_list), os.path.abspath(args.hostfile), args.np)
+
+# Loggers
+LOG_DIR_ROOT='/tmp/ptre/logs'
+stdouts = []
+stderrs = []
+for i in range(args.np):
+  log_dir = os.path.join(LOG_DIR_ROOT, 'rank%03d' % i)
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+  stdout_path = os.path.join(log_dir, 'stdout')
+  stderr_path = os.path.join(log_dir, 'stderr')
+  stdout_file = open(stdout_path, 'a+', buffering=1)
+  stderr_file = open(stderr_path, 'a+', buffering=1)
+  stdouts.append(stdout_file)
+  stderrs.append(stderr_file)
+
+# SSH Clients
+def open_channel(rank, client, hostname, channels):
+  client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+  client.connect(hostname)
+  channel = client.get_transport().open_session()
+  channels[rank] = channel
+  print("Connected to", hostname, '(RANK=%d)' % rank)
 
 try:
   ssh_clients = []
   channels = []
   pids = []
+  ch_stdouts = []
+  ch_stderrs = []
+
   for i in range(args.np):
-    host = hosts[i].split(':')[0]
     client = paramiko.SSHClient()
     ssh_clients.append(client)
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-    client.connect(host)
-    channel = client.get_transport().open_session()
-    channels.append(channel)
+    channels.append(None)
+
+  threads = []
+  for i in range(args.np):
+    th = Thread(target=open_channel, args=(i, ssh_clients[i], hostnames[i], channels))
+    th.start()
+    threads.append(th)
+  for i in range(args.np):
+    threads[i].join()
 
   for i, channel in enumerate(channels):
     cmd = '%s -rank %d' % (cmd_base, i)
     channel.exec_command(cmd)
     pid = int(channel.recv(8))
-    print(pid)
     pids.append(pid)
+    print('[RANK:%d] Launched the application' % i, '(PID=%d)' % pid)
+    #ch_stdouts.append(channel.makefile())
+    #ch_stderrs.append(channel.makefile_stderr())
 
   while True:
     cnt = 0
     for i, channel in enumerate(channels):
+      rank_str = '[RANK:%d]' % i
       if channel.recv_ready():
-        print('[RANK:%d]' % i, channel.recv(1024), end='')
+        #line = ch_stdouts[i].readline()
+        #print(line, file=stdouts[i], end='')
+        #print(rank_str, line, end='')
+        buf = channel.recv(1024)
+        print(buf, file=stdouts[i], end='')
+        if args.printall or i == 0:
+          print(rank_str, buf, end='')
       if channel.recv_stderr_ready():
-        print('[RANK:%d]' % i, channel.recv_stderr(1024), end='')
+        #line = ch_stderrs[i].readline()
+        #print(line, file=stderrs[i], end='')
+        #print(rank_str, line, end='')
+        buf = channel.recv_stderr(1024)
+        print(buf, file=stderrs[i], end='')
+        if args.printall or i == 0:
+          print(rank_str, buf, end='')
       if not channel.recv_ready() and not channel.recv_stderr_ready():
         if channel.exit_status_ready():
           cnt = cnt + 1
@@ -69,3 +122,5 @@ for i, channel in enumerate(channels):
   channel.close()
   ssh_clients[i].exec_command('kill -9 %d' % pids[i])
   ssh_clients[i].close()
+  stdouts[i].close()
+  stderrs[i].close()

@@ -29,8 +29,15 @@ class BroadcastModelCallback(Callback):
     #self.model.variables
     #self.model.optimizer.variables()
     ptre.broadcast_variables(self.model.variables, self._root_rank)
+    ptre.barrier()
     #ptre.synchronization_barrier()
     self._broadcast_done = True
+
+class PrintRecvCount(Callback):
+  def __init__(self):
+    super(PrintRecvCount, self).__init__()
+  def on_batch_end(self, batch, logs={}):
+    ptre.print_recv_count()
 
 class Print1(Callback):
   def __init__(self):
@@ -69,6 +76,7 @@ class PushModelCallback(Callback):
   def on_batch_begin(self, batch, logs=None):
     ptre.set_local_step(self._step)
     if (self._step + 1) % self._period == 0:
+    #if self._step < 2:
       ptre.set_push()
     else:
       ptre.unset_push()

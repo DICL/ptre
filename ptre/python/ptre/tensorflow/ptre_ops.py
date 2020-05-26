@@ -25,7 +25,7 @@ def init(comm_size, comm_rank, grpc_hosts_file=None, comm=None,
 def init_rdma_grpc_service():
   PTRE_CDLL.ptre_init_rdma_grpc_service()
 
-def finalize(wait_sec=60):
+def finalize(wait_sec=0):
   PTRE_CDLL.ptre_finalize(wait_sec)
 
 def size():
@@ -90,4 +90,14 @@ def set_local_step(step):
 
 def broadcast(tensor, root_rank, name):
   name = 'PtreBroadcast_%s' % _normalize_name(tensor.name)
+  #name = 'PtreBroadcast_%s' % tensor.name
   return PTRE_LIB.broadcast(tensor, name=name, root_rank=root_rank)
+
+def barrier():
+  PTRE_CDLL.ptre_barrier()
+
+def print_recv_count():
+  PTRE_CDLL.ptre_print_recv_count()
+
+def print_counter_summary():
+  PTRE_CDLL.ptre_print_counter_summary()

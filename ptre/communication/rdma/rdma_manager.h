@@ -13,6 +13,7 @@
 #include "ptre/protobuf/rdma_service.pb.h"
 #include "ptre/cm/remote_variable.h"
 #include "ptre/communication/push_variable.h"
+#include "ptre/core/allocator.h"
 
 #include "tensorflow/core/framework/tensor.h"
 
@@ -54,8 +55,13 @@ class RdmaManager {
   struct ibv_mr* GetMR(const BufType buf_type, const string& name);
   void SetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, const uint64_t remote_addr, const uint32_t rkey);
-  void GetRemoteAddress(int dst_rank, const BufType buf_type,
-      const string& name, uint64_t* out_addr, uint32_t* out_rkey);
+  // Returns:
+  // - 0 on success.
+  // - 1 on dst not found.
+  // - 2 on type not found for dst.
+  // - 3 on name not found for dst and type.
+  int GetRemoteAddress(int dst_rank, const BufType buf_type, const string& name,
+                       uint64_t* out_addr, uint32_t* out_rkey);
   int GetRemoteAccessBufInfos(std::vector<BufType>* out_buf_types,
                               std::vector<string>* out_names);
   bool IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
@@ -70,10 +76,23 @@ class RdmaManager {
   bool IsPushReady(int idx);
   bool IsPushReady(const string& var_name);
 
-  int RdmaRead(int dst, const BufType buf_type, const string& name,
+  // Returns:
+  //  0 on success
+  //  1 on remote address not found
+  //  2 on ibv_post_send failed
+  //  3 on ibv_query_qp failed
+  int RdmaRead(int dst, const BufType buf_type, const string& var_name,
       struct ibv_mr* read_mr, size_t read_length);
+  int RdmaRead(int dst, const BufType buf_type, const string& var_name,
+      void* read_buf, size_t read_length);
+
+  // Returns:
+  //  0 on success
+  //  1 on remote address not found
   int RdmaWrite(int dst, const BufType buf_type, const string& var_name,
       struct ibv_mr* send_mr, size_t send_length, uint32_t* imm_data = nullptr);
+  int RdmaWrite(int dst, const BufType buf_type, const string& var_name,
+      void* send_buf, size_t send_length, uint32_t* imm_data = nullptr);
 
   void ProcessCQ();
   void Poll(int num_comps);
@@ -146,6 +165,7 @@ class RdmaManager {
   std::vector<struct ibv_recv_wr*> recv_wrs_;
 
   // Variables
+  Allocator* allocator_ = nullptr;
   std::map<string, int> var_name_to_index_;
   std::vector<PushVariable*> push_variables_;
   std::mutex mu_;

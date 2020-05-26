@@ -41,6 +41,8 @@ class RdmaServiceImpl final : public Rdma::Service {
       GetRemoteAddressV2Response* response) override;
   grpc::Status Recv(grpc::ServerContext* context,
       const RecvRequest* request, RecvResponse* response) override;
+  grpc::Status GetPermit(grpc::ServerContext* context,
+      const GetPermitRequest* request, GetPermitResponse* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);

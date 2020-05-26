@@ -18,7 +18,22 @@ namespace ptre {
 #define MAX_CONCURRENT_WRITES 1000
 #define TIMEOUT_DEFAULT 14
 #define RETRY_CNT_DEFAULT 7
-#define QP_MAX_WR_DEFAULT 16
+#define MAX_QP_WR_DEFAULT 1024
+#define MAX_CQE_DEFAULT 2048
+
+/*
+   max_mr_size: 18446744073709551615
+        max_qp: 425912
+     max_qp_wr: 16351
+       max_sge: 32
+    max_sge_rd: 30
+        max_cq: 65408
+       max_cqe: 4194303
+        max_mr: 524032
+        max_pd: 32764
+max_qp_rd_atom: 16
+    atomic_cap: 1
+*/
 
 using std::cerr;
 using std::endl;
@@ -48,7 +63,8 @@ enum RdmaWrIdType {
   RDMA_WR_ID_CAS_TENSOR_AGG_STATE,
   RDMA_WR_ID_WRITE_TENSOR_AGG_STATE,
   RDMA_WR_ID_CAS,
-  RDMA_WR_ID_READ
+  RDMA_WR_ID_READ,
+  RDMA_WR_ID_WRITE
 };
 
 class RdmaWrId {

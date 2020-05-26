@@ -6,12 +6,13 @@ target_link_libraries(rdma
 
 add_library          (rdma_manager SHARED rdma_manager.cc)
 target_link_libraries(rdma_manager
-                        :libtensorflow_framework.so.2
-                        rdma
-                        remote_variable
-                        push_variable
-                        #rdma_agg_writer
-                        )
+  :libtensorflow_framework.so.2
+  rdma
+  remote_variable
+  push_variable
+  allocator
+  #rdma_agg_writer
+  )
 
 add_library          (rdma_grpc_server SHARED grpc_server.cc)
 target_link_libraries(rdma_grpc_server

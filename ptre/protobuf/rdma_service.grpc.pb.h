@@ -100,6 +100,13 @@ class Rdma final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteAddressV2Response>> PrepareAsyncGetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteAddressV2Response>>(PrepareAsyncGetRemoteAddressV2Raw(context, request, cq));
     }
+    virtual ::grpc::Status GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::ptre::GetPermitResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetPermitResponse>> AsyncGetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetPermitResponse>>(AsyncGetPermitRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetPermitResponse>> PrepareAsyncGetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetPermitResponse>>(PrepareAsyncGetPermitRaw(context, request, cq));
+    }
     class experimental_async_interface {
      public:
       virtual ~experimental_async_interface() {}
@@ -121,6 +128,8 @@ class Rdma final {
       virtual void Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) = 0;
     };
     virtual class experimental_async_interface* experimental_async() { return nullptr; }
   private:
@@ -142,6 +151,8 @@ class Rdma final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::RecvResponse>* PrepareAsyncRecvRaw(::grpc::ClientContext* context, const ::ptre::RecvRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteAddressV2Response>* AsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetRemoteAddressV2Response>* PrepareAsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetPermitResponse>* AsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::GetPermitResponse>* PrepareAsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -209,6 +220,13 @@ class Rdma final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>> PrepareAsyncGetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>>(PrepareAsyncGetRemoteAddressV2Raw(context, request, cq));
     }
+    ::grpc::Status GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::ptre::GetPermitResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>> AsyncGetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>>(AsyncGetPermitRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>> PrepareAsyncGetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>>(PrepareAsyncGetPermitRaw(context, request, cq));
+    }
     class experimental_async final :
       public StubInterface::experimental_async_interface {
      public:
@@ -230,6 +248,8 @@ class Rdma final {
       void Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) override;
+      void GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) override;
      private:
       friend class Stub;
       explicit experimental_async(Stub* stub): stub_(stub) { }
@@ -259,6 +279,8 @@ class Rdma final {
     ::grpc::ClientAsyncResponseReader< ::ptre::RecvResponse>* PrepareAsyncRecvRaw(::grpc::ClientContext* context, const ::ptre::RecvRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>* AsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>* PrepareAsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>* AsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>* PrepareAsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetLID_;
     const ::grpc::internal::RpcMethod rpcmethod_GetQPAttr_;
     const ::grpc::internal::RpcMethod rpcmethod_GetRemoteAddress_;
@@ -268,6 +290,7 @@ class Rdma final {
     const ::grpc::internal::RpcMethod rpcmethod_Barrier_;
     const ::grpc::internal::RpcMethod rpcmethod_Recv_;
     const ::grpc::internal::RpcMethod rpcmethod_GetRemoteAddressV2_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetPermit_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -284,6 +307,7 @@ class Rdma final {
     virtual ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response);
     virtual ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response);
     virtual ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response);
+    virtual ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_GetLID : public BaseClass {
@@ -465,7 +489,27 @@ class Rdma final {
       ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetLID<WithAsyncMethod_GetQPAttr<WithAsyncMethod_GetRemoteAddress<WithAsyncMethod_GetRemoteParamAddress<WithAsyncMethod_AttemptPush<WithAsyncMethod_NotifyPushDone<WithAsyncMethod_Barrier<WithAsyncMethod_Recv<WithAsyncMethod_GetRemoteAddressV2<Service > > > > > > > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_GetPermit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithAsyncMethod_GetPermit() {
+      ::grpc::Service::MarkMethodAsync(9);
+    }
+    ~WithAsyncMethod_GetPermit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetPermit(::grpc::ServerContext* context, ::ptre::GetPermitRequest* request, ::grpc::ServerAsyncResponseWriter< ::ptre::GetPermitResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_GetLID<WithAsyncMethod_GetQPAttr<WithAsyncMethod_GetRemoteAddress<WithAsyncMethod_GetRemoteParamAddress<WithAsyncMethod_AttemptPush<WithAsyncMethod_NotifyPushDone<WithAsyncMethod_Barrier<WithAsyncMethod_Recv<WithAsyncMethod_GetRemoteAddressV2<WithAsyncMethod_GetPermit<Service > > > > > > > > > > AsyncService;
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetLID : public BaseClass {
    private:
@@ -691,7 +735,32 @@ class Rdma final {
     }
     virtual void GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
-  typedef ExperimentalWithCallbackMethod_GetLID<ExperimentalWithCallbackMethod_GetQPAttr<ExperimentalWithCallbackMethod_GetRemoteAddress<ExperimentalWithCallbackMethod_GetRemoteParamAddress<ExperimentalWithCallbackMethod_AttemptPush<ExperimentalWithCallbackMethod_NotifyPushDone<ExperimentalWithCallbackMethod_Barrier<ExperimentalWithCallbackMethod_Recv<ExperimentalWithCallbackMethod_GetRemoteAddressV2<Service > > > > > > > > > ExperimentalCallbackService;
+  template <class BaseClass>
+  class ExperimentalWithCallbackMethod_GetPermit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    ExperimentalWithCallbackMethod_GetPermit() {
+      ::grpc::Service::experimental().MarkMethodCallback(9,
+        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>(
+          [this](::grpc::ServerContext* context,
+                 const ::ptre::GetPermitRequest* request,
+                 ::ptre::GetPermitResponse* response,
+                 ::grpc::experimental::ServerCallbackRpcController* controller) {
+                   return this->GetPermit(context, request, response, controller);
+                 }));
+    }
+    ~ExperimentalWithCallbackMethod_GetPermit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual void GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+  };
+  typedef ExperimentalWithCallbackMethod_GetLID<ExperimentalWithCallbackMethod_GetQPAttr<ExperimentalWithCallbackMethod_GetRemoteAddress<ExperimentalWithCallbackMethod_GetRemoteParamAddress<ExperimentalWithCallbackMethod_AttemptPush<ExperimentalWithCallbackMethod_NotifyPushDone<ExperimentalWithCallbackMethod_Barrier<ExperimentalWithCallbackMethod_Recv<ExperimentalWithCallbackMethod_GetRemoteAddressV2<ExperimentalWithCallbackMethod_GetPermit<Service > > > > > > > > > > ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetLID : public BaseClass {
    private:
@@ -841,6 +910,23 @@ class Rdma final {
     }
     // disable synchronous version of this method
     ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetPermit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithGenericMethod_GetPermit() {
+      ::grpc::Service::MarkMethodGeneric(9);
+    }
+    ~WithGenericMethod_GetPermit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1023,6 +1109,26 @@ class Rdma final {
     }
     void RequestGetRemoteAddressV2(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetPermit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithRawMethod_GetPermit() {
+      ::grpc::Service::MarkMethodRaw(9);
+    }
+    ~WithRawMethod_GetPermit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetPermit(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1251,6 +1357,31 @@ class Rdma final {
     virtual void GetRemoteAddressV2(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
+  class ExperimentalWithRawCallbackMethod_GetPermit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    ExperimentalWithRawCallbackMethod_GetPermit() {
+      ::grpc::Service::experimental().MarkMethodRawCallback(9,
+        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+          [this](::grpc::ServerContext* context,
+                 const ::grpc::ByteBuffer* request,
+                 ::grpc::ByteBuffer* response,
+                 ::grpc::experimental::ServerCallbackRpcController* controller) {
+                   this->GetPermit(context, request, response, controller);
+                 }));
+    }
+    ~ExperimentalWithRawCallbackMethod_GetPermit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual void GetPermit(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_GetLID : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service *service) {}
@@ -1430,9 +1561,29 @@ class Rdma final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedGetRemoteAddressV2(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::ptre::GetRemoteAddressV2Request,::ptre::GetRemoteAddressV2Response>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetLID<WithStreamedUnaryMethod_GetQPAttr<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<WithStreamedUnaryMethod_AttemptPush<WithStreamedUnaryMethod_NotifyPushDone<WithStreamedUnaryMethod_Barrier<WithStreamedUnaryMethod_Recv<WithStreamedUnaryMethod_GetRemoteAddressV2<Service > > > > > > > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetPermit : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithStreamedUnaryMethod_GetPermit() {
+      ::grpc::Service::MarkMethodStreamed(9,
+        new ::grpc::internal::StreamedUnaryHandler< ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>(std::bind(&WithStreamedUnaryMethod_GetPermit<BaseClass>::StreamedGetPermit, this, std::placeholders::_1, std::placeholders::_2)));
+    }
+    ~WithStreamedUnaryMethod_GetPermit() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetPermit(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::ptre::GetPermitRequest,::ptre::GetPermitResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_GetLID<WithStreamedUnaryMethod_GetQPAttr<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<WithStreamedUnaryMethod_AttemptPush<WithStreamedUnaryMethod_NotifyPushDone<WithStreamedUnaryMethod_Barrier<WithStreamedUnaryMethod_Recv<WithStreamedUnaryMethod_GetRemoteAddressV2<WithStreamedUnaryMethod_GetPermit<Service > > > > > > > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetLID<WithStreamedUnaryMethod_GetQPAttr<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<WithStreamedUnaryMethod_AttemptPush<WithStreamedUnaryMethod_NotifyPushDone<WithStreamedUnaryMethod_Barrier<WithStreamedUnaryMethod_Recv<WithStreamedUnaryMethod_GetRemoteAddressV2<Service > > > > > > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetLID<WithStreamedUnaryMethod_GetQPAttr<WithStreamedUnaryMethod_GetRemoteAddress<WithStreamedUnaryMethod_GetRemoteParamAddress<WithStreamedUnaryMethod_AttemptPush<WithStreamedUnaryMethod_NotifyPushDone<WithStreamedUnaryMethod_Barrier<WithStreamedUnaryMethod_Recv<WithStreamedUnaryMethod_GetRemoteAddressV2<WithStreamedUnaryMethod_GetPermit<Service > > > > > > > > > > StreamedService;
 };
 
 }  // namespace ptre

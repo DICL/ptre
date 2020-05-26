@@ -26,10 +26,11 @@ class GrpcClient {
   int GetRemoteParamAddress();
   int GetRemoteEnv();
   bool AttemptPush(int vstep);
-  int NotifyPushDone();
+  int NotifyPushDone(const string& var_name);
   bool Barrier();
 
   int Recv(char* buf, size_t len, const string& name);
+  int GetPermit(const string& name);
 
  private:
   int comm_rank_;

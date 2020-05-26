@@ -17,11 +17,25 @@ ConsensusManager::ConsensusManager(int ptre_size, int ptre_rank,
   ptre_size_ = ptre_size;
   ptre_rank_ = ptre_rank;
   num_vars_ = vars.size();
+
+  // Init Allocator
+  size_t size_total = 0;
+  std::vector<size_t> sizes;
   for (int i = 0; i < num_vars_; i++) {
+    sizes.push_back(vars[i]->AllocatedBytes());  // Receive Buffer
+    sizes.push_back(sizeof(int));  // Permit Buffer
+  }
+  allocator_ = new Allocator(sizes);
+  // Init Remote Variable
+  for (int i = 0; i < num_vars_; i++) {
+    RemoteVariable* rvar = new RemoteVariable(*vars[i], allocator_);
+    remote_variables_.push_back(rvar);
+    /*
+    LOG(INFO) << names[i] << ": TotalBytes()=" << vars[i]->TotalBytes()
+        << ", AllocatedBytes()=" << vars[i]->AllocatedBytes();
+    */
     var_names_.push_back(names[i]);
     var_name_to_index_[names[i]] = i;
-    RemoteVariable* rvar = new RemoteVariable(*vars[i]);
-    remote_variables_.push_back(rvar);
   }
 }
 
@@ -817,7 +831,7 @@ void ConsensusManager::ProcessAggregation(int idx) {
 }
 
 RemoteVariable* ConsensusManager::remote_variable(int idx) {
-  if (idx < ptre_size_) {
+  if (idx < num_vars_) {
     return remote_variables_[idx];
   }
   return NULL;
@@ -839,6 +853,16 @@ std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
 
 const std::vector<string>& ConsensusManager::variable_names() {
   return var_names_;
+}
+
+int ConsensusManager::var_name_to_index(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    return -1;
+  }
+  int idx = search->second;
+  return idx;
 }
 
 }  // namespace ptre

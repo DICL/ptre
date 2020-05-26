@@ -11,7 +11,9 @@ target_link_libraries(consensus_manager
   rdma_manager
   peer_selector
   remote_variable
-  grpc_client_cache)
+  grpc_client_cache
+  allocator
+  )
 
 #add_library(tensor_aggregator SHARED tensor_aggregator.cc)
 #target_link_libraries(tensor_aggregator
@@ -19,10 +21,17 @@ target_link_libraries(consensus_manager
 #  rdma)
 
 add_library(push_permit SHARED push_permit.cc)
+target_link_libraries(push_permit
+  allocator
+  )
 
 add_library(remote_variable SHARED remote_variable.cc)
 target_link_libraries(remote_variable
-  push_permit)
+  :libtensorflow_framework.so.2
+  pthread
+  push_permit
+  allocator
+  )
 
 add_executable(test_peer_selector test_peer_selector.cc)
 target_link_libraries(test_peer_selector peer_selector)

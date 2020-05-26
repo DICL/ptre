@@ -14,6 +14,8 @@
 #include "ptre/communication/rdma/rdma_manager.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
 //#include "ptre/communication/tcp/tcp_manager.h"
+#include "ptre/core/allocator.h"
+
 #include "tensorflow/core/framework/tensor.h"
 
 #define MAX_RECV_THRESHOLD 4
@@ -134,6 +136,7 @@ class ConsensusManager {
   RemoteVariable* remote_variable(const string& var_name);
   std::vector<RemoteVariable*>& remote_variables();
   const std::vector<string>& variable_names();
+  int var_name_to_index(const string& var_name);
 
   std::mutex send_mu_;
   std::condition_variable send_cv_;
@@ -152,6 +155,9 @@ class ConsensusManager {
   /// Training Infos
   int local_step_;
   int virtual_step_ = 1;
+  
+  // Allocator
+  Allocator* allocator_;
 
   // Variables
   int num_vars_;

@@ -21,9 +21,16 @@ GrpcClient::GrpcClient(int src_rank, int dst_rank, const std::string& hostname)
     : comm_rank_(src_rank), dst_rank_(dst_rank), hostname_(hostname) {
   //std::string target(grpc_target(dst_rank_));
   //std::cout << "target: " << hostname << std::endl;
+  grpc::ChannelArguments ch_args;
+  ch_args.SetMaxReceiveMessageSize(-1);
+  std::shared_ptr<grpc::Channel> ch = grpc::CreateCustomChannel(hostname,
+      grpc::InsecureChannelCredentials(), ch_args);
+  stub_ = Rdma::NewStub(ch);
+  /*
   std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(hostname,
       grpc::InsecureChannelCredentials());
   stub_ = Rdma::NewStub(channel);
+  */
 }
 
 GrpcClient::~GrpcClient() {
@@ -96,11 +103,12 @@ bool GrpcClient::AttemptPush(int vstep) {
   }
 }
 
-int GrpcClient::NotifyPushDone() {
+int GrpcClient::NotifyPushDone(const string& var_name) {
   NotifyPushDoneRequest request;
   NotifyPushDoneResponse response;
   ClientContext context;
-  request.set_rank(comm_rank_);
+  request.set_src_rank(comm_rank_);
+  request.set_var_name(var_name);
   grpc::Status status = stub_->NotifyPushDone(&context, request, &response);
   //std::cout << "\n Client NotifyPushDone\n";
 }
@@ -130,11 +138,30 @@ int GrpcClient::Recv(char* buf, size_t len, const string& name) {
   request.set_name(name);
   grpc::Status status = stub_->Recv(&context, request, &response);
   if (status.ok()) {
-    strncpy(buf, response.buf().data(), len);
+    /*
+    LOG(INFO) << "GOT " << name << ": var[0]=" << ((float*) response.buf().data())[0];
+    */
+    memcpy((void*) buf, (void*) response.buf().data(), len);
     return 0;
   } else {
     LOG(ERROR) << "dst_rank=" << dst_rank_ << " error_code="
         << status.error_code() << ": " << status.error_message();
+    return -1;
+  }
+}
+
+int GrpcClient::GetPermit(const string& name) {
+  GetPermitRequest req;
+  req.set_var_name(name);
+
+  GetPermitResponse res;
+
+  ClientContext ctx;
+  grpc::Status status = stub_->GetPermit(&ctx, req, &res);
+
+  if (status.ok()) {
+    return res.permit();
+  } else {
     return -1;
   }
 }
