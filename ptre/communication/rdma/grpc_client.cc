@@ -165,6 +165,24 @@ int GrpcClient::GetPermit(const string& name) {
     return -1;
   }
 }
+
+int GrpcClient::AttemptPushVar(const string& var_name) {
+  AttemptPushVarRequest req;
+  req.set_src_rank(comm_rank_);
+  req.set_var_name(var_name);
+
+  AttemptPushVarResponse res;
+  ClientContext ctx;
+  grpc::Status status = stub_->AttemptPushVar(&ctx, req, &res);
+
+  //LOG(INFO) << "result=" << res.result();
+  if (status.ok() && res.result() == 1) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
 //GrpcClient* GrpcClientCache::GetClient(int dst_rank) {
 //  if (cache_.find(rank) == cache_.end()) {
 //    auto client = new GrpcClient(rank_, dst_rank,

@@ -173,6 +173,24 @@ void RdmaServiceImpl::Send(int dst_rank, char* buf, size_t len,
   //q->push(std::move(send_buf));
   q->push(send_buf);
 }
+
+grpc::Status RdmaServiceImpl::AttemptPushVar(grpc::ServerContext* context,
+                                      const AttemptPushVarRequest* request,
+                                      AttemptPushVarResponse* response) {
+  //LOG(INFO) << "Got AttemptPushVar: " << request->var_name() << ", src=" << request->src_rank();
+  int src_rank = request->src_rank();
+  string var_name = request->var_name();
+
+  auto rvar = cm_->remote_variable(var_name);
+  if (rvar) {
+    rvar->EnqueueSenderCandidate(src_rank);
+    response->set_result(1);
+  } else {
+    response->set_result(0);
+  }
+
+  return grpc::Status::OK;
+}
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
 //  rdma_manager_ = rdma_manager;
 //}

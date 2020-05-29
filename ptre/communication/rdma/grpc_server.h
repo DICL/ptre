@@ -43,6 +43,9 @@ class RdmaServiceImpl final : public Rdma::Service {
       const RecvRequest* request, RecvResponse* response) override;
   grpc::Status GetPermit(grpc::ServerContext* context,
       const GetPermitRequest* request, GetPermitResponse* response) override;
+  grpc::Status AttemptPushVar(grpc::ServerContext* context,
+                              const AttemptPushVarRequest* request,
+                              AttemptPushVarResponse* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);

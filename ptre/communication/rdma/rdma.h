@@ -13,13 +13,14 @@
 #include "tensorflow/core/platform/logging.h"
 
 namespace ptre {
+
 #define IB_PORT 1
 #define QUEUE_DEPTH_DEFAULT 1024
 #define MAX_CONCURRENT_WRITES 1000
 #define TIMEOUT_DEFAULT 14
 #define RETRY_CNT_DEFAULT 7
-#define MAX_QP_WR_DEFAULT 1024
-#define MAX_CQE_DEFAULT 2048
+#define MAX_QP_WR_DEFAULT 4096
+#define MAX_CQE_DEFAULT 4096
 
 /*
    max_mr_size: 18446744073709551615
@@ -117,7 +118,7 @@ int ptre_rdma_connect_qp_local(struct ibv_qp* qp, uint32_t dest_qp_num,
 void rdma_qp_reset_to_rts(struct ibv_qp* qp, uint32_t remote_qpn,
     uint16_t remote_lid, uint32_t remote_psn = 0, uint32_t my_psn = 0);
 
-void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
+int ptre_poll_cq(struct ibv_cq* cq, int num_comps,
                                 struct ibv_wc* wcs, int caller_id = 0);
 
 int post_write(size_t buffer_size, uint64_t src_addr,

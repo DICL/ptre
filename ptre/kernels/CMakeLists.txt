@@ -19,6 +19,10 @@ add_library(job_def SHARED job_def.cc)
 
 #add_library(ptre_ops SHARED ptre_ops.cc ${PTRE_OPS_GPU_O})
 add_library(ptre_ops SHARED ptre_ops.cc ptre_ops_gpu.cu.o)
+#set_target_properties(ptre_ops PROPERTIES
+#  CXX_STANDARD 17
+#  CXX_EXTENSIONS OFF
+#  )
 #add_library(ptre_ops SHARED ptre_ops.cc ptre_ops_gpu.cu.cc)
 #add_library(ptre_ops SHARED ptre_ops.cc)
 target_link_libraries(ptre_ops
@@ -33,5 +37,7 @@ target_link_libraries(ptre_ops
                       rdma_grpc_server
                       rdma_grpc_client
                       grpc_client_cache
+                      rdma_task
+                      #shared_mutex
 )
 #target_compile_definitions(ptre_ops PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)

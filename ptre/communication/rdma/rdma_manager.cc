@@ -65,7 +65,7 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank) {
     sge->lkey = mr->lkey;
     struct ibv_recv_wr* wr =
         (struct ibv_recv_wr*) calloc(1, sizeof(struct ibv_recv_wr));
-    wr->wr_id = 0;
+    wr->wr_id = 0x10000000 + i;
     wr->sg_list = sge;
     wr->num_sge = 1;
     recv_wrs_.push_back(wr);
@@ -164,6 +164,144 @@ void RdmaManager::ConnectQP(int dst, uint32_t remote_qpn) {
   RTSQP(dst);
 }
 
+int RdmaManager::ConnectivityCheck() {
+  LOG(INFO) << "Checking QP Connectivities";
+  int ret = 0;
+  int send_buf = ptre_rank_;
+  struct ibv_mr* send_mr = ibv_reg_mr(pd_, (void*) &send_buf, sizeof(send_buf),
+      0);
+  for (int i = 0; i < ptre_size_; i++) {
+    struct ibv_sge sge;
+    memset(&sge, 0, sizeof(sge));
+    sge.addr = (uint64_t) send_mr->addr;
+    sge.length = send_mr->length;
+    sge.lkey = send_mr->lkey;
+    struct ibv_send_wr wr;
+    memset(&wr, 0, sizeof(wr));
+    wr.wr_id = i;
+    wr.sg_list = &sge;
+    wr.num_sge = 1;
+    wr.opcode = IBV_WR_SEND;
+    wr.send_flags = IBV_SEND_SIGNALED;
+    struct ibv_qp* qp = qps_[i];
+    struct ibv_send_wr* bad_wr;
+    int ret = ibv_post_send(qp, &wr, &bad_wr);
+    if (ret) {
+      LOG(ERROR) << "Failed to PingPostSend to " << i;
+    }
+  }
+  int recv_buf_arr[ptre_size_];
+  struct ibv_mr* recv_mr_arr[ptre_size_];
+  for (int i = 0; i < ptre_size_; i++){
+    struct ibv_mr* recv_mr = ibv_reg_mr(pd_, (void*) (recv_buf_arr + i),
+        sizeof(int), IBV_ACCESS_LOCAL_WRITE);
+    recv_mr_arr[i] = recv_mr;
+  }
+  for (int i = 0; i < ptre_size_; i++){
+    struct ibv_mr* recv_mr = recv_mr_arr[i];
+    struct ibv_sge sge;
+    memset(&sge, 0, sizeof(sge));
+    sge.addr = (uint64_t) recv_mr->addr;
+    sge.length = recv_mr->length;
+    sge.lkey = recv_mr->lkey;
+    struct ibv_recv_wr wr;
+    memset(&wr, 0, sizeof(wr));
+    wr.wr_id = 0x10000 + i;
+    wr.sg_list = &sge;
+    wr.num_sge = 1;
+    struct ibv_qp* qp = qps_[i];
+    struct ibv_recv_wr* bad_wr;
+    int ret = ibv_post_recv(qp, &wr, &bad_wr);
+    if (ret) {
+      LOG(ERROR) << "Failed to PingPostRecv from " << i;
+    }
+  }
+  bool schecker[ptre_size_] = { false };
+  bool rchecker[ptre_size_] = { false };
+  bool recover[ptre_size_] = { false };
+  int scnt = 0, rcnt = 0;
+  while (scnt < ptre_size_ || rcnt < ptre_size_) {
+    for (int i = 0; i < ptre_size_; i++) {
+      if (!schecker[i]) {
+        struct ibv_cq* cq = send_cqs_[i];
+        struct ibv_wc wc;
+        int ne;
+        do {
+          ne = ibv_poll_cq(cq, 1, &wc);
+        } while (ne < 1);
+        enum ibv_wc_status s = wc.status;
+        if (!s) {
+          schecker[i] = true;
+          scnt++;
+        } else {
+          schecker[i] = true;
+          scnt++;
+          LOG(ERROR) << "PingPostSend: Bad WC status=" << s;
+          ret = 1;
+          recover[i] = true;
+        }
+      }
+      if (!rchecker[i]) {
+        struct ibv_cq* cq = recv_cqs_[i];
+        struct ibv_wc wc;
+        int ne;
+        do {
+          ne = ibv_poll_cq(cq, 1, &wc);
+        } while (ne < 1);
+        enum ibv_wc_status s = wc.status;
+        if (!s) {
+          rchecker[i] = true;
+          rcnt++;
+        } else {
+          rchecker[i] = true;
+          rcnt++;
+          LOG(ERROR) << "PingPostRecv: Bad WC status=" << s;
+          ret = 1;
+          recover[i] = true;
+        }
+      }
+    }
+  }
+
+  for (int i = 0; i < ptre_size_; i++) {
+    if (recover[i]) {
+      LOG(INFO) << "Recovering QP for dst=" << i;
+      RecoverQP(i);
+    }
+  }
+
+  ibv_dereg_mr(send_mr);
+  for (int i = 0; i < ptre_size_; i++) {
+    ibv_dereg_mr(recv_mr_arr[i]);
+  }
+
+  LOG(INFO) << "Done Connectivity Check: " << ret;
+  return ret;
+}
+
+int RdmaManager::RecoverQP(int dst) {
+  int ret;
+  struct ibv_qp* qp = qps_[dst];
+  struct ibv_qp_attr attr;
+  struct ibv_qp_init_attr init_attr;
+  ret = ibv_query_qp(qp, &attr,
+        IBV_QP_STATE
+      | IBV_QP_AV
+      | IBV_QP_DEST_QPN,
+      &init_attr);
+  if (ret) {
+    LOG(ERROR) << "Failed to query QP: ret=" << ret << ", "
+        << std::strerror(ret);
+    return 1;
+  }
+  if (attr.qp_state != IBV_QPS_RTS) {
+    uint32_t dest_qp_num = attr.dest_qp_num;
+    uint16_t dlid = attr.ah_attr.dlid;
+    rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
+  }
+  return 0;
+}
+
 void RdmaManager::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
     const std::vector<string>& names) {
   std::vector<size_t> sizes;
@@ -199,6 +337,15 @@ void RdmaManager::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
 
     var_name_to_index_[names[i]] = i;
   }
+}
+
+int RdmaManager::var_name_to_index(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    return -1;
+  }
+  return search->second;
 }
 
 void RdmaManager::set_remote_lid(int dst, uint16_t lid) {
@@ -341,221 +488,6 @@ void RdmaManager::SetRemoteMRV2(const int dst_rank, const BufType buf_type,
 
 }
 
-#if 0
-int RdmaManager::RdmaWriteBufRemote(const int dst_rank, const BufType src_type,
-    const BufType dst_type, const string& name, const bool polling) {
-  struct ibv_qp* qp = qps_[dst_rank];
-  struct ibv_mr* mr = mrs_[src_type][name];
-  RemoteMR rmr = rmrs_[dst_rank][dst_type][name];
-  struct ibv_sge sge;
-  memset(&sge, 0, sizeof(struct ibv_sge));
-  sge.addr = (uint64_t) mr->addr;
-  sge.length = mr->length;
-  sge.lkey = mr->lkey;
-  struct ibv_send_wr wr;
-  int ret;
-  // Try Write
-  while (true) {
-    memset(&wr, 0, sizeof(struct ibv_send_wr));
-    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WRITE_ID_TENSOR_WRITE, nullptr);
-    wr.sg_list = &sge;
-    wr.num_sge = 1;
-    wr.opcode = IBV_WR_RDMA_WRITE;
-    wr.send_flags = IBV_SEND_SIGNALED;
-    wr.wr.rdma.remote_addr = rmr.remote_addr;
-    wr.wr.rdma.rkey = rmr.rkey;
-    struct ibv_send_wr* bad_wr;
-    ret = ibv_post_send(qp, &wr, &bad_wr);
-    if (ret) {
-      LOG(ERROR) << "Failed to RDMA WRITE: " << std::strerror(ret) << "(code=" << ret << ")";
-      exit(1);
-    }
-#if 0
-    if (polling) {
-      struct ibv_wc wc;
-      ptre_poll_cq(cq_, 1, &wc);
-    }
-#else
-    struct ibv_wc wc;
-    ptre_poll_cq(send_cqs_[dst_rank], 1, &wc);
-    if (!wc.status) {
-      break;
-    } else {
-      LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
-    }
-    struct ibv_qp_attr attr;
-    struct ibv_qp_init_attr init_attr;
-    ret = ibv_query_qp(qp, &attr,
-          IBV_QP_STATE
-        | IBV_QP_AV
-        | IBV_QP_DEST_QPN,
-        &init_attr);
-    if (ret) {
-      LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
-      exit(1);
-    }
-    if (attr.qp_state != IBV_QPS_RTS) {
-      uint32_t dest_qp_num = attr.dest_qp_num;
-      uint16_t dlid = attr.ah_attr.dlid;
-      LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
-      rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
-    }
-#endif
-  }
-}
-#endif
-
-/// Must be called after all remote mrs initialized.
-#if 0
-void RdmaManager::InitAggWriter() {
-  // Init vector send_buf_mrs
-  std::map<string, struct ibv_mr*>& send_buf_mr_map = mrs_[BUF_TYPE_SEND_BUF];
-  std::vector<struct ibv_mr*> send_buf_mrs;
-  for (int i = 0; i < recv_tensor_names_.size(); i++) {
-    send_buf_mrs.push_back(send_buf_mr_map[recv_tensor_names_[i]]);
-  }
-  for (int dst = 0; dst < ptre_size_; dst++) {
-#if 0
-    bool condition = dst != ptre_rank_;
-#else
-    bool condition = true;
-#endif
-    if (condition) {
-      // Init vector agg_buf_state_rmrs
-      std::map<string, RemoteMR>& agg_buf_state_rmr_map =
-          rmrs_[dst][BUF_TYPE_AGG_BUF_STATE];
-      std::vector<RemoteMR> agg_buf_state_rmrs;
-      for (int i = 0; i < recv_tensor_names_.size(); i++) {
-        agg_buf_state_rmrs.push_back(
-            agg_buf_state_rmr_map[recv_tensor_names_[i]]);
-      }
-      // Init vector agg_buf_rmrs
-      std::map<string, RemoteMR>& agg_buf_rmr_map = rmrs_[dst][BUF_TYPE_AGG_BUF];
-      std::vector<RemoteMR> agg_buf_rmrs;
-      for (int i = 0; i < recv_tensor_names_.size(); i++) {
-        agg_buf_rmrs.push_back(agg_buf_rmr_map[recv_tensor_names_[i]]);
-      }
-      RdmaAggWriter* writer = new RdmaAggWriter(dst, rdma_env_.pd,
-          send_cqs_[dst], qps_[dst],
-          recv_tensor_names_,
-          agg_buf_state_rmrs,
-          agg_buf_rmrs,
-          send_buf_mrs);
-      agg_writers_.emplace(dst, writer);
-    }
-  }
-}
-#endif
-
-#if 0
-int RdmaManager::PushTensorBufferedAggregation(const int dst_rank,
-                                               const string& name) {
-
-  return agg_writers_[dst_rank]->WriteToAggBuf(name);
-}
-
-int RdmaManager::PushTensorBufferedAggregation(const int dst_rank,
-    const std::vector<string>& names) {
-  int done_cnt = 0;
-  int n = names.size();
-  bool done_flags[n] = { };
-  uint64_t read_states[n] = { };
-  bool all_done = false;
-  LOG(INFO) << "[DEBUG] Write Tensors to rank " << dst_rank;
-  auto start_time = std::chrono::system_clock::now();
-  auto last_time = start_time;
-  while (!all_done) {
-    auto curr_time = std::chrono::system_clock::now();
-    std::chrono::duration<double> time_diff = curr_time - last_time;
-    if (time_diff.count() > 10) {
-      LOG(INFO) << "[DEBUG] Hangs on writing tensors to rank " << dst_rank;
-      int written_cnt = 0;
-      for (int i = 0; i < n; i++) {
-        if (!done_flags[i]) {
-          LOG(INFO) << "[DEBUG] not written: " << names[i] << ", state = " << read_states[i];
-        } else {
-          written_cnt++;
-        }
-      }
-      LOG(INFO) << "[DEBUG] Written count = " << written_cnt << " to rank " << dst_rank;
-      last_time = curr_time;
-    }
-    all_done = true;
-    for (int i = 0; i < n; i++) {
-      if (!done_flags[i]) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        //LOG(INFO) << "[DEBUG] TransitStateV2(" << names[i] << ")";
-        uint64_t remote_state = agg_writers_[dst_rank]->TransitStateV2(names[i],
-            StatefulAggBuf::kRecvReady, StatefulAggBuf::kRecvInProgress);
-        read_states[i] = remote_state;
-        if (remote_state == StatefulAggBuf::kRecvReady) {
-          //LOG(INFO) << "[DEBUG] WriteToAggBufV2(" << names[i] << ")";
-          agg_writers_[dst_rank]->WriteToAggBufV2(names[i]);
-          while (true) {
-            uint64_t inner = agg_writers_[dst_rank]->TransitStateV2(names[i],
-                2, 3);
-            if (inner == 2) {
-              break;
-            } else {
-              LOG(ERROR) << "inner=" << inner;
-            }
-          }
-          done_flags[i] = true;
-          last_time = curr_time;
-          //LOG(INFO) << "[DEBUG] Write Done for dst=" << dst_rank << " (" << ++done_cnt << "/" << n << ")";
-        } else {
-          //LOG(INFO) << "[DEBUG] TransitState Failed for dst=" << dst_rank << ", name=" << names[i];
-          all_done = false;
-        }
-      }
-    }
-    //usleep(1000 * 1000 * 1);
-  }
-  auto end_time = std::chrono::system_clock::now();
-  std::chrono::duration<double> time_diff = end_time - start_time;
-  LOG(INFO) << "Done pushing all tensors to rank " << dst_rank << ": elapsed " << time_diff.count() << " s";
-}
-
-uint64_t RdmaManager::RdmaFetchAndAdd(const int dst_rank,
-    const BufType dst_type, const string& name, const uint64_t add,
-    struct ibv_mr* read_mr) {
-  LOG(ERROR) << "THIS FUNCTION IS NOT READY YET.";
-  exit(1);
-  uint64_t* read_buf;
-  bool dereg_mr;
-  if (read_mr == nullptr) {
-    dereg_mr = true;
-    read_buf = (uint64_t*) aligned_alloc(8, sizeof(uint64_t));
-    read_mr = ibv_reg_mr(rdma_env_.pd, (void*) read_buf, sizeof(uint64_t),
-        IBV_ACCESS_LOCAL_WRITE);
-  } else {
-    dereg_mr = false;
-    read_buf = (uint64_t*) read_mr->addr;
-  }
-
-  struct ibv_sge sge;
-  sge.addr = (uint64_t) read_buf;
-  sge.length = sizeof(uint64_t);
-  sge.lkey = read_mr->lkey;
-
-  struct ibv_send_wr wr;
-  memset(&wr, 0, sizeof(wr));
-  wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_CAS, nullptr);
-  wr.sg_list = &sge;
-  wr.num_sge = 1;
-  wr.opcode = IBV_WR_ATOMIC_FETCH_AND_ADD;
-  wr.send_flags = IBV_SEND_SIGNALED;
-  RemoteMR rmr = rmrs_[dst_rank][dst_type][name];
-  wr.wr.atomic.remote_addr = rmr.remote_addr;
-  wr.wr.atomic.compare_add = add;
-  wr.wr.atomic.rkey = rmr.rkey;
-
-  struct ibv_send_wr* bad_wr;
-  struct ibv_qp* qp = qps_[dst_rank];
-  int ret = ibv_post_send(qp, &wr, &bad_wr);
-}
-#endif
-
 int RdmaManager::RdmaRead(int dst, const BufType buf_type,
     const string& var_name, struct ibv_mr* read_mr, size_t read_length) {
   int ret;
@@ -586,42 +518,22 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type,
   // QP
   struct ibv_qp* qp = qps_[dst];
   // Try RDMA read
-  while (true) {
-    // WR ID
-    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_READ, nullptr);
-    // Post send
-    struct ibv_send_wr* bad_wr;
-    ret = ibv_post_send(qp, &wr, &bad_wr);
-    if (ret) {
-      LOG(ERROR) << "Failed to ibv_post_send for read " << var_name << ":"
-          << buf_type << " for rank " << dst;
-      return 2;
-    }
-    struct ibv_wc wc;
-    ptre_poll_cq(send_cqs_[dst], 1, &wc);
-    if (!wc.status) {
-      return 0;
-    } else {
-      LOG(ERROR) << "Bad WC status=" << wc.status << " from Send CQ of RANK=" << dst << ", Starting to reset QP";
-    }
-    struct ibv_qp_attr attr;
-    struct ibv_qp_init_attr init_attr;
-    ret = ibv_query_qp(qp, &attr,
-          IBV_QP_STATE
-        | IBV_QP_AV
-        | IBV_QP_DEST_QPN,
-        &init_attr);
-    if (ret) {
-      LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
-      return 3;
-    }
-    if (attr.qp_state != IBV_QPS_RTS) {
-      uint32_t dest_qp_num = attr.dest_qp_num;
-      uint16_t dlid = attr.ah_attr.dlid;
-      LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
-      rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
-    }
-    return 5;
+  wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_READ, nullptr);
+  // Post send
+  struct ibv_send_wr* bad_wr;
+  ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret) {
+    LOG(ERROR) << "Failed to ibv_post_send for read " << var_name << ":"
+        << buf_type << " for rank " << dst << ": ret=" << ret;
+    return 2;
+  }
+  struct ibv_wc wc;
+  ptre_poll_cq(send_cqs_[dst], 1, &wc);
+  if (!wc.status) {
+    return 0;
+  } else {
+    LOG(ERROR) << "Bad WC status=" << wc.status << " from Send CQ of RANK=" << dst;
+    return 3;
   }
   return -1;
 }
@@ -632,7 +544,7 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
       IBV_ACCESS_LOCAL_WRITE);
   if (!mr) {
     LOG(ERROR) << "Failed to Register MR";
-    return 4;
+    return -1;
   }
   int ret = RdmaRead(dst, buf_type, name, mr, read_length);
   ibv_dereg_mr(mr);
@@ -674,41 +586,23 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
   wr.wr.rdma.rkey = rkey;
   // QP
   struct ibv_qp* qp = qps_[dst];
-  while (true) {
-    // WR ID
-    wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_WRITE, nullptr);
-    // Post send
-    struct ibv_send_wr* bad_wr;
-    ret = ibv_post_send(qp, &wr, &bad_wr);
-    if (ret) {
-      LOG(ERROR) << "Failed to ibv_post_send for write " << var_name << ":"
-          << buf_type << " for rank " << dst;
-      return 2;
-    }
-    struct ibv_wc wc;
-    ptre_poll_cq(send_cqs_[dst], 1, &wc);
-    if (!wc.status) {
-      return 0;
-    }
-    LOG(ERROR) << "Bad WC status=" << wc.status << ", Starting to reset QP";
-    struct ibv_qp_attr attr;
-    struct ibv_qp_init_attr init_attr;
-    ret = ibv_query_qp(qp, &attr,
-          IBV_QP_STATE
-        | IBV_QP_AV
-        | IBV_QP_DEST_QPN,
-        &init_attr);
-    if (ret) {
-      LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
-      return 3;
-    }
-    if (attr.qp_state != IBV_QPS_RTS) {
-      uint32_t dest_qp_num = attr.dest_qp_num;
-      uint16_t dlid = attr.ah_attr.dlid;
-      LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
-      rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
-    }
-    return 5;
+  // WR ID
+  wr.wr_id = (uint64_t) new RdmaWrId(RDMA_WR_ID_WRITE, nullptr);
+  // Post send
+  struct ibv_send_wr* bad_wr;
+  ret = ibv_post_send(qp, &wr, &bad_wr);
+  if (ret) {
+    LOG(ERROR) << "Failed to ibv_post_send for write " << var_name << ":"
+        << buf_type << " for rank " << dst;
+    return 2;
+  }
+  struct ibv_wc wc;
+  ptre_poll_cq(send_cqs_[dst], 1, &wc);
+  if (!wc.status) {
+    return 0;
+  } else {
+    LOG(ERROR) << "Bad WC status=" << wc.status;
+    return 3;
   }
   return -1;
 }
@@ -719,7 +613,7 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
   struct ibv_mr* mr = ibv_reg_mr(pd_, send_buf, send_length, 0);
   if (!mr) {
     LOG(ERROR) << "Failed to register memory region";
-    return 4;
+    return -1;
   }
   int ret = RdmaWrite(dst, buf_type, var_name, mr, send_length, imm_data);
   ibv_dereg_mr(mr);
@@ -1146,7 +1040,7 @@ int RdmaManager::PushAndNotify(int dst, const string& var_name) {
   if (!ret) {
     read_permit = *((int*) read_mr->addr);
   } else {
-    LOG(ERROR) << "RDMA READ failed";
+    LOG(ERROR) << "RDMA READ failed: ret=" << ret;
     return -1;  // RDMA READ Failed
   }
   // 2. RDMA Write with IMM Data
@@ -1170,40 +1064,30 @@ int RdmaManager::PushAndNotify(int dst, const string& var_name) {
 int RdmaManager::ReceivePushNotify(int dst) {
   int ret;
   struct ibv_qp* qp = qps_[dst];
-  struct ibv_cq* cq = recv_cqs_[dst];
   struct ibv_recv_wr* wr = recv_wrs_[dst];
   struct ibv_recv_wr* bad_wr;
   ret = ibv_post_recv(qp, wr, &bad_wr);
+  if (ret) {
+    return -1;
+  }
+  return 0;
+}
+
+int RdmaManager::PollPushNotify(int dst) {
+  struct ibv_cq* cq = recv_cqs_[dst];
   struct ibv_wc wc;
   int num_comps = ibv_poll_cq(cq, 1, &wc);
   if (num_comps > 0) {
     if (wc.status == IBV_WC_SUCCESS) {
-      //LOG(INFO) << "ret=" << ret << ": " << std::strerror(ret) << ", errno=" << errno << ": " << std::strerror(errno);
-      // Write done
       uint32_t idx = ntohl(wc.imm_data);
       return idx;
     } else {
-      LOG(ERROR) << "Bad WC status=" << wc.status << " from RECV CQ of RANK=" << dst << ", Starting to reset QP";
-      struct ibv_qp_attr attr;
-      struct ibv_qp_init_attr init_attr;
-      ret = ibv_query_qp(qp, &attr,
-            IBV_QP_STATE
-          | IBV_QP_AV
-          | IBV_QP_DEST_QPN,
-          &init_attr);
-      if (ret) {
-        LOG(ERROR) << "Failed to query QP state: " << std::strerror(ret);
-        return 3;
-      }
-      if (attr.qp_state != IBV_QPS_RTS) {
-        uint32_t dest_qp_num = attr.dest_qp_num;
-        uint16_t dlid = attr.ah_attr.dlid;
-        LOG(ERROR) << "QP num=" << qp->qp_num << ", state=" << attr.qp_state << ", dest_qp_num=" << dest_qp_num;
-        rdma_qp_reset_to_rts(qp, dest_qp_num, dlid);
-      }
+      LOG(ERROR) << "Bad WC status=" << wc.status << " from RECV CQ of RANK=" << dst;
+      RecoverQP(dst);
+      return -1;
     }
   }
-  return -1;
+  return -2;
 }
 
 
@@ -1257,6 +1141,22 @@ struct ibv_qp* RdmaManager::qp(int dst) {
   }
   return NULL;
 }
+PushVariable* RdmaManager::push_variable(int idx) {
+  if (idx < push_variables_.size()) {
+    return push_variables_[idx];
+  }
+  return NULL;
+}
+PushVariable* RdmaManager::push_variable(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    return NULL;
+  }
+  int idx = search->second;
+  return push_variable(idx);
+}
+
 //struct ibv_qp* RdmaManager::qp(int dest_rank) { return qps_[dest_rank]; }
 //struct ibv_cq* RdmaManager::send_cq(int dst) { return send_cqs_[dst]; }
 //struct ibv_cq* RdmaManager::recv_cq(int dst) { return recv_cqs_[dst]; }

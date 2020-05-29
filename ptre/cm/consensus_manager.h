@@ -155,7 +155,7 @@ class ConsensusManager {
   /// Training Infos
   int local_step_;
   int virtual_step_ = 1;
-  
+
   // Allocator
   Allocator* allocator_;
 

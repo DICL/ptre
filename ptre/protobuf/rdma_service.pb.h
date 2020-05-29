@@ -48,7 +48,7 @@ struct TableStruct_rdma_5fservice_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[23]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[25]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -62,6 +62,12 @@ extern AttemptPushRequestDefaultTypeInternal _AttemptPushRequest_default_instanc
 class AttemptPushResponse;
 class AttemptPushResponseDefaultTypeInternal;
 extern AttemptPushResponseDefaultTypeInternal _AttemptPushResponse_default_instance_;
+class AttemptPushVarRequest;
+class AttemptPushVarRequestDefaultTypeInternal;
+extern AttemptPushVarRequestDefaultTypeInternal _AttemptPushVarRequest_default_instance_;
+class AttemptPushVarResponse;
+class AttemptPushVarResponseDefaultTypeInternal;
+extern AttemptPushVarResponseDefaultTypeInternal _AttemptPushVarResponse_default_instance_;
 class BarrierRequest;
 class BarrierRequestDefaultTypeInternal;
 extern BarrierRequestDefaultTypeInternal _BarrierRequest_default_instance_;
@@ -129,6 +135,8 @@ extern RecvResponseDefaultTypeInternal _RecvResponse_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::ptre::AttemptPushRequest* Arena::CreateMaybeMessage<::ptre::AttemptPushRequest>(Arena*);
 template<> ::ptre::AttemptPushResponse* Arena::CreateMaybeMessage<::ptre::AttemptPushResponse>(Arena*);
+template<> ::ptre::AttemptPushVarRequest* Arena::CreateMaybeMessage<::ptre::AttemptPushVarRequest>(Arena*);
+template<> ::ptre::AttemptPushVarResponse* Arena::CreateMaybeMessage<::ptre::AttemptPushVarResponse>(Arena*);
 template<> ::ptre::BarrierRequest* Arena::CreateMaybeMessage<::ptre::BarrierRequest>(Arena*);
 template<> ::ptre::BarrierResponse* Arena::CreateMaybeMessage<::ptre::BarrierResponse>(Arena*);
 template<> ::ptre::GetLIDRequest* Arena::CreateMaybeMessage<::ptre::GetLIDRequest>(Arena*);
@@ -3244,6 +3252,271 @@ class GetPermitResponse :
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
+// -------------------------------------------------------------------
+
+class AttemptPushVarRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AttemptPushVarRequest) */ {
+ public:
+  AttemptPushVarRequest();
+  virtual ~AttemptPushVarRequest();
+
+  AttemptPushVarRequest(const AttemptPushVarRequest& from);
+  AttemptPushVarRequest(AttemptPushVarRequest&& from) noexcept
+    : AttemptPushVarRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline AttemptPushVarRequest& operator=(const AttemptPushVarRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AttemptPushVarRequest& operator=(AttemptPushVarRequest&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const AttemptPushVarRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const AttemptPushVarRequest* internal_default_instance() {
+    return reinterpret_cast<const AttemptPushVarRequest*>(
+               &_AttemptPushVarRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    23;
+
+  void Swap(AttemptPushVarRequest* other);
+  friend void swap(AttemptPushVarRequest& a, AttemptPushVarRequest& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline AttemptPushVarRequest* New() const final {
+    return CreateMaybeMessage<AttemptPushVarRequest>(nullptr);
+  }
+
+  AttemptPushVarRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AttemptPushVarRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const AttemptPushVarRequest& from);
+  void MergeFrom(const AttemptPushVarRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(AttemptPushVarRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.AttemptPushVarRequest";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // string var_name = 1;
+  void clear_var_name();
+  static const int kVarNameFieldNumber = 1;
+  const std::string& var_name() const;
+  void set_var_name(const std::string& value);
+  void set_var_name(std::string&& value);
+  void set_var_name(const char* value);
+  void set_var_name(const char* value, size_t size);
+  std::string* mutable_var_name();
+  std::string* release_var_name();
+  void set_allocated_var_name(std::string* var_name);
+
+  // int32 src_rank = 2;
+  void clear_src_rank();
+  static const int kSrcRankFieldNumber = 2;
+  ::PROTOBUF_NAMESPACE_ID::int32 src_rank() const;
+  void set_src_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.AttemptPushVarRequest)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
+  ::PROTOBUF_NAMESPACE_ID::int32 src_rank_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
+class AttemptPushVarResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.AttemptPushVarResponse) */ {
+ public:
+  AttemptPushVarResponse();
+  virtual ~AttemptPushVarResponse();
+
+  AttemptPushVarResponse(const AttemptPushVarResponse& from);
+  AttemptPushVarResponse(AttemptPushVarResponse&& from) noexcept
+    : AttemptPushVarResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline AttemptPushVarResponse& operator=(const AttemptPushVarResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AttemptPushVarResponse& operator=(AttemptPushVarResponse&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const AttemptPushVarResponse& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const AttemptPushVarResponse* internal_default_instance() {
+    return reinterpret_cast<const AttemptPushVarResponse*>(
+               &_AttemptPushVarResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    24;
+
+  void Swap(AttemptPushVarResponse* other);
+  friend void swap(AttemptPushVarResponse& a, AttemptPushVarResponse& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline AttemptPushVarResponse* New() const final {
+    return CreateMaybeMessage<AttemptPushVarResponse>(nullptr);
+  }
+
+  AttemptPushVarResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AttemptPushVarResponse>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const AttemptPushVarResponse& from);
+  void MergeFrom(const AttemptPushVarResponse& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(AttemptPushVarResponse* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.AttemptPushVarResponse";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // bool result = 1;
+  void clear_result();
+  static const int kResultFieldNumber = 1;
+  bool result() const;
+  void set_result(bool value);
+
+  // @@protoc_insertion_point(class_scope:ptre.AttemptPushVarResponse)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  bool result_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
 // ===================================================================
 
 
@@ -4166,9 +4439,100 @@ inline void GetPermitResponse::set_permit(::PROTOBUF_NAMESPACE_ID::int32 value) 
   // @@protoc_insertion_point(field_set:ptre.GetPermitResponse.permit)
 }
 
+// -------------------------------------------------------------------
+
+// AttemptPushVarRequest
+
+// string var_name = 1;
+inline void AttemptPushVarRequest::clear_var_name() {
+  var_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& AttemptPushVarRequest::var_name() const {
+  // @@protoc_insertion_point(field_get:ptre.AttemptPushVarRequest.var_name)
+  return var_name_.GetNoArena();
+}
+inline void AttemptPushVarRequest::set_var_name(const std::string& value) {
+  
+  var_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:ptre.AttemptPushVarRequest.var_name)
+}
+inline void AttemptPushVarRequest::set_var_name(std::string&& value) {
+  
+  var_name_.SetNoArena(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:ptre.AttemptPushVarRequest.var_name)
+}
+inline void AttemptPushVarRequest::set_var_name(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  var_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:ptre.AttemptPushVarRequest.var_name)
+}
+inline void AttemptPushVarRequest::set_var_name(const char* value, size_t size) {
+  
+  var_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:ptre.AttemptPushVarRequest.var_name)
+}
+inline std::string* AttemptPushVarRequest::mutable_var_name() {
+  
+  // @@protoc_insertion_point(field_mutable:ptre.AttemptPushVarRequest.var_name)
+  return var_name_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline std::string* AttemptPushVarRequest::release_var_name() {
+  // @@protoc_insertion_point(field_release:ptre.AttemptPushVarRequest.var_name)
+  
+  return var_name_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline void AttemptPushVarRequest::set_allocated_var_name(std::string* var_name) {
+  if (var_name != nullptr) {
+    
+  } else {
+    
+  }
+  var_name_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), var_name);
+  // @@protoc_insertion_point(field_set_allocated:ptre.AttemptPushVarRequest.var_name)
+}
+
+// int32 src_rank = 2;
+inline void AttemptPushVarRequest::clear_src_rank() {
+  src_rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 AttemptPushVarRequest::src_rank() const {
+  // @@protoc_insertion_point(field_get:ptre.AttemptPushVarRequest.src_rank)
+  return src_rank_;
+}
+inline void AttemptPushVarRequest::set_src_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  src_rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.AttemptPushVarRequest.src_rank)
+}
+
+// -------------------------------------------------------------------
+
+// AttemptPushVarResponse
+
+// bool result = 1;
+inline void AttemptPushVarResponse::clear_result() {
+  result_ = false;
+}
+inline bool AttemptPushVarResponse::result() const {
+  // @@protoc_insertion_point(field_get:ptre.AttemptPushVarResponse.result)
+  return result_;
+}
+inline void AttemptPushVarResponse::set_result(bool value) {
+  
+  result_ = value;
+  // @@protoc_insertion_point(field_set:ptre.AttemptPushVarResponse.result)
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

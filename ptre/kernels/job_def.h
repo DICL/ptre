@@ -59,6 +59,20 @@ class PushRequest {
   std::vector<bool> checker_;
 };
 
+class PushTaskV2 {
+ public:
+  PushTaskV2(int dst, const string& var_name);
+  int dst();
+  const string& var_name();
+  void SetAttemptDone();
+  bool IsAttemptDone();
+
+ private:
+  int dst_;
+  string var_name_;
+  bool attempt_done_;
+};
+
 }
 
 #endif  // PTRE_KERNELS_JOB_DEF_H_

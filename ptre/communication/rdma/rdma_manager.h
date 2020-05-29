@@ -44,6 +44,8 @@ class RdmaManager {
   void RTSQP(int dst, uint32_t my_psn);
   void RESETQP(int dst);
   void ConnectQP(int dst, uint32_t remote_qpn);
+  int ConnectivityCheck();
+  int RecoverQP(int dst);
 
   // Memory Region Init Functions
   void SetTrainableVariables(std::vector<RemoteVariable*>& vars,
@@ -127,6 +129,7 @@ class RdmaManager {
 
   int PushAndNotify(int dst, const string& var_name);
   int ReceivePushNotify(int dst);
+  int PollPushNotify(int dst);
 
   int PushTensor(int dst_rank, string name, const Tensor& tensor);
   int NotifyPushDone(int dst_rank);
@@ -141,8 +144,11 @@ class RdmaManager {
 #if 0
   uint16_t lid() { return rdma_env_.port_attr.lid; }
 #endif
+  int var_name_to_index(const string& var_name);
   void set_remote_lid(int dst, uint16_t lid);
   uint16_t remote_lid(int dst);
+  PushVariable* push_variable(int idx);
+  PushVariable* push_variable(const string& var_name);
 
  private:
   // PTRE Attributes

@@ -178,7 +178,8 @@ void rdma_qp_reset_to_rts(struct ibv_qp* qp, uint32_t remote_qpn,
   ret = ibv_modify_qp(qp, &attr, IBV_QP_STATE);
   if (ret) {
     LOG(ERROR) << "Failed to modify QP to RESET: " << std::strerror(ret) << "(code=" << ret << ")";
-    exit(1);
+    //exit(1);
+    return;
   }
 
   /// Init QP
@@ -238,11 +239,12 @@ void rdma_qp_reset_to_rts(struct ibv_qp* qp, uint32_t remote_qpn,
       | IBV_QP_MAX_QP_RD_ATOMIC);
   if (ret) {
     LOG(ERROR) << "Failed to modify QP to RTS: " << std::strerror(ret) << "(code=" << ret << ")";
-    exit(1);
+    return;
+    //exit(1);
   }
 }
 
-void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
+int ptre_poll_cq(struct ibv_cq* cq, int num_comps,
                                 struct ibv_wc* wcs, int caller_id) {
   int cnt = 0;
   while (cnt < num_comps) {
@@ -252,7 +254,7 @@ void ptre_poll_cq(struct ibv_cq* cq, int num_comps,
       for (int i = 0; i < new_comps; i++) {
         struct ibv_wc& curr_wc = wcs[cnt + i];
         if (curr_wc.status) {
-          LOG(ERROR) << "Failed to post send: error_code=" << curr_wc.status << ": " << std::strerror(curr_wc.status) << ", caller=" << caller_id;
+          //LOG(ERROR) << "Failed to post send: error_code=" << curr_wc.status << ": " << std::strerror(curr_wc.status) << ", caller=" << caller_id;
           //exit(1);
           //std::cerr << "Bad wc status " << curr_wc.status << endl;
         }
@@ -478,7 +480,8 @@ void rdma_modify_qp_rts(struct ibv_qp* qp, uint32_t remote_qpn,
   ret = ibv_modify_qp(qp, &attr, IBV_QP_STATE);
   if (ret) {
     LOG(ERROR) << "Failed to modify QP to RESET: " << std::strerror(ret) << "(code=" << ret << ")";
-    exit(1);
+    return;
+    //exit(1);
   }
 
   /// Init QP

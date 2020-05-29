@@ -81,4 +81,26 @@ int PushRequest::step() {
   return step_;
 }
 
-}  // namespace ptre
+PushTaskV2::PushTaskV2(int dst, const string& var_name) {
+  dst_ = dst;
+  var_name_ = var_name;
+  attempt_done_ = false;
+}
+
+int PushTaskV2::dst() {
+  return dst_;
+}
+
+const string& PushTaskV2::var_name() {
+  return var_name_;
+}
+
+void PushTaskV2::SetAttemptDone() {
+  attempt_done_ = true;
+}
+
+bool PushTaskV2::IsAttemptDone() {
+  return attempt_done_;
+}
+
+}
