@@ -1,12 +1,16 @@
 #ifndef PTRE_CM_REMOTE_VARIABLE_H_
 #define PTRE_CM_REMOTE_VARIABLE_H_
 
+#define EIGEN_USE_THREADS
+
 #include <mutex>
 
 #include "ptre/cm/push_permit.h"
 #include "ptre/core/allocator.h"
 #include "ptre/tensorflow/types.h"
 #include "tensorflow/core/framework/tensor.h"
+
+#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 
 namespace ptre {
 
@@ -22,10 +26,12 @@ class RemoteVariable {
   void NewIncoming(int src_rank);
   void SetAggState(int state);
   void Aggregate();
+  void AggregateEigenDevice(const Eigen::ThreadPoolDevice& d);
   int AggCount();
   int GetGlcTensor(Tensor*& out);
   void* rcv_data();
   size_t rcv_length();
+  int agg_state();
   int agg_count();
   Tensor* tensor();
   int permit();

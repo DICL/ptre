@@ -59,7 +59,7 @@ int RPNTask::PostWrite() {
   struct ibv_send_wr* bad_wr;
   int ret = ibv_post_send(qp, &wr, &bad_wr);
   if (ret) {
-    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_send";
+    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_send, ret=" << ret;
     return 1;
   }
   return 0;
@@ -79,7 +79,8 @@ int RecvTask::PostRecv() {
   struct ibv_recv_wr* bad_wr;
   ret = ibv_post_recv(qp, &wr_, &bad_wr);
   if (ret) {
-    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_send";
+    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_recv, ret=" << ret;
+    usleep(100);
     return 1;
   }
   return 0;

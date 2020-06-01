@@ -54,9 +54,11 @@
     } \
   }
 
-#define NUM_PUSH_THREADS 8
-#define NUM_POLLING_THREADS 8
-#define NUM_AGG_THREADS 8
+#define NUM_PUSH_THREADS 1
+#define NUM_SEND_POLLING_THREADS 1
+#define NUM_RECV_POLLING_THREADS 0
+#define NUM_AGG_THREADS 28
+#define NUM_AGG_EIGEN_THREADS 8
 //#define NUM_RECV_THREADS 1
 
 //using ptre::PushJob;
@@ -128,7 +130,12 @@ struct PtreGlobal {
     if (push_thread.joinable()) {
       push_thread.join();
     }
-    for (auto& t : polling_threads) {
+    for (auto& t : send_polling_threads) {
+      if (t.joinable()) {
+        t.join();
+      }
+    }
+    for (auto& t : recv_polling_threads) {
       if (t.joinable()) {
         t.join();
       }
@@ -185,11 +192,13 @@ struct PtreGlobal {
   std::thread grpc_server_thread;
   std::thread push_thread;
   std::vector<std::thread> push_threads;
-  std::vector<std::thread> polling_threads;
+  std::vector<std::thread> send_polling_threads;
+  std::vector<std::thread> recv_polling_threads;
   std::thread aggregation_thread;
   std::vector<std::thread> aggregation_threads;
   std::thread receive_thread;
   std::vector<std::thread> receive_threads;
+  Eigen::ThreadPool* eigen_pool;
 
   int rank;
   int size;
@@ -332,27 +341,28 @@ void AThreadLoop() {
   }
 }
 */
-int ProcessRecvCQ(int dst, struct ibv_wc* wcs) {
-  struct ibv_cq* cq = ptre_global.rdma_manager->recv_cq(dst);
+int ProcessRecvCQ(int src, struct ibv_wc* wcs) {
+  struct ibv_cq* cq = ptre_global.rdma_manager->recv_cq(src);
   //struct ibv_wc wcs[ptre::MAX_CQE_DEFAULT];
   int ne = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
   if (ne <= 0) return 1;
   for (int i = 0; i < ne; i++) {
     RecvTask* task = reinterpret_cast<RecvTask*>(wcs[i].wr_id);
     if (wcs[i].status == IBV_WC_SUCCESS) {
-      //LOG(INFO) << "Push from rank=" << dst;
+      //LOG(INFO) << "Push from rank=" << src;
       uint32_t idx = ntohl(wcs[i].imm_data);
       if (idx >= 0) {
-        LOG(INFO) << "Push from rank=" << dst << ", var_name=" << idx;
+        //LOG(INFO) << "Push from rank=" << src << ", var_name=" << idx;
         auto rvar = ptre_global.cm->remote_variable(idx);
         if (rvar) {
-          rvar->NewIncoming(i);
+          rvar->NewIncoming(src);
+          //LOG(INFO) << idx << ": agg_state=" << rvar->agg_state();
         }
       }
     } else {
-      ptre_global.rdma_manager->RecoverQP(dst);
+      ptre_global.rdma_manager->RecoverQP(src);
     }
-    IBV_CALL(dst, task->PostRecv());
+    IBV_CALL(src, task->PostRecv());
   }
   return 0;
 }
@@ -411,7 +421,8 @@ int ProcessSendCQ(int dst, struct ibv_wc* wcs) {
   return 0;
 }
 
-void CQProcessThreadLoop(int tid, int num_t) {
+void SendCQProcessThreadLoop(int tid) {
+  const int num_t = NUM_SEND_POLLING_THREADS;
   int begin = ptre_global.size * tid / num_t;
   int end = ptre_global.size * (tid + 1) / num_t;
   //const size_t num_wcs = ptre::MAX_CQE_DEFAULT;
@@ -420,9 +431,28 @@ void CQProcessThreadLoop(int tid, int num_t) {
   while (!ptre_global.is_shutdown) {
     for (int i = begin; i < end; i++) {
       ProcessSendCQ(i, wcs);
+#if NUM_RECV_POLLING_THREADS
+#else
+      ProcessRecvCQ(i, wcs);
+#endif
+    }
+  }
+}
+
+void RecvCQProcessThreadLoop(int tid) {
+#if NUM_RECV_POLLING_THREADS
+  const int num_t = NUM_RECV_POLLING_THREADS;
+  int begin = ptre_global.size * tid / num_t;
+  int end = ptre_global.size * (tid + 1) / num_t;
+  struct ibv_wc wcs[4096];
+  int ret;
+  while (!ptre_global.is_shutdown) {
+    for (int i = begin; i < end; i++) {
+      //ProcessSendCQ(i, wcs);
       ProcessRecvCQ(i, wcs);
     }
   }
+#endif
 }
 
 void ConcurrentPushThreadLoop() {
@@ -558,15 +588,23 @@ void ReceiveThreadLoop(int tid, int num_t) {
 }
 #endif
 
-void AggregationThreadLoop(int tid, int num_t) {
+void AggregationThreadLoop(int tid) {
+  const int num_t = NUM_AGG_THREADS;
   int begin = ptre_global.num_trainable_variables * tid / num_t;
   int end = ptre_global.num_trainable_variables * (tid + 1) / num_t;
+
+  //Eigen::ThreadPool pool(NUM_AGG_EIGEN_THREADS);
+  Eigen::ThreadPoolDevice d(ptre_global.eigen_pool, NUM_AGG_EIGEN_THREADS);
   //LOG(INFO) << "AGG_THREAD[TID:" << tid << "] begin=" << begin << ", end=" << end;
   while (!ptre_global.is_shutdown) {
     for (int i = begin; i < end; i++) {
       auto rvar = ptre_global.cm->remote_variable(i);
       if (rvar) {
+#if 0
         rvar->Aggregate();
+#else
+        rvar->AggregateEigenDevice(d);
+#endif
       }
     }
   }
@@ -715,14 +753,6 @@ class RegisterVariablesOp : public OpKernel {
 
     //ptre_global.qp_recover_thread = std::thread(QPRecoverThreadLoop);
 
-    // Init Aggregation Thread
-    LOG(INFO) << "Starting Aggregation Threads: num_threads=" << NUM_AGG_THREADS;
-    //ptre_global.aggregation_thread = std::thread(AggregationThreadLoop);
-    for (int i = 0; i < NUM_AGG_THREADS; i++) {
-      ptre_global.aggregation_threads.emplace_back(
-          std::thread(AggregationThreadLoop, i, NUM_AGG_THREADS));
-    }
-
     // Post Recv
     PostReceiveWRs();
 #if 0
@@ -744,10 +774,25 @@ class RegisterVariablesOp : public OpKernel {
     }
 
     // Polling Thread
-    LOG(INFO) << "Starting Polling Threads: num_threads=" << NUM_POLLING_THREADS;
-    for (int i = 0; i < NUM_POLLING_THREADS; i++) {
-      ptre_global.polling_threads.emplace_back(
-          std::thread(CQProcessThreadLoop, i, NUM_POLLING_THREADS));
+    LOG(INFO) << "Starting Send Polling Threads: num_threads=" << NUM_SEND_POLLING_THREADS;
+    for (int i = 0; i < NUM_SEND_POLLING_THREADS; i++) {
+      ptre_global.send_polling_threads.emplace_back(
+          std::thread(SendCQProcessThreadLoop, i));
+    }
+    LOG(INFO) << "Starting Recv Polling Threads: num_threads=" << NUM_RECV_POLLING_THREADS;
+    for (int i = 0; i < NUM_RECV_POLLING_THREADS; i++) {
+      ptre_global.recv_polling_threads.emplace_back(
+          std::thread(RecvCQProcessThreadLoop, i));
+    }
+
+    // Init Aggregation Thread
+    LOG(INFO) << "Starting Aggregation Threads: num_threads=" << NUM_AGG_THREADS;
+    //ptre_global.eigen_pool = new Eigen::ThreadPool(NUM_AGG_EIGEN_THREADS);
+    ptre_global.eigen_pool = new Eigen::ThreadPool(NUM_AGG_THREADS);
+    //Eigen::ThreadPoolDevice d(&pool, NUM_AGG_EIGEN_THREADS);
+    for (int i = 0; i < NUM_AGG_THREADS; i++) {
+      ptre_global.aggregation_threads.emplace_back(
+          std::thread(AggregationThreadLoop, i));
     }
 
     LOG(INFO) << "[2/2] Done Registering Variables";
@@ -1094,6 +1139,7 @@ class ModelaverageOp : public OpKernel {
       do_reduce = false;
     }
     if (do_reduce) {
+      //LOG(INFO) << var_name_ << ": num_incomings=" << num_incomings;
       const Device& d = ctx->template eigen_device<Device>();
       const Tensor other(*ret);
 #if 1
@@ -1101,10 +1147,6 @@ class ModelaverageOp : public OpKernel {
       Tensor m_(DataTypeToEnum<T>::v(), TensorShape({ }));
       m_.flat<T>()(0) = T(num_incomings + 1);
       const Tensor m(m_);
-      /*
-      LOG(INFO) << "\n" << "MAVG " << var_name_;
-      */
-      //usleep(100);
       functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
           other.flat<T>());
 #else
@@ -1522,6 +1564,7 @@ void ptre_barrier() {
 void ptre_print_counter_summary() {
   int n = ptre_global.agg_cnts.size();
   float avg_bytes = 0;
+  float avg_count = 0;
   for (auto&& name : ptre_global.trainable_var_names) {
     int sum = 0;
     std::vector<int> l;
@@ -1531,10 +1574,12 @@ void ptre_print_counter_summary() {
     }
     std::sort(l.begin(), l.end(), std::greater<int>());
     float avg = (float) sum / (n - 1);
+    avg_count += avg;
     LOG(INFO) << name << ": avg=" << avg
         << ", mid=" << l[(n - 1) / 2];
     avg_bytes += avg * ptre_global.cm->remote_variable(name)->rcv_length();
   }
+  LOG(INFO) << "AVG COUNT=" << avg_count;
   LOG(INFO) << "AVG BYTES=" << (int) avg_bytes;
 }
 

@@ -128,6 +128,25 @@ void RemoteVariable::Aggregate() {
   agg_state_ = 0;
 }
 
+void RemoteVariable::AggregateEigenDevice(const Eigen::ThreadPoolDevice& d) {
+  std::lock_guard<std::mutex> guard(mu_);
+  if (agg_state_ == 1 && rcv_state_ == 1) {
+    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    Flat var_flat = tensor_->flat<float>();
+    Flat rcv_flat((float*) rcv_buf_, var_flat.size());
+    if (agg_cnt_ == 0) {
+      //var_flat = rcv_flat;
+      //memcpy((void*) tensor_->tensor_data().data(), rcv_buf_, rcv_length_);
+      var_flat.device(d) = rcv_flat;
+    } else {
+      var_flat.device(d) = var_flat + rcv_flat;
+    }
+    agg_cnt_++;
+    permit_->Next();
+  }
+  agg_state_ = 0;
+}
+
 int RemoteVariable::AggCount() {
   std::lock_guard<std::mutex> guard(mu_);
   return agg_cnt_;
@@ -149,6 +168,10 @@ void* RemoteVariable::rcv_data() {
 
 size_t RemoteVariable::rcv_length() {
   return rcv_length_;
+}
+
+int RemoteVariable::agg_state() {
+  return agg_state_;
 }
 
 int RemoteVariable::agg_count() {
