@@ -33,6 +33,13 @@ class BroadcastModelCallback(Callback):
     #ptre.synchronization_barrier()
     self._broadcast_done = True
 
+class PrintCounters(Callback):
+  def __init__(self):
+    super(PrintCounters, self).__init__()
+
+  def on_epoch_end(self, epoch, logs={}):
+    ptre.print_counter_summary_epoch()
+
 class PrintRecvCount(Callback):
   def __init__(self):
     super(PrintRecvCount, self).__init__()

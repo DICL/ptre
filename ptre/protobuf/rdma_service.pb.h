@@ -48,7 +48,7 @@ struct TableStruct_rdma_5fservice_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[25]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[27]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -74,6 +74,12 @@ extern BarrierRequestDefaultTypeInternal _BarrierRequest_default_instance_;
 class BarrierResponse;
 class BarrierResponseDefaultTypeInternal;
 extern BarrierResponseDefaultTypeInternal _BarrierResponse_default_instance_;
+class CancelPushVarRequest;
+class CancelPushVarRequestDefaultTypeInternal;
+extern CancelPushVarRequestDefaultTypeInternal _CancelPushVarRequest_default_instance_;
+class CancelPushVarResponse;
+class CancelPushVarResponseDefaultTypeInternal;
+extern CancelPushVarResponseDefaultTypeInternal _CancelPushVarResponse_default_instance_;
 class GetLIDRequest;
 class GetLIDRequestDefaultTypeInternal;
 extern GetLIDRequestDefaultTypeInternal _GetLIDRequest_default_instance_;
@@ -139,6 +145,8 @@ template<> ::ptre::AttemptPushVarRequest* Arena::CreateMaybeMessage<::ptre::Atte
 template<> ::ptre::AttemptPushVarResponse* Arena::CreateMaybeMessage<::ptre::AttemptPushVarResponse>(Arena*);
 template<> ::ptre::BarrierRequest* Arena::CreateMaybeMessage<::ptre::BarrierRequest>(Arena*);
 template<> ::ptre::BarrierResponse* Arena::CreateMaybeMessage<::ptre::BarrierResponse>(Arena*);
+template<> ::ptre::CancelPushVarRequest* Arena::CreateMaybeMessage<::ptre::CancelPushVarRequest>(Arena*);
+template<> ::ptre::CancelPushVarResponse* Arena::CreateMaybeMessage<::ptre::CancelPushVarResponse>(Arena*);
 template<> ::ptre::GetLIDRequest* Arena::CreateMaybeMessage<::ptre::GetLIDRequest>(Arena*);
 template<> ::ptre::GetLIDResponse* Arena::CreateMaybeMessage<::ptre::GetLIDResponse>(Arena*);
 template<> ::ptre::GetPermitRequest* Arena::CreateMaybeMessage<::ptre::GetPermitRequest>(Arena*);
@@ -3517,6 +3525,264 @@ class AttemptPushVarResponse :
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
 };
+// -------------------------------------------------------------------
+
+class CancelPushVarRequest :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.CancelPushVarRequest) */ {
+ public:
+  CancelPushVarRequest();
+  virtual ~CancelPushVarRequest();
+
+  CancelPushVarRequest(const CancelPushVarRequest& from);
+  CancelPushVarRequest(CancelPushVarRequest&& from) noexcept
+    : CancelPushVarRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline CancelPushVarRequest& operator=(const CancelPushVarRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CancelPushVarRequest& operator=(CancelPushVarRequest&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const CancelPushVarRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const CancelPushVarRequest* internal_default_instance() {
+    return reinterpret_cast<const CancelPushVarRequest*>(
+               &_CancelPushVarRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    25;
+
+  void Swap(CancelPushVarRequest* other);
+  friend void swap(CancelPushVarRequest& a, CancelPushVarRequest& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline CancelPushVarRequest* New() const final {
+    return CreateMaybeMessage<CancelPushVarRequest>(nullptr);
+  }
+
+  CancelPushVarRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<CancelPushVarRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const CancelPushVarRequest& from);
+  void MergeFrom(const CancelPushVarRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CancelPushVarRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.CancelPushVarRequest";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // string var_name = 1;
+  void clear_var_name();
+  static const int kVarNameFieldNumber = 1;
+  const std::string& var_name() const;
+  void set_var_name(const std::string& value);
+  void set_var_name(std::string&& value);
+  void set_var_name(const char* value);
+  void set_var_name(const char* value, size_t size);
+  std::string* mutable_var_name();
+  std::string* release_var_name();
+  void set_allocated_var_name(std::string* var_name);
+
+  // int32 src_rank = 2;
+  void clear_src_rank();
+  static const int kSrcRankFieldNumber = 2;
+  ::PROTOBUF_NAMESPACE_ID::int32 src_rank() const;
+  void set_src_rank(::PROTOBUF_NAMESPACE_ID::int32 value);
+
+  // @@protoc_insertion_point(class_scope:ptre.CancelPushVarRequest)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
+  ::PROTOBUF_NAMESPACE_ID::int32 src_rank_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CancelPushVarResponse :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ptre.CancelPushVarResponse) */ {
+ public:
+  CancelPushVarResponse();
+  virtual ~CancelPushVarResponse();
+
+  CancelPushVarResponse(const CancelPushVarResponse& from);
+  CancelPushVarResponse(CancelPushVarResponse&& from) noexcept
+    : CancelPushVarResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline CancelPushVarResponse& operator=(const CancelPushVarResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CancelPushVarResponse& operator=(CancelPushVarResponse&& from) noexcept {
+    if (GetArenaNoVirtual() == from.GetArenaNoVirtual()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const CancelPushVarResponse& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const CancelPushVarResponse* internal_default_instance() {
+    return reinterpret_cast<const CancelPushVarResponse*>(
+               &_CancelPushVarResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    26;
+
+  void Swap(CancelPushVarResponse* other);
+  friend void swap(CancelPushVarResponse& a, CancelPushVarResponse& b) {
+    a.Swap(&b);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline CancelPushVarResponse* New() const final {
+    return CreateMaybeMessage<CancelPushVarResponse>(nullptr);
+  }
+
+  CancelPushVarResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<CancelPushVarResponse>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const CancelPushVarResponse& from);
+  void MergeFrom(const CancelPushVarResponse& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  #if GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  #else
+  bool MergePartialFromCodedStream(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedInputStream* input) final;
+  #endif  // GOOGLE_PROTOBUF_ENABLE_EXPERIMENTAL_PARSER
+  void SerializeWithCachedSizes(
+      ::PROTOBUF_NAMESPACE_ID::io::CodedOutputStream* output) const final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* InternalSerializeWithCachedSizesToArray(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CancelPushVarResponse* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ptre.CancelPushVarResponse";
+  }
+  private:
+  inline ::PROTOBUF_NAMESPACE_ID::Arena* GetArenaNoVirtual() const {
+    return nullptr;
+  }
+  inline void* MaybeArenaPtr() const {
+    return nullptr;
+  }
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_rdma_5fservice_2eproto);
+    return ::descriptor_table_rdma_5fservice_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // @@protoc_insertion_point(class_scope:ptre.CancelPushVarResponse)
+ private:
+  class HasBitSetters;
+
+  ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_rdma_5fservice_2eproto;
+};
 // ===================================================================
 
 
@@ -4526,9 +4792,86 @@ inline void AttemptPushVarResponse::set_result(bool value) {
   // @@protoc_insertion_point(field_set:ptre.AttemptPushVarResponse.result)
 }
 
+// -------------------------------------------------------------------
+
+// CancelPushVarRequest
+
+// string var_name = 1;
+inline void CancelPushVarRequest::clear_var_name() {
+  var_name_.ClearToEmptyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline const std::string& CancelPushVarRequest::var_name() const {
+  // @@protoc_insertion_point(field_get:ptre.CancelPushVarRequest.var_name)
+  return var_name_.GetNoArena();
+}
+inline void CancelPushVarRequest::set_var_name(const std::string& value) {
+  
+  var_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:ptre.CancelPushVarRequest.var_name)
+}
+inline void CancelPushVarRequest::set_var_name(std::string&& value) {
+  
+  var_name_.SetNoArena(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:ptre.CancelPushVarRequest.var_name)
+}
+inline void CancelPushVarRequest::set_var_name(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  var_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:ptre.CancelPushVarRequest.var_name)
+}
+inline void CancelPushVarRequest::set_var_name(const char* value, size_t size) {
+  
+  var_name_.SetNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:ptre.CancelPushVarRequest.var_name)
+}
+inline std::string* CancelPushVarRequest::mutable_var_name() {
+  
+  // @@protoc_insertion_point(field_mutable:ptre.CancelPushVarRequest.var_name)
+  return var_name_.MutableNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline std::string* CancelPushVarRequest::release_var_name() {
+  // @@protoc_insertion_point(field_release:ptre.CancelPushVarRequest.var_name)
+  
+  return var_name_.ReleaseNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+}
+inline void CancelPushVarRequest::set_allocated_var_name(std::string* var_name) {
+  if (var_name != nullptr) {
+    
+  } else {
+    
+  }
+  var_name_.SetAllocatedNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), var_name);
+  // @@protoc_insertion_point(field_set_allocated:ptre.CancelPushVarRequest.var_name)
+}
+
+// int32 src_rank = 2;
+inline void CancelPushVarRequest::clear_src_rank() {
+  src_rank_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 CancelPushVarRequest::src_rank() const {
+  // @@protoc_insertion_point(field_get:ptre.CancelPushVarRequest.src_rank)
+  return src_rank_;
+}
+inline void CancelPushVarRequest::set_src_rank(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  src_rank_ = value;
+  // @@protoc_insertion_point(field_set:ptre.CancelPushVarRequest.src_rank)
+}
+
+// -------------------------------------------------------------------
+
+// CancelPushVarResponse
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

@@ -46,6 +46,9 @@ class RdmaServiceImpl final : public Rdma::Service {
   grpc::Status AttemptPushVar(grpc::ServerContext* context,
                               const AttemptPushVarRequest* request,
                               AttemptPushVarResponse* response) override;
+  grpc::Status CancelPushVar(grpc::ServerContext* context,
+                              const CancelPushVarRequest* request,
+                              CancelPushVarResponse* response) override;
 
   void SetRdmaManager(RdmaManager* rdma_manager);
   void SetConsensusManager(ConsensusManager* cm);

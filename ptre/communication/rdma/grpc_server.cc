@@ -191,6 +191,18 @@ grpc::Status RdmaServiceImpl::AttemptPushVar(grpc::ServerContext* context,
 
   return grpc::Status::OK;
 }
+
+grpc::Status RdmaServiceImpl::CancelPushVar(grpc::ServerContext* context,
+                                      const CancelPushVarRequest* request,
+                                      CancelPushVarResponse* response) {
+  int src_rank = request->src_rank();
+  string var_name = request->var_name();
+  auto rvar = cm_->remote_variable(var_name);
+  if (rvar) {
+    rvar->PopSenderCandidate(src_rank);
+  }
+  return grpc::Status::OK;
+}
 //void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
 //  rdma_manager_ = rdma_manager;
 //}

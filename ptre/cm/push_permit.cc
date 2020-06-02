@@ -45,6 +45,19 @@ int Permit::Enqueue(int src_rank, int rcv_state) {
   return -1;
 }
 
+int Permit::Pop(int src_rank) {
+  auto search = std::find(dq_.begin(), dq_.end(), src_rank);
+  if (search != dq_.end()) {
+    dq_.erase(search);
+  }
+  auto search_pending = std::find(dq_pending_.begin(), dq_pending_.end(),
+      src_rank);
+  if (search_pending != dq_pending_.end()) {
+    dq_pending_.erase(search_pending);
+  }
+  return 0;
+}
+
 void Permit::SwapPendingQueue() {
   checker_.clear();
   dq_.swap(dq_pending_);

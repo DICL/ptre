@@ -47,6 +47,7 @@ class RPNTask {
   int PostWrite();
   int state();
   int permit();
+  string var_name();
 
  private:
   uint64_t id_;

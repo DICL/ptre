@@ -41,8 +41,8 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank) {
     qp_init_attr.qp_type = IBV_QPT_RC;
     qp_init_attr.cap.max_send_wr = MAX_QP_WR_DEFAULT;
     qp_init_attr.cap.max_recv_wr = MAX_QP_WR_DEFAULT;
-    qp_init_attr.cap.max_send_sge = 16;
-    qp_init_attr.cap.max_recv_sge = 16;
+    qp_init_attr.cap.max_send_sge = 1;
+    qp_init_attr.cap.max_recv_sge = 1;
     qp = ibv_create_qp(pd_, &qp_init_attr);
     if (!qp) {
       LOG(ERROR) << "Failed to create QP for rank=" << i;

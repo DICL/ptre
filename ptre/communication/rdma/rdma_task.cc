@@ -27,7 +27,10 @@ int RPNTask::PostRead() {
   struct ibv_send_wr* bad_wr;
   int ret = ibv_post_send(qp, &wr, &bad_wr);
   if (ret) {
-    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_send";
+    if (ret == 12) {
+      return 12;
+    }
+    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_send, ret=" << ret;
     return 1;
   }
   return 0;
@@ -59,6 +62,9 @@ int RPNTask::PostWrite() {
   struct ibv_send_wr* bad_wr;
   int ret = ibv_post_send(qp, &wr, &bad_wr);
   if (ret) {
+    if (ret == 12) {
+      return 12;
+    }
     LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_send, ret=" << ret;
     return 1;
   }
@@ -73,6 +79,10 @@ int RPNTask::permit() {
   return permit_;
 }
 
+string RPNTask::var_name() {
+  return var_name_;
+}
+
 int RecvTask::PostRecv() {
   int ret;
   struct ibv_qp* qp = rdma_mgr_->qp(dst_);
@@ -80,7 +90,16 @@ int RecvTask::PostRecv() {
   ret = ibv_post_recv(qp, &wr_, &bad_wr);
   if (ret) {
     LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to ibv_post_recv, ret=" << ret;
-    usleep(100);
+    if (ret == 12) {
+      struct ibv_qp_attr attr;
+      struct ibv_qp_init_attr init_attr;
+      int qp_ret = ibv_query_qp(qp, &attr, IBV_QP_STATE | IBV_QP_CAP,
+          &init_attr);
+      LOG(INFO) << "qp_state=" << attr.qp_state
+          << ", max_send_wr=" << init_attr.cap.max_send_wr
+          << ", max_recv_wr=" << init_attr.cap.max_recv_wr;
+      usleep(1000 * 1000);
+    }
     return 1;
   }
   return 0;

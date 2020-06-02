@@ -22,6 +22,7 @@ class RemoteVariable {
   RemoteVariable(const Tensor& var, Allocator* a);
   void StartRecv();
   int EnqueueSenderCandidate(int src_rank);
+  int PopSenderCandidate(int src_rank);
   void StopRecv();
   void NewIncoming(int src_rank);
   void SetAggState(int state);

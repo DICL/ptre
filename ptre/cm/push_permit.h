@@ -20,6 +20,7 @@ class Permit {
   int* data() { return buf_; }
   int value() { return *buf_; }
   int Enqueue(int src_rank, int rcv_state);
+  int Pop(int src_rank);
   void SwapPendingQueue();
   void Next();
   void SetValue(int value);

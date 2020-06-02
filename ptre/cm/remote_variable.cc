@@ -90,6 +90,15 @@ int RemoteVariable::EnqueueSenderCandidate(int src_rank) {
   return ret;
 }
 
+int RemoteVariable::PopSenderCandidate(int src_rank) {
+  std::lock_guard<std::mutex> guard(mu_);
+  int ret = permit_->Pop(src_rank);
+  if (permit_->value() == src_rank && rcv_state_) {
+    permit_->Next();
+  }
+  return 0;
+}
+
 void RemoteVariable::StopRecv() {
   std::lock_guard<std::mutex> guard(mu_);
   rcv_state_ = 0;

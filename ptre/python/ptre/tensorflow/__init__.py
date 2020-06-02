@@ -6,6 +6,7 @@ from ptre.tensorflow.ptre_ops import _get_remote_variable
 from ptre.tensorflow.ptre_ops import broadcast
 from ptre.tensorflow.ptre_ops import barrier
 from ptre.tensorflow.ptre_ops import print_counter_summary
+from ptre.tensorflow.ptre_ops import print_counter_summary_epoch
 from ptre.tensorflow.ptre_ops import connect_qps
 from ptre.tensorflow.ptre_ops import count_step
 from ptre.tensorflow.ptre_ops import finalize

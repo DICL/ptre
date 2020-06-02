@@ -18,6 +18,7 @@
 #include <vector>
 #include <functional>
 #include <mutex>
+#include <sstream>
 //#include <shared_mutex>
 //#include "ptre/lib/shared_mutex.h"
 
@@ -46,6 +47,7 @@
 
 #define IBV_CALL(D, X) \
   while (!ptre_global.is_shutdown) { \
+    std::lock_guard<std::mutex> guard(*ptre_global.qp_mus[D]); \
     int ibv_call_ret = X; \
     if (ibv_call_ret) { \
       ptre_global.rdma_manager->RecoverQP(D); \
@@ -54,10 +56,10 @@
     } \
   }
 
-#define NUM_PUSH_THREADS 1
-#define NUM_SEND_POLLING_THREADS 1
-#define NUM_RECV_POLLING_THREADS 0
-#define NUM_AGG_THREADS 28
+#define NUM_PUSH_THREADS 4
+#define NUM_SEND_POLLING_THREADS 4
+#define NUM_RECV_POLLING_THREADS 1
+#define NUM_AGG_THREADS 21
 #define NUM_AGG_EIGEN_THREADS 8
 //#define NUM_RECV_THREADS 1
 
@@ -127,9 +129,6 @@ struct PtreGlobal {
         t.join();
       }
     }
-    if (push_thread.joinable()) {
-      push_thread.join();
-    }
     for (auto& t : send_polling_threads) {
       if (t.joinable()) {
         t.join();
@@ -148,18 +147,11 @@ struct PtreGlobal {
         t.join();
       }
     }
-    if (aggregation_thread.joinable()) {
-      aggregation_thread.join();
-    }
     for (auto& t : receive_threads) {
       if (t.joinable()) {
         t.join();
       }
     }
-    if (receive_thread.joinable()) {
-      receive_thread.join();
-    }
-
     //if (qp_recover_thread.joinable()) {
     //  qp_recover_thread.join();
     //}
@@ -190,13 +182,10 @@ struct PtreGlobal {
   std::atomic<bool> is_shutdown;
   // Background thread running PTRE communication.
   std::thread grpc_server_thread;
-  std::thread push_thread;
   std::vector<std::thread> push_threads;
   std::vector<std::thread> send_polling_threads;
   std::vector<std::thread> recv_polling_threads;
-  std::thread aggregation_thread;
   std::vector<std::thread> aggregation_threads;
-  std::thread receive_thread;
   std::vector<std::thread> receive_threads;
   Eigen::ThreadPool* eigen_pool;
 
@@ -246,8 +235,14 @@ struct PtreGlobal {
   std::atomic<int> rcv_cnt_total;
   std::atomic<int> send_cnt_total;
   std::vector<std::map<string, int>> agg_cnts;
+  int agg_cnts_last = 1;
 
   std::map<string, int> push_success_cnt;
+
+  std::vector<std::mutex*> qp_mus;
+
+  std::mutex rpn_checker_mu;
+  std::map<uint64_t, string> rpn_checker;
 };
 
 static PtreGlobal ptre_global;
@@ -360,11 +355,30 @@ int ProcessRecvCQ(int src, struct ibv_wc* wcs) {
         }
       }
     } else {
-      ptre_global.rdma_manager->RecoverQP(src);
+      //ptre_global.rdma_manager->RecoverQP(src);
     }
     IBV_CALL(src, task->PostRecv());
   }
   return 0;
+}
+
+bool IsRPNTaskValid(RPNTask* task) {
+  std::lock_guard<std::mutex> guard(ptre_global.rpn_checker_mu);
+  auto search = ptre_global.rpn_checker.find((uint64_t) task);
+  if (search == ptre_global.rpn_checker.end()) {
+    return false;
+  }
+  return true;
+}
+
+void DiscardRPNTask(RPNTask* task) {
+  std::lock_guard<std::mutex> guard(ptre_global.rpn_checker_mu);
+}
+
+void CancelPushVar(int dst, const string& var_name) {
+  GrpcClient* client;
+  ptre_global.grpc_client_cache->GetClient(dst, &client);
+  client->CancelPushVar(var_name);
 }
 
 int ProcessSendCQ(int dst, struct ibv_wc* wcs) {
@@ -374,48 +388,72 @@ int ProcessSendCQ(int dst, struct ibv_wc* wcs) {
   int ret;
   for (int i = 0; i < ne; i++) {
     RPNTask* task = reinterpret_cast<RPNTask*>(wcs[i].wr_id);
+    if (!IsRPNTaskValid(task)) {
+      CancelPushVar(dst, task->var_name());
+      delete task;
+      continue;
+    }
     if (wcs[i].status == IBV_WC_SUCCESS) {
-      if (task->state() == RPNTask::STATE_WRITE) {
+      if (task->state() == RPNTask::STATE_READ) {
+        if (task->permit() == ptre_global.rank) {
+          ptre_global.qp_mus[dst]->lock();
+          ret = task->PostWrite();
+          ptre_global.qp_mus[dst]->unlock();
+          if (ret) {
+            CancelPushVar(dst, task->var_name());
+            delete task;
+            continue;
+            //DiscardRPNTask(task);
+          }
+          //IBV_CALL(dst, task->PostWrite());
+        } else {
+          ptre_global.qp_mus[dst]->lock();
+          ret = task->PostRead();
+          ptre_global.qp_mus[dst]->unlock();
+          if (ret) {
+            CancelPushVar(dst, task->var_name());
+            delete task;
+            continue;
+            //DiscardRPNTask(task);
+          }
+          //IBV_CALL(dst, task->PostRead());
+        }
+      } else if (task->state() == RPNTask::STATE_WRITE) {
         delete task;
         continue;
-      } else if (task->state() == RPNTask::STATE_READ) {
-        if (task->permit() == ptre_global.rank) {
-          do {
-            ret = task->PostWrite();
-            if (ret) {
-              ptre_global.rdma_manager->RecoverQP(dst);
-            }
-          } while (ret && !ptre_global.is_shutdown);
-        } else {
-          do {
-            ret = task->PostRead();
-            if (ret) {
-              ptre_global.rdma_manager->RecoverQP(dst);
-            }
-          } while (ret && !ptre_global.is_shutdown);
-        }
       } else {
         LOG(ERROR) << "Unknown task state: " << task->state();
       }
     } else {
-      //ptre_global.rdma_manager->RecoverQP(dst);
+#if 1
+      CancelPushVar(dst, task->var_name());
+      delete task;
+      continue;
+#else
       if (task->state() == RPNTask::STATE_READ) {
-        do {
-          ret = task->PostRead();
-          if (ret) {
-            ptre_global.rdma_manager->RecoverQP(dst);
-          }
-        } while (ret && !ptre_global.is_shutdown);
+        ptre_global.qp_mus[dst]->lock();
+        ret = task->PostRead();
+        ptre_global.qp_mus[dst]->unlock();
+        if (ret) {
+          delete task;
+          continue;
+          //DiscardRPNTask(task);
+        }
+        //IBV_CALL(dst, task->PostRead());
       } else if (task->state() == RPNTask::STATE_WRITE) {
-        do {
-          ret = task->PostWrite();
-          if (ret) {
-            ptre_global.rdma_manager->RecoverQP(dst);
-          }
-        } while (ret && !ptre_global.is_shutdown);
+        ptre_global.qp_mus[dst]->lock();
+        ret = task->PostWrite();
+        ptre_global.qp_mus[dst]->unlock();
+        if (ret) {
+          delete task;
+          continue;
+          //DiscardRPNTask(task);
+        }
+        //IBV_CALL(dst, task->PostWrite());
       } else {
         LOG(ERROR) << "Unknown task state: " << task->state();
       }
+#endif
     }
   }
   return 0;
@@ -480,9 +518,11 @@ void ConcurrentPushThreadLoop() {
     }
 
     if(!pvar->GetState()) {
+#if 0
       mu.lock();
       q.push(task);
       mu.unlock();
+#endif
       //var_mu.unlock_shared();
       var_mu.unlock();
       continue;
@@ -510,7 +550,19 @@ void ConcurrentPushThreadLoop() {
 
     RPNTask* rdma_task = new RPNTask(ptre_global.rdma_manager, task->dst(),
         task->var_name());
-    IBV_CALL(task->dst(), rdma_task->PostRead());
+    ptre_global.rpn_checker_mu.lock();
+    ptre_global.rpn_checker[(uint64_t) rdma_task] = task->var_name();
+    ptre_global.rpn_checker_mu.unlock();
+    ptre_global.qp_mus[task->dst()]->lock();
+    int read_ret = rdma_task->PostRead();
+    ptre_global.qp_mus[task->dst()]->unlock();
+    if (read_ret) {
+      delete rdma_task;
+      mu.lock();
+      q.push(task);
+      mu.unlock();
+    }
+    //IBV_CALL(task->dst(), rdma_task->PostRead());
     //LOG(INFO) << "Done PostRead dst=" << task->dst() << ", var_name=" << task->var_name();
 
     //LOG(INFO) << "Done PushAndNotify";
@@ -525,16 +577,6 @@ void ConcurrentPushThreadLoop() {
 #endif
     //var_mu.unlock_shared();
     var_mu.unlock();
-  }
-}
-
-void PostReceiveWRs() {
-  int ret;
-  for (int i = 0; i < ptre_global.size; i++) {
-    RecvTask* task = new RecvTask(ptre_global.rdma_manager, i);
-    do {
-      ret = task->PostRecv();
-    } while (ret && !ptre_global.is_shutdown);
   }
 }
 
@@ -642,6 +684,9 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   LOG(INFO) << "Init Rdma Manager";
   ptre_global.rdma_manager = new RdmaManager(size, rank);
   ptre_global.grpc_service.SetRdmaManager(ptre_global.rdma_manager);
+  for (int i = 0; i < ptre_global.size; i++) {
+    ptre_global.qp_mus.push_back(new std::mutex());
+  }
 
   // Connect Queue Pairs
   LOG(INFO) << "Connect Queue Pairs";
@@ -753,21 +798,14 @@ class RegisterVariablesOp : public OpKernel {
 
     //ptre_global.qp_recover_thread = std::thread(QPRecoverThreadLoop);
 
-    // Post Recv
-    PostReceiveWRs();
-#if 0
-    // Init Receive Thread
-    LOG(INFO) << "Starting Receive Threads: num_threads=" << NUM_RECV_THREADS;
-    //ptre_global.receive_thread = std::thread(ReceiveThreadLoop);
-    for (int i = 0; i < NUM_RECV_THREADS; i++) {
-      ptre_global.receive_threads.emplace_back(
-          std::thread(ReceiveThreadLoop, i, NUM_RECV_THREADS));
+    // Post Recvs
+    for (int i = 0; i < ptre_global.size; i++) {
+      RecvTask* task = new RecvTask(ptre_global.rdma_manager, i);
+      IBV_CALL(i, task->PostRecv());
     }
-#endif
 
     // Init Push Thread
     LOG(INFO) << "Starting Push Threads: num_threads=" << NUM_PUSH_THREADS;
-    //ptre_global.push_thread = std::thread(PushThreadLoop);
     for (int i = 0; i < NUM_PUSH_THREADS; i++) {
       ptre_global.push_threads.emplace_back(
           std::thread(ConcurrentPushThreadLoop));
@@ -1279,9 +1317,21 @@ void ClearTasks(const string& var_name) {
     q.pop();
     if (task->var_name().compare(var_name)) {  // they differ
       q.push(task);
+    } else {
+      CancelPushVar(task->dst(), task->var_name());
     }
   }
   mu.unlock();
+  ptre_global.rpn_checker_mu.lock();
+  auto it = ptre_global.rpn_checker.begin();
+  while (it != ptre_global.rpn_checker.end()) {
+    if (!it->second.compare(var_name)) {
+      it = ptre_global.rpn_checker.erase(it);
+    } else {
+      it++;
+    }
+  }
+  ptre_global.rpn_checker_mu.unlock();
 }
 
 void EnqueueTasks(const string& var_name, int num_push) {
@@ -1326,13 +1376,12 @@ class PushTensorOp : public OpKernel {
   }
   void Compute(OpKernelContext* ctx) {
     if (ptre_global.push_step_state != 1) return;
+    std::lock_guard<std::mutex> guard(ptre_global.push_var_mus[var_name_]);
 
     auto pvar = ptre_global.rdma_manager->push_variable(var_name_);
     if (!pvar) return;
 
-    ptre_global.push_var_mus[var_name_].lock();
     pvar->StopPush();
-    ptre_global.push_var_mus[var_name_].unlock();
     ClearTasks(var_name_);
 
     /*
@@ -1367,11 +1416,9 @@ class PushTensorOp : public OpKernel {
     */
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
 
-    EnqueueTasks(var_name_, ptre_global.num_push);
-    ptre_global.push_var_mus[var_name_].lock();
     pvar->StartPush();
     //ptre_global.rdma_manager->SetPushReady(var_name_);
-    ptre_global.push_var_mus[var_name_].unlock();
+    EnqueueTasks(var_name_, ptre_global.num_push);
   }
  private:
   string var_name_;
@@ -1559,6 +1606,30 @@ void ptre_set_local_step(int local_step) {
 
 void ptre_barrier() {
   tensorflow::PtreBarrier();
+}
+
+void ptre_print_counter_summary_epoch() {
+  int begin = ptre_global.agg_cnts_last;
+  int end = ptre_global.agg_cnts.size();
+  int n = end - begin;
+  float avg_bytes = 0;
+  float avg_count = 0;
+  std::stringstream ss;
+  for (auto&& name : ptre_global.trainable_var_names) {
+    int sum = 0;
+    std::vector<int> l;
+    for (int i = begin; i < end; i++) {
+      sum += ptre_global.agg_cnts[i][name];
+      l.push_back(ptre_global.agg_cnts[i][name]);
+    }
+    std::sort(l.begin(), l.end(), std::greater<int>());
+    float avg = (float) sum / (n - 1);
+    avg_count += avg;
+    ss << "(" << avg << ", " << l[(n - 1) / 2] << ") ";
+    avg_bytes += avg * ptre_global.cm->remote_variable(name)->rcv_length();
+  }
+  ptre_global.agg_cnts_last = end;
+  LOG(INFO) << ss.str() << "\nAVG COUNT=" << avg_count << ", AVG BYTES=" << (int) avg_bytes << ", n=" << n;
 }
 
 void ptre_print_counter_summary() {

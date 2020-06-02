@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import re
 import ctypes
+import time
 
 from tensorflow.python.framework import load_library
 
@@ -26,6 +27,7 @@ def init_rdma_grpc_service():
   PTRE_CDLL.ptre_init_rdma_grpc_service()
 
 def finalize(wait_sec=0):
+  barrier(1)
   PTRE_CDLL.ptre_finalize(wait_sec)
 
 def size():
@@ -93,11 +95,15 @@ def broadcast(tensor, root_rank, name):
   #name = 'PtreBroadcast_%s' % tensor.name
   return PTRE_LIB.broadcast(tensor, name=name, root_rank=root_rank)
 
-def barrier():
+def barrier(wait_sec=0):
   PTRE_CDLL.ptre_barrier()
+  time.sleep(wait_sec)
 
 def print_recv_count():
   PTRE_CDLL.ptre_print_recv_count()
 
 def print_counter_summary():
   PTRE_CDLL.ptre_print_counter_summary()
+
+def print_counter_summary_epoch():
+  PTRE_CDLL.ptre_print_counter_summary_epoch()

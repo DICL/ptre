@@ -25,6 +25,7 @@ static const char* Rdma_method_names[] = {
   "/ptre.Rdma/GetRemoteParamAddress",
   "/ptre.Rdma/AttemptPush",
   "/ptre.Rdma/AttemptPushVar",
+  "/ptre.Rdma/CancelPushVar",
   "/ptre.Rdma/NotifyPushDone",
   "/ptre.Rdma/Barrier",
   "/ptre.Rdma/Recv",
@@ -45,11 +46,12 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   , rpcmethod_GetRemoteParamAddress_(Rdma_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_AttemptPush_(Rdma_method_names[4], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_AttemptPushVar_(Rdma_method_names[5], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_NotifyPushDone_(Rdma_method_names[6], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_Barrier_(Rdma_method_names[7], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_Recv_(Rdma_method_names[8], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetRemoteAddressV2_(Rdma_method_names[9], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_GetPermit_(Rdma_method_names[10], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_CancelPushVar_(Rdma_method_names[6], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_NotifyPushDone_(Rdma_method_names[7], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_Barrier_(Rdma_method_names[8], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_Recv_(Rdma_method_names[9], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetRemoteAddressV2_(Rdma_method_names[10], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetPermit_(Rdma_method_names[11], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Rdma::Stub::GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest& request, ::ptre::GetLIDResponse* response) {
@@ -170,6 +172,26 @@ void Rdma::Stub::experimental_async::AttemptPushVar(::grpc::ClientContext* conte
 
 ::grpc::ClientAsyncResponseReader< ::ptre::AttemptPushVarResponse>* Rdma::Stub::PrepareAsyncAttemptPushVarRaw(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest& request, ::grpc::CompletionQueue* cq) {
   return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushVarResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPushVar_, context, request, false);
+}
+
+::grpc::Status Rdma::Stub::CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest& request, ::ptre::CancelPushVarResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_CancelPushVar_, context, request, response);
+}
+
+void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::CancelPushVarResponse>* Rdma::Stub::AsyncCancelPushVarRaw(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CancelPushVarResponse>::Create(channel_.get(), cq, rpcmethod_CancelPushVar_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::CancelPushVarResponse>* Rdma::Stub::PrepareAsyncCancelPushVarRaw(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CancelPushVarResponse>::Create(channel_.get(), cq, rpcmethod_CancelPushVar_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::ptre::NotifyPushDoneResponse* response) {
@@ -306,25 +328,30 @@ Rdma::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Rdma_method_names[6],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::CancelPushVarRequest, ::ptre::CancelPushVarResponse>(
+          std::mem_fn(&Rdma::Service::CancelPushVar), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Rdma_method_names[7],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::NotifyPushDoneRequest, ::ptre::NotifyPushDoneResponse>(
           std::mem_fn(&Rdma::Service::NotifyPushDone), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Rdma_method_names[7],
+      Rdma_method_names[8],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::BarrierRequest, ::ptre::BarrierResponse>(
           std::mem_fn(&Rdma::Service::Barrier), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Rdma_method_names[8],
+      Rdma_method_names[9],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::RecvRequest, ::ptre::RecvResponse>(
           std::mem_fn(&Rdma::Service::Recv), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Rdma_method_names[9],
+      Rdma_method_names[10],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>(
           std::mem_fn(&Rdma::Service::GetRemoteAddressV2), this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
-      Rdma_method_names[10],
+      Rdma_method_names[11],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Rdma::Service, ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>(
           std::mem_fn(&Rdma::Service::GetPermit), this)));
@@ -369,6 +396,13 @@ Rdma::Service::~Service() {
 }
 
 ::grpc::Status Rdma::Service::AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Rdma::Service::CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) {
   (void) context;
   (void) request;
   (void) response;

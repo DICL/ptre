@@ -183,6 +183,22 @@ int GrpcClient::AttemptPushVar(const string& var_name) {
   }
 }
 
+int GrpcClient::CancelPushVar(const string& var_name) {
+  CancelPushVarRequest req;
+  req.set_src_rank(comm_rank_);
+  req.set_var_name(var_name);
+
+  CancelPushVarResponse res;
+  ClientContext ctx;
+  grpc::Status status = stub_->CancelPushVar(&ctx, req, &res);
+
+  if (status.ok()) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
 //GrpcClient* GrpcClientCache::GetClient(int dst_rank) {
 //  if (cache_.find(rank) == cache_.end()) {
 //    auto client = new GrpcClient(rank_, dst_rank,

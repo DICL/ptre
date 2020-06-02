@@ -32,6 +32,7 @@ class GrpcClient {
   int Recv(char* buf, size_t len, const string& name);
   int GetPermit(const string& name);
   int AttemptPushVar(const string& var_name);
+  int CancelPushVar(const string& var_name);
 
  private:
   int comm_rank_;
