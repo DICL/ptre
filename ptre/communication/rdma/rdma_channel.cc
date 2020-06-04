@@ -2,6 +2,11 @@
 
 namespace ptre {
 
+RdmaChannel::RdmaChannel(struct ibv_context* ctx, struct ibv_qp* qp) {
+  ctx_ = ctx;
+  qp_ = qp;
+}
+
 int RdmaChannel::PostSend(struct ibv_send_wr& wr) {
   int ret;
   struct ibv_send_wr* bad_wr;

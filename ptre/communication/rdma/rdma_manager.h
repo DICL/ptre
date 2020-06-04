@@ -50,6 +50,7 @@ class RdmaManager {
   // Memory Region Init Functions
   void SetTrainableVariables(std::vector<RemoteVariable*>& vars,
       const std::vector<string>& names);
+  void InitMRs(std::vector<RemoteVariable*>& vars);
 
   /// MR management V2
   void RegisterMR(const BufType buf_type, const string& name, void* buf,

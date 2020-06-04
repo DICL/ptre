@@ -38,6 +38,8 @@ target_link_libraries(ptre_ops
                       rdma_grpc_client
                       grpc_client_cache
                       rdma_task
+                      rdma_channel
+                      rdma_pull_job
                       #shared_mutex
 )
 #target_compile_definitions(ptre_ops PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)

@@ -22,6 +22,7 @@
 //#include <shared_mutex>
 //#include "ptre/lib/shared_mutex.h"
 
+#include <absl/base/macros.h>
 #include <arpa/inet.h>
 #include <infiniband/verbs.h>
 
@@ -30,7 +31,7 @@
 #include "ptre/communication/rdma/grpc_client.h"
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/rdma.h"
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 #include "ptre/communication/rdma/rdma_task.h"
 //#include "ptre/tensorflow/types.h"
 #include "ptre/kernels/job_def.h"
@@ -50,7 +51,7 @@
     std::lock_guard<std::mutex> guard(*ptre_global.qp_mus[D]); \
     int ibv_call_ret = X; \
     if (ibv_call_ret) { \
-      ptre_global.rdma_manager->RecoverQP(D); \
+      ptre_global.rdma_mgr->RecoverQP(D); \
     } else { \
       break; \
     } \
@@ -156,14 +157,14 @@ struct PtreGlobal {
     //  qp_recover_thread.join();
     //}
     /*
-    if (rdma_manager != nullptr) {
-      delete rdma_manager;
+    if (rdma_mgr != nullptr) {
+      delete rdma_mgr;
     }
     */
   }
 
   ConsensusManager* cm = nullptr;
-  RdmaManager* rdma_manager = nullptr;
+  RdmaManager* rdma_mgr = nullptr;
   std::mutex mu;
   std::mutex q_mu;
   std::queue<int> q;
@@ -317,355 +318,118 @@ void PtreBarrier() {
   }
 }
 
-/*
-void PushThreadLoop(int tid, int num_t) {
-  int begin = ptre_global.size * tid / num_t;
-  int end = ptre_global.size * (tid + 1) / num_t;
+// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+// Read indicator key
+// Read tensor
+// Read and check indicator key
+//
+// Aggregate
 
-  for (int i = begin; i < end; i++) {
-  }
-}
-*/
-
-/*
-int PollSendCQ(int dst) {
+void EnqueuePullTask(PullTask* task) {
+  auto q = GetQueue(task);
+  q.lock();
+  q.push(task);
 }
 
-void AThreadLoop() {
-  while (!ptre_global.is_shutdown) {
-  }
-}
-*/
-int ProcessRecvCQ(int src, struct ibv_wc* wcs) {
-  struct ibv_cq* cq = ptre_global.rdma_manager->recv_cq(src);
-  //struct ibv_wc wcs[ptre::MAX_CQE_DEFAULT];
-  int ne = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
-  if (ne <= 0) return 1;
-  for (int i = 0; i < ne; i++) {
-    RecvTask* task = reinterpret_cast<RecvTask*>(wcs[i].wr_id);
-    if (wcs[i].status == IBV_WC_SUCCESS) {
-      //LOG(INFO) << "Push from rank=" << src;
-      uint32_t idx = ntohl(wcs[i].imm_data);
-      if (idx >= 0) {
-        //LOG(INFO) << "Push from rank=" << src << ", var_name=" << idx;
-        auto rvar = ptre_global.cm->remote_variable(idx);
-        if (rvar) {
-          rvar->NewIncoming(src);
-          //LOG(INFO) << idx << ": agg_state=" << rvar->agg_state();
-        }
-      }
+// Delete a task object.
+void DeletePullTask(PullTask* task) {
+  const string var_name = task->var_name();
+  auto table = GetVariablePullTaskTable(var_name);
+  PTRE_VAR_LOCK(var_name);
+  auto it = table.begin();
+  while (it != table.end()) {
+    if (*it == task) {
+      it = table.erase(it);
     } else {
-      //ptre_global.rdma_manager->RecoverQP(src);
+      it++;
     }
-    IBV_CALL(src, task->PostRecv());
   }
-  return 0;
+  delete task;
+  PTRE_VAR_UNLOCK(var_name);
 }
 
-bool IsRPNTaskValid(RPNTask* task) {
-  std::lock_guard<std::mutex> guard(ptre_global.rpn_checker_mu);
-  auto search = ptre_global.rpn_checker.find((uint64_t) task);
-  if (search == ptre_global.rpn_checker.end()) {
-    return false;
+void ProcessPullTaskCQ(PullTask* task) {
+  switch (task->GetState()) {
+    case PullTask::STATE_TENSOR_READ: {
+      task->PostReadValidation();
+    }
+    case PullTask::STATE_KEY_READ: {
+      task->PostReadTensor();
+      break;
+    }
+    case PullTask::STATE_VALIDATION_READ: {
+      if (task->IsTensorValid()) {
+        EnqueueAggregation(task);
+      } else {
+        task->PostReadKey();
+      }
+      break;
+    }
+    default: {
+      break;
+    }
   }
-  return true;
+
+  if (task->state() == PullTask::STATE_ABORTED) {
+    auto job = reinterpret_cast<PullJob*>(task->job_handle());
+    job->DeleteTask(task);
+  }
 }
 
-void DiscardRPNTask(RPNTask* task) {
-  std::lock_guard<std::mutex> guard(ptre_global.rpn_checker_mu);
-}
-
-void CancelPushVar(int dst, const string& var_name) {
-  GrpcClient* client;
-  ptre_global.grpc_client_cache->GetClient(dst, &client);
-  client->CancelPushVar(var_name);
-}
-
-int ProcessSendCQ(int dst, struct ibv_wc* wcs) {
-  struct ibv_cq* cq = ptre_global.rdma_manager->send_cq(dst);
+int ProcessCQ(int dst, struct ibv_wc* wcs) {
+  struct ibv_cq* cq = ptre_global.rdma_mgr->send_cq(dst);
   int ne = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
   if (ne <= 0) return 1;
   int ret;
   for (int i = 0; i < ne; i++) {
-    RPNTask* task = reinterpret_cast<RPNTask*>(wcs[i].wr_id);
-    if (!IsRPNTaskValid(task)) {
-      CancelPushVar(dst, task->var_name());
-      delete task;
-      continue;
-    }
+    PullTask* task = reinterpret_cast<PullTask*>(wcs[i].wr_id);
     if (wcs[i].status == IBV_WC_SUCCESS) {
-      if (task->state() == RPNTask::STATE_READ) {
-        if (task->permit() == ptre_global.rank) {
-          ptre_global.qp_mus[dst]->lock();
-          ret = task->PostWrite();
-          ptre_global.qp_mus[dst]->unlock();
-          if (ret) {
-            CancelPushVar(dst, task->var_name());
-            delete task;
-            continue;
-            //DiscardRPNTask(task);
-          }
-          //IBV_CALL(dst, task->PostWrite());
-        } else {
-          ptre_global.qp_mus[dst]->lock();
-          ret = task->PostRead();
-          ptre_global.qp_mus[dst]->unlock();
-          if (ret) {
-            CancelPushVar(dst, task->var_name());
-            delete task;
-            continue;
-            //DiscardRPNTask(task);
-          }
-          //IBV_CALL(dst, task->PostRead());
-        }
-      } else if (task->state() == RPNTask::STATE_WRITE) {
-        delete task;
-        continue;
-      } else {
-        LOG(ERROR) << "Unknown task state: " << task->state();
-      }
+      ProcessPullTaskCQ(task);
     } else {
-#if 1
-      CancelPushVar(dst, task->var_name());
-      delete task;
-      continue;
-#else
-      if (task->state() == RPNTask::STATE_READ) {
-        ptre_global.qp_mus[dst]->lock();
-        ret = task->PostRead();
-        ptre_global.qp_mus[dst]->unlock();
-        if (ret) {
-          delete task;
-          continue;
-          //DiscardRPNTask(task);
-        }
-        //IBV_CALL(dst, task->PostRead());
-      } else if (task->state() == RPNTask::STATE_WRITE) {
-        ptre_global.qp_mus[dst]->lock();
-        ret = task->PostWrite();
-        ptre_global.qp_mus[dst]->unlock();
-        if (ret) {
-          delete task;
-          continue;
-          //DiscardRPNTask(task);
-        }
-        //IBV_CALL(dst, task->PostWrite());
-      } else {
-        LOG(ERROR) << "Unknown task state: " << task->state();
-      }
-#endif
+      LOG(ERROR) << "wc bad status = " << wcs[i].status;
+      LOG(ERROR) << "PullTask Must be freed: " << (void*) task;
     }
   }
   return 0;
 }
 
-void SendCQProcessThreadLoop(int tid) {
-  const int num_t = NUM_SEND_POLLING_THREADS;
-  int begin = ptre_global.size * tid / num_t;
-  int end = ptre_global.size * (tid + 1) / num_t;
-  //const size_t num_wcs = ptre::MAX_CQE_DEFAULT;
-  struct ibv_wc wcs[4096];
-  int ret;
+
+// Share task resource with Modelaverage OpKernel -> ClearPullTasks()
+// NEVER SET STATE TO ABORTED
+void ConcurrentAggThreadLoop() {
+  auto&& q = ptre_global.agg_q;
   while (!ptre_global.is_shutdown) {
-    for (int i = begin; i < end; i++) {
-      ProcessSendCQ(i, wcs);
-#if NUM_RECV_POLLING_THREADS
-#else
-      ProcessRecvCQ(i, wcs);
-#endif
-    }
-  }
-}
-
-void RecvCQProcessThreadLoop(int tid) {
-#if NUM_RECV_POLLING_THREADS
-  const int num_t = NUM_RECV_POLLING_THREADS;
-  int begin = ptre_global.size * tid / num_t;
-  int end = ptre_global.size * (tid + 1) / num_t;
-  struct ibv_wc wcs[4096];
-  int ret;
-  while (!ptre_global.is_shutdown) {
-    for (int i = begin; i < end; i++) {
-      //ProcessSendCQ(i, wcs);
-      ProcessRecvCQ(i, wcs);
-    }
-  }
-#endif
-}
-
-void ConcurrentPushThreadLoop() {
-  auto&& q = ptre_global.push_q;
-  auto&& mu = ptre_global.push_q_mu;
-  while (!ptre_global.is_shutdown) {
-    mu.lock();
-    if (q.size() == 0) {
-      mu.unlock();
-      continue;
-    }
-    auto task = q.front();
-    q.pop();
-    mu.unlock();
-
-    //LOG(INFO) << "Processing task " << task->var_name() << ", dst=" << task->dst();
-    auto&& var_mu = ptre_global.push_var_mus[task->var_name()];
-    //var_mu.lock_shared();
-    var_mu.lock();
-    auto pvar = ptre_global.rdma_manager->push_variable(task->var_name());
-    if (!pvar) {
-      //var_mu.unlock_shared();
-      var_mu.unlock();
-      continue;
-    }
-
-    if(!pvar->GetState()) {
-#if 0
-      mu.lock();
-      q.push(task);
-      mu.unlock();
-#endif
-      //var_mu.unlock_shared();
-      var_mu.unlock();
-      continue;
-    }
-
-    if (!task->IsAttemptDone()) {
-      GrpcClient* client;
-      ptre_global.grpc_client_cache->GetClient(task->dst(), &client);
-      int ret = client->AttemptPushVar(task->var_name());
-      if (ret) {
-        //var_mu.unlock_shared();
-        var_mu.unlock();
-        continue;
-      }
-      //LOG(INFO) << "Done AttemptPushVar: " << task->var_name() << ", dst=" << task->dst();
-      task->SetAttemptDone();
-    }
-
-    //LOG(INFO) << "PushAndNotify " << task->dst() << ", " << task->var_name();
-    //LOG(INFO) << "PushAndNotify";
-    /*
-    int ret = ptre_global.rdma_manager->PushAndNotify(task->dst(),
-        task->var_name());
-    */
-
-    RPNTask* rdma_task = new RPNTask(ptre_global.rdma_manager, task->dst(),
-        task->var_name());
-    ptre_global.rpn_checker_mu.lock();
-    ptre_global.rpn_checker[(uint64_t) rdma_task] = task->var_name();
-    ptre_global.rpn_checker_mu.unlock();
-    ptre_global.qp_mus[task->dst()]->lock();
-    int read_ret = rdma_task->PostRead();
-    ptre_global.qp_mus[task->dst()]->unlock();
-    if (read_ret) {
-      delete rdma_task;
-      mu.lock();
-      q.push(task);
-      mu.unlock();
-    }
-    //IBV_CALL(task->dst(), rdma_task->PostRead());
-    //LOG(INFO) << "Done PostRead dst=" << task->dst() << ", var_name=" << task->var_name();
-
-    //LOG(INFO) << "Done PushAndNotify";
-#if 0
-    if (ret) {
-      if (ret < 0) {
-      }
-      mu.lock();
-      q.push(task);
-      mu.unlock();
-    }
-#endif
-    //var_mu.unlock_shared();
-    var_mu.unlock();
-  }
-}
-
-#if 0
-void ReceiveThreadLoop(int tid, int num_t) {
-  std::map<int, bool> checker;
-  int begin = ptre_global.size * tid / num_t;
-  int end = ptre_global.size * (tid + 1) / num_t;
-  //LOG(INFO) << "RECV_THREAD[TID:" << tid << "] begin=" << begin << ", end=" << end;
-  for (int i = begin; i < end; i++) {
-    //LOG(INFO) << "ReceivePushAndNotify";
-    int ret = ptre_global.rdma_manager->ReceivePushNotify(i);
-    //LOG(INFO) << "Done ReceivePushAndNotify";
-    if (ret) {
-      checker[i] = false;
-    } else {
-      checker[i] = true;
-    }
-  }
-  while (!ptre_global.is_shutdown) {
-    for (int i = begin; i < end; i++) {
-      if (checker[i]) {
-        int ret = ptre_global.rdma_manager->PollPushNotify(i);
-        if (ret >= 0) {
-          int idx = ret;
-          auto rvar = ptre_global.cm->remote_variable(idx);
-          if (rvar) {
-            rvar->NewIncoming(i);
-          }
-          int ret_inner = ptre_global.rdma_manager->ReceivePushNotify(i);
-          if (ret_inner) {
-            checker[i] = false;
-          } else {
-            checker[i] = true;
-          }
-        } else if (ret == -1) {
-            checker[i] = false;
-        }
+    PullTask* task;
+    q.wait_and_pop(task);
+    auto job = reinterpret_cast<PullJob*>(task->job_handle());
+    auto rvar = ptre_global.cm->remote_variable(task->var_name());
+    if (rvar) {
+      if (task->state() == PullTask::STATE_VALID) {
+        rvar->Aggregate(*task->tensor());
+        job->DeleteTask(task);
       } else {
-        //LOG(INFO) << "ReceivePushAndNotify";
-        int ret = ptre_global.rdma_manager->ReceivePushNotify(i);
-        //LOG(INFO) << "Done ReceivePushAndNotify";
+        int ret = task->PostReadKey();
         if (ret) {
-          checker[i] = false;
-        } else {
-          checker[i] = true;
+          job->DeleteTask(task);
         }
       }
-    }
-  }
-}
-#endif
-
-void AggregationThreadLoop(int tid) {
-  const int num_t = NUM_AGG_THREADS;
-  int begin = ptre_global.num_trainable_variables * tid / num_t;
-  int end = ptre_global.num_trainable_variables * (tid + 1) / num_t;
-
-  //Eigen::ThreadPool pool(NUM_AGG_EIGEN_THREADS);
-  Eigen::ThreadPoolDevice d(ptre_global.eigen_pool, NUM_AGG_EIGEN_THREADS);
-  //LOG(INFO) << "AGG_THREAD[TID:" << tid << "] begin=" << begin << ", end=" << end;
-  while (!ptre_global.is_shutdown) {
-    for (int i = begin; i < end; i++) {
-      auto rvar = ptre_global.cm->remote_variable(i);
-      if (rvar) {
-#if 0
-        rvar->Aggregate();
-#else
-        rvar->AggregateEigenDevice(d);
-#endif
-      }
+    } else {
+      job->DeleteTask(task);
     }
   }
 }
 
 void load_grpc_hosts(const string& grpc_hosts_file) {
   std::string in_line;
-  //std::ifstream in("/home/wkim/experiments/grpc_hosts");
   std::ifstream in(grpc_hosts_file);
   while (std::getline(in, in_line)) {
     if (in_line[0] == '#') continue;
     ptre_global.grpc_hosts.emplace_back(in_line);
   }
   in.close();
-  /*
-  for (int i = 0; i < ptre_global.size; i++) {
-    std::cout << ptre_global.grpc_hosts[i] << std::endl;
-  }
-  */
 }
 
 void InitComm(int size, int rank, const string& grpc_hosts_file) {
@@ -682,8 +446,8 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
 
   // Init RdmaManager
   LOG(INFO) << "Init Rdma Manager";
-  ptre_global.rdma_manager = new RdmaManager(size, rank);
-  ptre_global.grpc_service.SetRdmaManager(ptre_global.rdma_manager);
+  ptre_global.rdma_mgr = new RdmaManager(size, rank);
+  ptre_global.grpc_service.SetRdmaManager(ptre_global.rdma_mgr);
   for (int i = 0; i < ptre_global.size; i++) {
     ptre_global.qp_mus.push_back(new std::mutex());
   }
@@ -698,21 +462,21 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     while (ret) {
       ret = client->GetLID(&remote_lid);
     }
-    ptre_global.rdma_manager->set_remote_lid(i, remote_lid);
+    ptre_global.rdma_mgr->set_remote_lid(i, remote_lid);
     ret = -1;
     uint32_t remote_qpn;
     uint32_t remote_psn;
     while (ret) {
       ret = client->GetQPAttr(&remote_qpn, &remote_psn);
     }
-    ptre_global.rdma_manager->ConnectQP(i, remote_qpn);
+    ptre_global.rdma_mgr->ConnectQP(i, remote_qpn);
   }
   PtreBarrier();
 
   // Connectivity Check
   int ret;
   do {
-    ret = ptre_global.rdma_manager->ConnectivityCheck();
+    ret = ptre_global.rdma_mgr->ConnectivityCheck();
     PtreBarrier();
   } while (ret);
 
@@ -731,6 +495,21 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
 
 /// MR management V2
 ///
+
+void RdmaSetRemoteAddress(int dst, BufType buf_type, const string& var_name) {
+  GrpcClient* client;
+  ptre_global.grpc_client_cache->GetClient(dst, &client);
+  uint64_t remote_addr;
+  uint32_t rkey;
+  int ret;
+  do {
+    ret = client->GetRemoteAddress(buf_type, var_name, &remote_addr, &rkey);
+  } while (ret && !ptre_global.is_shutdown);
+  ptre_global.rdma_mgr->SetRemoteAddress(dst, buf_type, var_name,
+      remote_addr, rkey);
+}
+
+
 REGISTER_OP("RegisterVariables")
     .Input("vars: NumTensors * T")
     .Attr("T: {float32}")
@@ -768,40 +547,16 @@ class RegisterVariablesOp : public OpKernel {
 
     // Register MRs
     LOG(INFO) << "Register Memory Regions";
-    ptre_global.rdma_manager->SetTrainableVariables(
-        ptre_global.cm->remote_variables(), names_);
+    ptre_global.rdma_mgr->InitMRs(ptre_global.cm->remote_variables());
 
     // Retrieve Remote Addresses
     LOG(INFO) << "Exchange Remote Addresses for RDMA Communication";
     for (int i = 0; i < ptre_global.size; i++) {
-      GrpcClient* client;
-      ptre_global.grpc_client_cache->GetClient(i, &client);
       for (int j = 0; j < num_inputs; j++) {
-        int ret = -1;
-        uint64_t remote_addr;
-        uint32_t rkey;
-        while (ret) {
-          ret = client->GetRemoteAddress(ptre::BUF_TYPE_RECV_BUF, names_[j],
-              &remote_addr, &rkey);
-        }
-        ptre_global.rdma_manager->SetRemoteAddress(i, ptre::BUF_TYPE_RECV_BUF,
-            names_[j], remote_addr, rkey);
-        ret = -1;
-        while (ret) {
-          ret = client->GetRemoteAddress(ptre::BUF_TYPE_PUSH_PERMIT, names_[j],
-              &remote_addr, &rkey);
-        }
-        ptre_global.rdma_manager->SetRemoteAddress(i,
-            ptre::BUF_TYPE_PUSH_PERMIT, names_[j], remote_addr, rkey);
+        RdmaSetRemoteAddress(i, BUF_TYPE_PULL_KEY, names_[j]);
+        RdmaSetRemoteAddress(i, BUF_TYPE_PULL_TENSOR_A, names_[j]);
+        RdmaSetRemoteAddress(i, BUF_TYPE_PULL_TENSOR_B, names_[j]);
       }
-    }
-
-    //ptre_global.qp_recover_thread = std::thread(QPRecoverThreadLoop);
-
-    // Post Recvs
-    for (int i = 0; i < ptre_global.size; i++) {
-      RecvTask* task = new RecvTask(ptre_global.rdma_manager, i);
-      IBV_CALL(i, task->PostRecv());
     }
 
     // Init Push Thread
@@ -872,209 +627,6 @@ class BroadcastOp : public OpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("Broadcast").Device(DEVICE_CPU), BroadcastOp);
 
-REGISTER_OP("GetRemoteVariable")
-    .Attr("index: int = -1")
-    .Attr("var_name: string = ''")
-    .Output("var: float32");
-class GetRemoteVariableOp : public OpKernel {
- public:
-  explicit GetRemoteVariableOp(OpKernelConstruction* context)
-      : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("index", &index_));
-    OP_REQUIRES_OK(context, context->GetAttr("var_name", &var_name_));
-  }
-  void Compute(OpKernelContext* context) override {
-    //Tensor other(ptre_global.cm->global_consensus(index_));
-    usleep(1);
-    Tensor other;
-    if (index_ >= 0) {
-      other = ptre_global.cm->global_consensus(index_);
-    //}
-    } else {
-      //std::cout << "get_remote_variable with name: " << var_name_ << std::endl;
-      other = ptre_global.cm->global_consensus(var_name_);
-    }
-    Tensor* output;
-    OP_REQUIRES_OK(context, context->allocate_output(0, other.shape(), &output));
-    //std::copy(other.tensor_data().begin(), other.tensor_data().end(),
-    //          const_cast<char*>(output->tensor_data().begin()));
-    auto output_flat = output->flat<float>();
-    output_flat = other.flat<float>();
-  }
-
- private:
-  int index_;
-  std::string var_name_;
-};
-REGISTER_KERNEL_BUILDER(Name("GetRemoteVariable").Device(DEVICE_CPU),
-                        GetRemoteVariableOp);
-
-REGISTER_OP("GetRemoteVariables")
-    .Output("out: float32");
-class GetRemoteVariablesOp : public OpKernel {
- public:
-  explicit GetRemoteVariablesOp(OpKernelConstruction* context)
-      : OpKernel(context) { }
-  void Compute(OpKernelContext* context) override {
-    int num_vars = ptre_global.cm->num_vars();
-    for (int i = 0; i < num_vars; i++) {
-      Tensor other(ptre_global.cm->global_consensus(i));
-      Tensor* output;
-      OP_REQUIRES_OK(context, context->allocate_output(i, other.shape(), &output));
-      auto output_flat = output->flat<float>();
-      output_flat = other.flat<float>();
-    }
-  }
-};
-REGISTER_KERNEL_BUILDER(Name("GetRemoteVariables").Device(DEVICE_CPU),
-                        GetRemoteVariablesOp);
-
-REGISTER_OP("GetSendTensor")
-    .Attr("index: int")
-    .Output("var: float32");
-class GetSendTensorOp : public OpKernel {
- public:
-  explicit GetSendTensorOp(OpKernelConstruction* context)
-      : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("index", &index_));
-  }
-  void Compute(OpKernelContext* context) override {
-    Tensor* other(ptre_global.cm->send_tensor(index_));
-    Tensor* output;
-    OP_REQUIRES_OK(context, context->allocate_output(0, other->shape(), &output));
-    auto output_flat = output->flat<float>();
-    output_flat = other->flat<float>();
-  }
-
- private:
-  int index_;
-};
-REGISTER_KERNEL_BUILDER(Name("GetSendTensor").Device(DEVICE_CPU),
-                        GetSendTensorOp);
-
-REGISTER_OP("AverageModelWithRemote")
-    .Attr("T: {float32}")
-    .Attr("NumTensors: int")
-    .Input("vars: NumTensors * T")
-    .Output("outputs: NumTensors * T");
-class AverageModelWithRemoteOp : public OpKernel {
- public:
-  explicit AverageModelWithRemoteOp(OpKernelConstruction* context)
-      : OpKernel(context) {
-    //OP_REQUIRES_OK(context, context->GetAttr("var_sizes", &var_sizes_));
-  }
-  void Compute(OpKernelContext* context) override {
-    int num_inputs = context->num_inputs();
-    for (int i = 0; i < num_inputs; i++) {
-      const Tensor &input = context->input(i);
-      //Tensor input = context->mutable_input(i, true);
-      Tensor* output;
-      OP_REQUIRES_OK(context, context->allocate_output(i, input.shape(), &output));
-      //OP_REQUIRES_OK(context,
-      //               context->forward_input_or_allocate_output(
-      //                   {i}, i, input.shape(), &output));
-      // Load remote tensor from CM
-      Tensor other(ptre_global.cm->global_consensus(i));
-      //Tensor other(input.dtype(), input.shape());
-      //auto other_flat = other.flat<float>();
-      //for (int j = 0; j < var_sizes_[i]; j++) {
-      //  other_flat(j) = 1.0;
-      //}
-
-      // Averaging
-      //auto input_flat = input.flat<float>();
-      //input_flat = 0.5 * (input_flat + other_flat);
-      auto output_flat = output->flat<float>();
-      output_flat = 0.5 * (input.flat<float>() + other.flat<float>());
-      //std::copy(output->tensor_data().begin(), output->tensor_data().end(),
-      //          const_cast<char*>(input.tensor_data().begin()));
-    }
-  }
-};
-REGISTER_KERNEL_BUILDER(Name("AverageModelWithRemote").Device(DEVICE_CPU),
-                        AverageModelWithRemoteOp);
-
-//REGISTER_OP("PushModel")
-//    .Attr("T: {float32}")
-//    .Attr("NumTensors: int")
-//    .Input("var: NumTensors * T");
-//
-//class PushModel : public OpKernel {
-// public:
-//  void Compute(OpKernelContext *context) override {
-//    //ptre_global->PushModel
-//  }
-//};
-
-//REGISTER_OP("Incoming")
-//    .
-
-REGISTER_OP("ApplyModelAveraging")
-    .Input("var: Ref(T)")
-    .Input("remote: T")
-    .Output("out: Ref(T)")
-    .Attr("T: numbertype");
-template <typename T>
-class ApplyModelAveragingOp : public OpKernel {
- public:
-  explicit ApplyModelAveragingOp(OpKernelConstruction* ctx) : OpKernel(ctx) { }
-
-  void Compute(OpKernelContext* ctx) {
-    Tensor var = ctx->mutable_input(0, false);
-    const Tensor& remote = ctx->input(1);
-    //const Device& device = ctx->template eigen_device<Device>();
-//  void operator()(const CPUDevice& d, typename TTypes<T>::Flat var,
-//                  typename TTypes<T>::ConstFlat remote) {
-//    var.device(d) = 0.5 * (var + remote);
-//  }
-    //functor::ApplyModelAveraging<Device, T>()(
-    //    device, var.flat<T>(), remote.flat<T>());
-    var.flat<T>() = 0.5 * (var.flat<T>() + remote.flat<T>());
-
-    ctx->forward_ref_input_to_ref_output(0, 0);
-  }
-};
-REGISTER_KERNEL_BUILDER(
-    Name("ApplyModelAveraging").Device(DEVICE_CPU).TypeConstraint<float>("float"),
-    ApplyModelAveragingOp<float>);
-
-REGISTER_OP("IsNewIncoming")
-    .Output("out: bool");
-class IsNewIncomingOp : public OpKernel {
- public:
-  explicit IsNewIncomingOp(OpKernelConstruction* ctx) : OpKernel(ctx) { }
-  void Compute(OpKernelContext* ctx) {
-    Tensor* output;
-    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape({ }), &output));
-    usleep(1);
-    //volatile bool* ret = ptre_global.cm->is_new_incoming_ptr();
-    bool* ret = ptre_global.cm->is_new_incoming_ptr();
-    //std::cout << "IsNewIncomingOp: *is_new_incoming_ptr = " << *ret << std::endl;
-    std::copy(ret, ret + sizeof(bool), const_cast<char*>(output->tensor_data().begin()));
-    //std::cout << "IsNewIncomingOp: *((bool*) output->tensor_data().begin()) = " << *((bool*) output->tensor_data().begin()) << std::endl;
-  }
-};
-REGISTER_KERNEL_BUILDER(
-    Name("IsNewIncoming").Device(DEVICE_CPU), IsNewIncomingOp);
-
-REGISTER_OP("MarkNoNew");
-class MarkNoNewOp : public OpKernel {
- public:
-  explicit MarkNoNewOp(OpKernelConstruction* ctx) : OpKernel(ctx) { }
-  void Compute(OpKernelContext* ctx) {
-    ptre_global.cm->MarkNoNew();
-    //volatile bool* ret = ptre_global.cm->is_new_incoming_ptr();
-    bool* ret = ptre_global.cm->is_new_incoming_ptr();
-    //std::cout << "MarkNoNewOp: *is_new_incoming_ptr = " << *ret << std::endl;
-  }
-};
-REGISTER_KERNEL_BUILDER(
-    Name("MarkNoNew").Device(DEVICE_CPU), MarkNoNewOp);
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
 namespace functor {
 template <typename T>
 struct Modelaverage<CPUDevice, T> {
@@ -1104,32 +656,82 @@ struct CopyTensorToSendBuf<CPUDevice, T> {
     memcpy(dst.data(), src.data(), bytes);
   }
 };
+
+template <typename T>
+struct CopyRemoteToVar<CPUDevice, T> {
+  void operator()(const CPUDevice& d,
+                  typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstFlat remote) {
+    auto bytes = sizeof(T) * var.size();
+    memcpy(var.data(), remote.data(), bytes);
+  }
+};
+
 }  // namespace functor
 
-//REGISTER_OP("ResourceGetGlobalConsensus")
-//  .Input("var: resource")
-//  .Attr("T: numbertype")
-//  .Attr("var_name: string")
-//  .Output("gcon: resource")
-//template <typename Device, typename T>
-//class GetRemoteOp : public OpKernel {
-// public:
-//  explicit GetRemoteOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
-//    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
-//  }
-//  void Compute(OpKernelContext* ctx) {
-//    Tensor* output;
-//    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, var.shape(), &output));
-//    const Tensor other(ptre_global.cm->global_consensus(var_name_));
-//  }
-// private:
-//  string var_name_;
-//};
+void ClearPullJobs() {
+  std::lock_guard<std::mutex> guard(ptre_global.job_table_mu);
+  auto&& table = ptre_global.pull_jobs;
+  auto it = table.begin();
+  while (it != table.end()) {
+    if (it->second->NumLiveTasks() == 0) {
+      it = table.erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
+void CreatePullJob(int step, int num_pull) {
+  std::map<int, std::vector<string>> task_init_attr;
+  std::map<bool> checker;
+  for (int i = 0; i < num_pull; i++) {
+    int dst;
+    do {
+      dst = ptre_global.cm->get_peer();
+    } while (checker.find(dst) != checker.end());
+    checker[dst] = 1;
+    std::vector<string> vars_to_pull;
+    task_init_attr[dst] = ptre_global.trainable_var_names;
+  }
+  PullJob* new_job = new PullJob(step, task_init_attr);
+  ptre_global.job_table_mu.lock();
+  ptre_global.pull_jobs[step] = new_job;
+  ptre_global.job_table_mu.unlock();
+}
+
+void EnqueuePullTasks(const string& var_name, int num_pull) {
+  // TODO: add tasks to the job.
+  // TODO: post task
+  int step = ptre_global.local_step;
+  auto job = ptre_global.pull_jobs[step];
+  std::vector<int> dsts;
+  job->GetDstPeers(var_name, &dsts);
+  for (auto dst : dsts) {
+    PullTask* task = new PullTask(ptre_global.rdma_mgr, dst,
+        ptre_global.cm->remote_variable(var_name), (void*) job);
+    job->SetTask(dst, var_name, task);
+    // TODO: check with CQ process thread
+    int ret = task->PostReadKey();
+    if (ret) {
+      job->DeleteTask(dst, var_name);
+    }
+  }
+}
+
+void StopPullTasks(const string& var_name) {
+  std::lock_guard<std::mutex> guard(ptre_global.job_table_mu);
+  auto&& job_table = ptre_global.pull_jobs;
+  for (auto&& it : job_table) {
+    it.second->StopTasks(var_name);
+  }
+}
 
 static Status ModelaverageShapeFn(InferenceContext* c) {
   ShapeHandle unused;
   ShapeHandle s = ShapeOrHandleShape(c, 0);                  // var
   if (c->num_outputs() > 0) {
+  :wa
     c->set_output(0, s);
   }
   return Status::OK();
@@ -1147,103 +749,25 @@ class ModelaverageOp : public OpKernel {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
   }
   void Compute(OpKernelContext* ctx) {
-    core::RefCountPtr<Var> ref;
-    LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
-    Tensor var;
-    var = *ref->tensor();
-
-    bool do_reduce = true;
-    Tensor* ret;
-
-    int num_incomings = 0;
     auto rvar = ptre_global.cm->remote_variable(var_name_);
-    if (rvar) {
-      //std::this_thread::sleep_for(std::chrono::seconds(1));
-      //LOG(INFO) << "StopRecv";
-      rvar->StopRecv();
-      //LOG(INFO) << "Done StopRecv";
-      /*
-      int permit = rvar->permit();
-      ptre_global.rdma_manager->RdmaWrite(ptre_global.rank,
-          BUF_TYPE_PUSH_PERMIT, var_name_, (void*) &permit, sizeof(int));
-      */
-      num_incomings = rvar->agg_count();
-      ret = rvar->tensor();
-    }
-    //ptre_global.rcv_cnts[ptre_global.local_step][ptre_global.cm->var_name_to_index(var_name_)]++;
-    //ptre_global.agg_cnt_total.fetch_add(num_incomings);
-    ptre_global.agg_cnts[ptre_global.local_step][var_name_] = num_incomings;
-    if (num_incomings == 0) {
-      do_reduce = false;
-    }
-    if (do_reduce) {
-      //LOG(INFO) << var_name_ << ": num_incomings=" << num_incomings;
+    if (!rvar) return;
+
+    StopPullTasks(var_name_);
+    rvar->StopAggregation();
+    int num_incomings = rvar->agg_count() - 1;
+    if (num_incomings > 0) {
+      rvar->Reduce();
+      core::RefCountPtr<Var> ref;
+      LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
+      Tensor var = *ref->tensor();
+      const Tensor remote = *rvar->tensor();
       const Device& d = ctx->template eigen_device<Device>();
-      const Tensor other(*ret);
-#if 1
-      // No Step Control
-      Tensor m_(DataTypeToEnum<T>::v(), TensorShape({ }));
-      m_.flat<T>()(0) = T(num_incomings + 1);
-      const Tensor m(m_);
-      functor::Modelaverage<Device, T>()(d, var.flat<T>(), m.scalar<T>(),
-          other.flat<T>());
-#else
-      // Step Control
-      int old = ptre_global.reduce_op_cnt0.fetch_add(1);
-      Tensor c1_(DataTypeToEnum<T>::v(), TensorShape({ }));
-      Tensor c2_(DataTypeToEnum<T>::v(), TensorShape({ }));
-      int k = ptre_global.virtual_step;
-      int k_r_sum = ptre_global.cm->rcv_steps_sum();
-      int k_sum = k + k_r_sum;
-      int n = num_incomings + 1;
-      float k_r_avg = (float) k_r_sum / (n - 1);
-      float c1_val = (float) k / k_sum;
-      float c2_val = (float) k_r_avg / k_sum;
-      int www = 0;
-      if (k < www) {
-        float delta = 0.5 - c1_val;
-        c1_val = c1_val + (delta / www) * (www - k);
-        c2_val = (1.0 - c1_val) / (n - 1);
-      }
-      c1_.flat<T>()(0) = T(c1_val);
-      c2_.flat<T>()(0) = T(c2_val);
-      const Tensor c1(c1_);
-      const Tensor c2(c2_);
-      if (old == 0) {
-        LOG(INFO) << "[DEBUG]\nlocal_step=" << ptre_global.local_step
-            << "\nvirtual_step=" << ptre_global.virtual_step
-            << "\nc1=" << c1_.flat<T>()(0)
-            << ", c2=" << c2_.flat<T>()(0)
-            << ", c1 + (n-1)c2 = " << c1_.flat<T>()(0) + (T) (n - 1) * c2_.flat<T>()(0)
-            << "\nk=" << k << ", k_r_avg=" << k_r_avg;
-      }
-      functor::LinearWeightedAverageApprox<Device, T>()(d, var.flat<T>(),
-          c1.scalar<T>(), other.flat<T>(), c2.scalar<T>());
-      int k_avg = k_sum / n;
-      if (k_avg > k) {
-        ptre_global.virtual_step = k_avg;
-        ptre_global.cm->set_virtual_step(k_avg);
-      }
-      old = ptre_global.reduce_op_cnt1.fetch_add(1);
-      if (old == ptre_global.cm->num_apply_ops() - 1) {
-        ptre_global.reduce_op_cnt0 = 0;
-        ptre_global.reduce_op_cnt1 = 0;
-      }
-#endif
+      functor::CopyRemoteToVar<Device, T>()(d, var.flat<T>(), remote.flat<T>());
     }
-    if (rvar) {
-      //LOG(INFO) << "StartRecv";
-      rvar->StartRecv();
-      //LOG(INFO) << "Done StartRecv";
-      /*
-      int permit = rvar->permit();
-      ptre_global.rdma_manager->RdmaWrite(ptre_global.rank,
-          BUF_TYPE_PUSH_PERMIT, var_name_, (void*) &permit, sizeof(int));
-      */
-    }
-    //ptre_global.cm->OpenReceive(var_name_);
-    //ptre_global.cm->CountReduce(var_name_);
-    //ptre_global.cm->CountReduceAndOpenRecv(var_name_);
+    rvar->StartAggregation();
+    EnqueuePullTasks(var_name_, ptre_global.num_push);
+
+    ptre_global.agg_cnts[ptre_global.local_step][var_name_] = num_incomings;
   }
 
  private:
@@ -1252,7 +776,6 @@ class ModelaverageOp : public OpKernel {
 #define REGISTER_KERNELS(D, T)                         \
   REGISTER_KERNEL_BUILDER(Name("ResourceModelaverage") \
                               .Device(DEVICE_##D)      \
-                              .HostMemory("var")       \
                               .TypeConstraint<T>("T"), \
                           ModelaverageOp<D##Device, T>);
 #define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
@@ -1294,7 +817,7 @@ void PtreClearQueueAndEnqueueRequest() {
     req_q.pop();
   }
   for (int i = 0; i < ptre_global.num_trainable_variables; i++) {
-    ptre_global.rdma_manager->InitPush(i);
+    ptre_global.rdma_mgr->InitPush(i);
   }
   auto req = std::make_shared<PushRequest>(ptre_global.num_push,
       ptre_global.local_step, ptre_global.size,
@@ -1378,7 +901,7 @@ class PushTensorOp : public OpKernel {
     if (ptre_global.push_step_state != 1) return;
     std::lock_guard<std::mutex> guard(ptre_global.push_var_mus[var_name_]);
 
-    auto pvar = ptre_global.rdma_manager->push_variable(var_name_);
+    auto pvar = ptre_global.rdma_mgr->push_variable(var_name_);
     if (!pvar) return;
 
     pvar->StopPush();
@@ -1401,7 +924,7 @@ class PushTensorOp : public OpKernel {
     var = *ref->tensor();
     const Device& d = ctx->template eigen_device<Device>();
     /*
-    struct ibv_mr* mr = ptre_global.rdma_manager->GetMR(ptre::BUF_TYPE_SEND_BUF,
+    struct ibv_mr* mr = ptre_global.rdma_mgr->GetMR(ptre::BUF_TYPE_SEND_BUF,
         var_name_);
     if (!mr) {
       LOG(ERROR) << "buf not found: " << ptre::BUF_TYPE_SEND_BUF << ", " << var_name_;
@@ -1417,7 +940,7 @@ class PushTensorOp : public OpKernel {
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), send_flat);
 
     pvar->StartPush();
-    //ptre_global.rdma_manager->SetPushReady(var_name_);
+    //ptre_global.rdma_mgr->SetPushReady(var_name_);
     EnqueueTasks(var_name_, ptre_global.num_push);
   }
  private:
@@ -1429,6 +952,76 @@ class PushTensorOp : public OpKernel {
                               .HostMemory("var")       \
                               .TypeConstraint<T>("T"), \
                           PushTensorOp<D##Device, T>);
+#define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
+
+TF_CALL_half(REGISTER_CPU_KERNELS);
+TF_CALL_bfloat16(REGISTER_CPU_KERNELS);
+TF_CALL_float(REGISTER_CPU_KERNELS);
+TF_CALL_double(REGISTER_CPU_KERNELS);
+
+#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+// Forward declarations of the functor specializations for GPU.
+namespace functor {
+#define DECLARE_GPU_SPEC(T)                             \
+  template <>                                           \
+  void CopyTensorToSendBuf<GPUDevice, T>::operator()(   \
+      const GPUDevice& d, typename TTypes<T>::Flat src, \
+      typename TTypes<T>::Flat dst);                    \
+  extern template struct CopyTensorToSendBuf<GPUDevice, T>;
+DECLARE_GPU_SPEC(Eigen::half);
+DECLARE_GPU_SPEC(float);
+DECLARE_GPU_SPEC(double);
+#undef DECLARE_GPU_SPEC
+
+REGISTER_KERNELS(GPU, Eigen::half);
+REGISTER_KERNELS(GPU, float);
+REGISTER_KERNELS(GPU, double);
+}  // namespace functor
+#endif  // GOOGLE_CUDA
+
+#undef REGISTER_CPU_KERNELS
+#undef REGISTER_KERNELS
+
+REGISTER_OP("ResourceUpdatePullVariable")
+  .Input("var: resource")
+  .Attr("T: numbertype")
+  .Attr("var_name: string");
+template <typename Device, typename T>
+class UpdatePullVariableOp : public OpKernel {
+ public:
+  explicit UpdatePullVariableOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
+  }
+  void Compute(OpKernelContext* ctx) {
+    auto pvar = ptre_global.rdma_mgr->pull_variable(var_name_);
+    if (!pvar) return;
+
+    core::RefCountPtr<Var> ref;
+    LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
+    Tensor var = *ref->tensor();
+
+    T* next_buf = (T*) pvar->next_data();
+    typename TTypes<T>::Flat next_flat(next_buf, var.flat<T>().size());
+    const Device& d = ctx->template eigen_device<Device>();
+    pvar->SetNextKey(ptre_global.local_step);
+    functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), next_flat);
+
+    pvar->Switch();
+
+    auto rvar = ptre_global.cm->remote_variable(var_name_);
+    if (rvar) {
+      rvar->Aggregate(pvar->curr_data());
+    }
+  }
+ private:
+  string var_name_;
+};
+#define REGISTER_KERNELS(D, T)                         \
+  REGISTER_KERNEL_BUILDER(Name("ResourceUpdatePullVariable")   \
+                              .Device(DEVICE_##D)      \
+                              .HostMemory("var")       \
+                              .TypeConstraint<T>("T"), \
+                          UpdatePullVariableOp<D##Device, T>);
 #define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
 
 TF_CALL_half(REGISTER_CPU_KERNELS);

@@ -31,6 +31,13 @@ struct CopyTensorToSendBuf {
                   typename TTypes<T>::Flat dst);
 };
 
+template <typename Device, typename T>
+struct CopyRemoteToVar {
+  void operator()(const Device& d,
+                  typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstFlat remote);
+};
+
 }  // namespace functor
 }  // namespace tensorflow
 #endif  // PTRE_KERNELS_PTRE_OPS_H_

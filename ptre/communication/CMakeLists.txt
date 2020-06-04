@@ -7,3 +7,10 @@ target_link_libraries(push_variable
   :libtensorflow_framework.so.2
   allocator
   )
+
+add_library(pull_variable SHARED pull_variable.cc)
+target_link_libraries(pull_variable
+  :libtensorflow_framework.so.2
+  allocator
+  )
+

@@ -1,10 +1,16 @@
 #ifndef PTRE_COMMUNICATION_RDMA_RDMA_TASK_H_
 #define PTRE_COMMUNICATION_RDMA_RDMA_TASK_H_
 
+#include <string>
+#include <mutex>
+
+#include "ptre/communication/comm_types.h"
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/communication/rdma/rdma_manager.h"
 
 namespace ptre {
+
+using std::string;
 
 // Read, Push and Notify
 class RPNTask {
@@ -101,6 +107,56 @@ class RecvTask {
   struct ibv_mr* mr_;
   struct ibv_sge sge_;
   struct ibv_recv_wr wr_;
+};
+
+class PullTask {
+ public:
+  enum TaskState {
+    STATE_INIT,
+    STATE_KEY_READ,
+    STATE_TENSOR_READ,
+    STATE_VALIDATION_READ,
+    STATE_VALID,
+    STATE_INVALID,
+    STATE_ABORTED,
+    STATE_STOPPED,
+  };
+
+  PullTask(RdmaManager* rdma_mgr, int dst, RemoteVariable* var,
+           void* job_handle);
+  ~PullTask();
+
+  int GetState();
+  // lock-free
+  int state();
+  int PostReadKey();
+  void PostReadTensor();
+  void PostReadValidation();
+  bool IsTensorValid();
+  Tensor* tensor();
+  const string& var_name() { return var_name_; }
+  void* job_handle() { return job_handle_; }
+
+ private:
+  RdmaManager* rdma_mgr_;
+  int dst_;
+  string var_name_;
+  void* job_handle_;
+  std::mutex mu_;
+  int state_;
+  // Read Buffers
+  struct PullKey key_read_;
+  Tensor* tensor_;
+  uint64_t validation_read_;
+  // MR for RDMA Read
+  struct ibv_mr* key_mr_;
+  struct ibv_mr* tensor_mr_;
+  struct ibv_mr* validation_mr_;
+  // Remote Addresses
+  uint64_t key_remote_addr_;
+  uint32_t key_rkey_;
+  uint64_t tensor_remote_addrs_[2];
+  uint32_t tensor_rkeys_[2];
 };
 
 } // namespace ptre

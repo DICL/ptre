@@ -339,6 +339,33 @@ void RdmaManager::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
   }
 }
 
+// PullVariable
+// 
+void RdmaManager::InitMRs(std::vector<RemoteVariable*>& vars) {
+  std::vector<size_t> sizes;
+  for (int i = 0; i < vars.size(); i++) {
+    size_t tensor_size = var[i]->tensor()->AllocatedBytes();
+    sizes.push_back(tensor_size);
+    sizes.push_back(tensor_size);
+    sizes.push_back(sizeof(struct PullKey));
+  }
+  allocator_ = new Allocator(sizes);
+
+  for (int i = 0; i < vars.size(); i++) {
+    PullVariable* pvar = new PullVariable(*var[i]->tensor(), var[i]->name(),
+        allocator_);
+    pull_variables_.push_back(pvar);
+    var_name_to_index_[pvar->name()] = i;
+
+    RegisterMR(BUF_TYPE_PULL_KEY, pvar->name(), (void*) pvar->key(),
+        sizeof(struct PullKey), IBV_ACCESS_REMOTE_READ);
+    RegisterMR(BUF_TYPE_PULL_TENSOR_A, pvar->name(), pvar->data(0),
+        pvar->length(), IBV_ACCESS_REMOTE_READ);
+    RegisterMR(BUF_TYPE_PULL_TENSOR_B, pvar->name(), pvar->data(1),
+        pvar->length(), IBV_ACCESS_REMOTE_READ);
+  }
+}
+
 int RdmaManager::var_name_to_index(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);
   if (search == var_name_to_index_.end()) {

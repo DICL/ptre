@@ -29,7 +29,7 @@ add_library(remote_variable SHARED remote_variable.cc)
 target_link_libraries(remote_variable
   :libtensorflow_framework.so.2
   pthread
-  push_permit
+  #push_permit
   allocator
   )
 

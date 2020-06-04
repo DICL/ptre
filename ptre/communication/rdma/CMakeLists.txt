@@ -29,7 +29,10 @@ target_link_libraries(rdma_grpc_client
   )
 
 add_library (rdma_task SHARED rdma_task.cc)
-target_link_libraries(rdma_task rdma)
+target_link_libraries(rdma_task
+  rdma
+  rdma_channel
+  )
 #add_library (rdma_worker SHARED rdma_worker.cc)
 #target_link_libraries(rdma_worker rdma_task)
 
@@ -42,3 +45,10 @@ target_link_libraries(rdma_task rdma)
 #target_link_libraries(grpc_server_test
 #                        pthread
 #                        rdma_grpc_server)
+
+add_library (rdma_channel SHARED rdma_channel.cc)
+target_link_libraries(rdma_channel rdma)
+
+add_library (rdma_pull_job SHARED pull_job.cc)
+target_link_libraries(rdma_pull_job
+  rdma_task)
