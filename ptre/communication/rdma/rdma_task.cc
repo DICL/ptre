@@ -106,9 +106,10 @@ int RecvTask::PostRecv() {
 }
 
 // PullTask
-PullTask::PullTask(RdmaManager* rdma_mgr, int dst, RemoteVariable* var,
+PullTask::PullTask(RdmaMgr* rdma_mgr, int dst, RemoteVariable* var,
                    void* job_handle) {
   rdma_mgr_ = rdma_mgr;
+  channel_ = rdma_mgr_->GetChannel(dst);
   dst_ = dst;
   var_name_ = var->name();
   job_handle_ = job_handle;
@@ -121,18 +122,27 @@ PullTask::PullTask(RdmaManager* rdma_mgr, int dst, RemoteVariable* var,
   // MR
   key_mr_ = ibv_reg_mr(rdma_mgr_->pd(), (void*) &key_read_, sizeof(key_read_),
       IBV_ACCESS_LOCAL_WRITE);
+  if (!key_mr_) {
+    LOG(ERROR) << "Failed to ibv_reg_mr: key_read_";
+  }
   tensor_mr_ = ibv_reg_mr(rdma_mgr_->pd(),
       (void*) tensor_->tensor_data().data(), tensor_->AllocatedBytes(),
       IBV_ACCESS_LOCAL_WRITE);
+  if (!tensor_mr_) {
+    LOG(ERROR) << "Failed to ibv_reg_mr: tensor_";
+  }
   validation_mr_ = ibv_reg_mr(rdma_mgr_->pd(), (void*) &validation_read_,
       sizeof(validation_read_), IBV_ACCESS_LOCAL_WRITE);
+  if (!validation_mr_) {
+    LOG(ERROR) << "Failed to ibv_re_mr: validation_read_";
+  }
   // Remote Addr
   rdma_mgr_->GetRemoteAddress(dst_, BUF_TYPE_PULL_KEY, var_name_,
       &key_remote_addr_, &key_rkey_);
-  for (int i = 0; i < 2; i++) {
-    rdma_mgr_->GetRemoteAddress(dst_, BUF_TYPE_PULL_TENSOR_A, var_name_,
-        &tensor_remote_addrs_[i], &tensor_rkeys_[i]);
-  }
+  rdma_mgr_->GetRemoteAddress(dst_, BUF_TYPE_PULL_TENSOR_A, var_name_,
+      &tensor_remote_addrs_[0], &tensor_rkeys_[0]);
+  rdma_mgr_->GetRemoteAddress(dst_, BUF_TYPE_PULL_TENSOR_B, var_name_,
+      &tensor_remote_addrs_[1], &tensor_rkeys_[1]);
 }
 
 PullTask::~PullTask() {
@@ -140,6 +150,11 @@ PullTask::~PullTask() {
   ibv_dereg_mr(tensor_mr_);
   ibv_dereg_mr(validation_mr_);
   delete tensor_;
+}
+
+void PullTask::SetState(enum TaskState state) {
+  std::lock_guard<std::mutex> guard(mu_);
+  state_ = state;
 }
 
 int PullTask::GetState() {
@@ -172,21 +187,24 @@ int PullTask::PostReadKey() {
   wr.wr.rdma.remote_addr = key_remote_addr_;
   wr.wr.rdma.rkey = key_rkey_;
   state_ = STATE_KEY_READ;
+//LOG(INFO) << __PRETTY_FUNCTION__ << " " << var_name_ << ": " << wr.wr.rdma.remote_addr << ", " << wr.wr.rdma.rkey;  // DEBUG
   int ret = channel_->PostSend(wr);
   if (ret) {
+    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to PostSend";
     state_ = STATE_ABORTED;
     return 1;
   }
   return 0;
 }
 
-void PullTask::PostReadTensor() {
+int PullTask::PostReadTensor() {
+//LOG(INFO) << __PRETTY_FUNCTION__;  // DEBUG
   std::lock_guard<std::mutex> guard(mu_);
   if (state_ == STATE_STOPPED) {
     state_ = STATE_ABORTED;
-    return;
+    return 1;
   }
-  int indicator = key_read_.indicator;
+  int idx = key_read_.curr;
   struct ibv_sge sge;
   memset(&sge, 0, sizeof(sge));
   sge.addr = (uint64_t) tensor_mr_->addr;
@@ -199,22 +217,26 @@ void PullTask::PostReadTensor() {
   wr.num_sge = 1;
   wr.opcode = IBV_WR_RDMA_READ;
   wr.send_flags = IBV_SEND_SIGNALED;
-  wr.wr.rdma.remote_addr = tensor_remote_addrs_[indicator];
-  wr.wr.rdma.rkey = tensor_rkeys_[indicator];
+  wr.wr.rdma.remote_addr = tensor_remote_addrs_[idx];
+  wr.wr.rdma.rkey = tensor_rkeys_[idx];
   state_ = STATE_TENSOR_READ;
   int ret = channel_->PostSend(wr);
   if (ret) {
+    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to PostSend";
     state_ = STATE_ABORTED;
+    return 1;
   }
+  return 0;
 }
 
-void PullTask::PostReadValidation() {
+int PullTask::PostReadValidation() {
+//LOG(INFO) << __PRETTY_FUNCTION__;  // DEBUG
   std::lock_guard<std::mutex> guard(mu_);
   if (state_ == STATE_STOPPED) {
     state_ = STATE_ABORTED;
-    return;
+    return 1;
   }
-  int indicator = key_read_.indicator;
+  int idx = key_read_.curr;
   struct ibv_sge sge;
   memset(&sge, 0, sizeof(sge));
   sge.addr = (uint64_t) validation_mr_->addr;
@@ -227,36 +249,37 @@ void PullTask::PostReadValidation() {
   wr.num_sge = 1;
   wr.opcode = IBV_WR_RDMA_READ;
   wr.send_flags = IBV_SEND_SIGNALED;
-  wr.wr.rdma.remote_addr = key_remote_addr_ + sizeof(bool)
-      + sizeof(uint64_t) * indicator;
+  wr.wr.rdma.remote_addr = key_remote_addr_ + sizeof(uint64_t)
+      + sizeof(uint64_t) * idx;
   wr.wr.rdma.rkey = key_rkey_;
-  state_ = STATE_KEY_READ;
+  state_ = STATE_VALIDATION_READ;
   int ret = channel_->PostSend(wr);
   if (ret) {
+    LOG(ERROR) << __PRETTY_FUNCTION__ << ": Failed to PostSend";
     state_ = STATE_ABORTED;
+    return 1;
   }
+  return 0;
 }
 
-bool PullTask::IsTensorValid() {
+bool PullTask::IsTensorValid(bool* out) {
   std::lock_guard<std::mutex> guard(mu_);
   if (state_ == STATE_STOPPED) {
+//LOG(INFO) << __PRETTY_FUNCTION__ << " " << var_name_ << ": Stopped";  // DEBUG
     state_ = STATE_ABORTED;
-    return false;
+    return 1;
   }
-  int indicator = key_read_.indicator;
-  uint64_t key_before;
-  if (indicator == 0) {
-    key_before = key_read_.key_a;
-  } else {
-    key_before = key_read_.key_b;
-  }
+  uint64_t key_before = key_read_.keys[key_read_.curr];
+//LOG(INFO) << __PRETTY_FUNCTION__ << var_name_ << ": idx=" << key_read_.curr << ", key_early=" << key_before << ", key_late=" << validation_read_;  // DEBUG
   bool ret = (key_before == validation_read_);
   if (ret) {
     state_ = STATE_VALID;
+//LOG(INFO) << "keys=" << key_before << ", " << validation_read_ << ", tensor=" << tensor_->DebugString();  // DEBUG
   } else {
     state_ = STATE_INVALID;
   }
-  return ret;
+  *out = ret;
+  return 0;
 }
 
 Tensor* PullTask::tensor() {

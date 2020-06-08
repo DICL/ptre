@@ -8,7 +8,7 @@ target_link_libraries(peer_selector
 add_library(consensus_manager SHARED consensus_manager.cc)
 target_link_libraries(consensus_manager
   :libtensorflow_framework.so.2
-  rdma_manager
+  rdma_mgr
   peer_selector
   remote_variable
   grpc_client_cache

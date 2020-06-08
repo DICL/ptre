@@ -26,6 +26,7 @@ class PullVariable {
   void* next_data() { return data(!key_->curr); }
   size_t length() { return length_; }
   struct PullKey* key() { return key_; }
+  const string& name() { return name_; }
 
  private:
   string name_;

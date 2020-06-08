@@ -12,8 +12,6 @@
 
 #include "tensorflow/core/platform/logging.h"
 
-namespace ptre {
-
 #define IB_PORT 1
 #define QUEUE_DEPTH_DEFAULT 1024
 #define MAX_CONCURRENT_WRITES 1000
@@ -21,6 +19,8 @@ namespace ptre {
 #define RETRY_CNT_DEFAULT 7
 #define MAX_QP_WR_DEFAULT 1024
 #define MAX_CQE_DEFAULT 1024
+
+namespace ptre {
 
 /*
    max_mr_size: 18446744073709551615

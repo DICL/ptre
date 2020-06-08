@@ -19,7 +19,7 @@ namespace ptre {
 void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
     std::vector<string>& names, const std::vector<Tensor*>& tensors,
     ConsensusManager*& consensus_manager,
-    RdmaManager*& rdma_manager) {
+    RdmaMgr*& rdma_mgr) {
   kHostFile = hostFile;
   kSize = comm_size;
   kRank = comm_rank;
@@ -31,13 +31,13 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
   kGrpcClientCache = std::make_shared<GrpcClientCache>(kRank, kGrpcHosts);
   std::cout << "Init Grpc Client Cache done.\n";
 
-  /// Init RdmaManager & ConsensusManager
-  rdma_manager = new RdmaManager(kSize, kRank, false);
-  std::cout << "Init RdmaManager done.\n";
+  /// Init RdmaMgr & ConsensusManager
+  rdma_mgr = new RdmaMgr(kSize, kRank, false);
+  std::cout << "Init RdmaMgr done.\n";
   consensus_manager = new ConsensusManager();
   std::cout << "Init ConsensusManager done.\n";
-  consensus_manager->SetRdmaManager(rdma_manager);
-  std::cout << "Set RdmaManager to ConsensusManager done.\n";
+  consensus_manager->SetRdmaMgr(rdma_mgr);
+  std::cout << "Set RdmaMgr to ConsensusManager done.\n";
 
   /// Init Global Consensus
   std::vector<const Tensor*> inputs;
@@ -49,13 +49,13 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
   std::cout << "Init Global Consensus done.\n";
 
   /// Run Grpc Server
-  kGrpcServerThread = std::thread(RunGrpcServer, consensus_manager, rdma_manager);
+  kGrpcServerThread = std::thread(RunGrpcServer, consensus_manager, rdma_mgr);
   std::cout << "Launching Grpc Server done.\n";
 
   /// Init Remote MR
   std::vector<BufType> buf_types;
   std::vector<string> buf_names;
-  int num_bufs = rdma_manager->GetRemoteAccessBufInfos(&buf_types, &buf_names);
+  int num_bufs = rdma_mgr->GetRemoteAccessBufInfos(&buf_types, &buf_names);
   std::cout << "Retrieve Remote Access Buf Infos done.\n";
   for (int i = 0; i < num_bufs; i++) {
     std::cout << "name: " << buf_names[i] << std::endl;
@@ -63,17 +63,17 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
   for (int i = 0; i < kSize; i++) {
     GrpcClient* grpc_client;
     kGrpcClientCache->GetClient(i, &grpc_client);
-    grpc_client->SetRdmaManager(rdma_manager);
+    grpc_client->SetRdmaMgr(rdma_mgr);
   }
   std::cout << "Set Rdma Manager for grpc clients done.\n";
   bool peer_flag[kSize] = { };
 
   // Set Local Remote MR
-  //RdmaEnv* env = rdma_manager->rdma_env();
-  //rdma_manager->SetDlid(kRank, env->port_attr.lid);
-  //rdma_manager->set_qpn(kRank, rdma_manager->qp(kRank)->qp_num);
-  //rdma_manager->set_snp(kRank, env->gid.global.subnet_prefix);
-  //rdma_manager->set_iid(kRank, env->gid.global.interface_id);
+  //RdmaEnv* env = rdma_mgr->rdma_env();
+  //rdma_mgr->SetDlid(kRank, env->port_attr.lid);
+  //rdma_mgr->set_qpn(kRank, rdma_mgr->qp(kRank)->qp_num);
+  //rdma_mgr->set_snp(kRank, env->gid.global.subnet_prefix);
+  //rdma_mgr->set_iid(kRank, env->gid.global.interface_id);
   //peer_flag[kRank] = true;
 
   int done_flag = 0;
@@ -86,19 +86,19 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
       }
       GrpcClient* grpc_client;
       kGrpcClientCache->GetClient(i, &grpc_client);
-      if (!rdma_manager->IsDlidSet(i)) {
+      if (!rdma_mgr->IsDlidSet(i)) {
         int ret = grpc_client->GetRemoteEnv();
         if (ret < 0) {
           done_flag = 0;
           continue;
         }
         if (i == kRank) {
-          std::cout << "local_lid=" << rdma_manager->lid() << ", remote_lid=" << rdma_manager->remote_lid(i) << std::endl;
+          std::cout << "local_lid=" << rdma_mgr->lid() << ", remote_lid=" << rdma_mgr->remote_lid(i) << std::endl;
         }
       }
       int client_status = 0;
       for (int j = 0; j < num_bufs; j++) {
-        if (rdma_manager->IsRemoteMRSetV2(i, buf_types[j], buf_names[j])) {
+        if (rdma_mgr->IsRemoteMRSetV2(i, buf_types[j], buf_names[j])) {
           continue;
         }
         RemoteMR rmr;
@@ -109,7 +109,7 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
         } else {
 #if 0
           if (i == kRank) {
-            struct ibv_mr* mr = rdma_manager->GetMR(buf_types[j], buf_names[j]);
+            struct ibv_mr* mr = rdma_mgr->GetMR(buf_types[j], buf_names[j]);
             std::cout << "mr.addr=" << (uint64_t) mr->addr << std::endl;
             std::cout << "remote_addr=" << rmr.remote_addr << std::endl;
             std::cout << "mr.lkey=" << mr->lkey << std::endl;
@@ -119,7 +119,7 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
             //rmr.rkey = mr->lkey;
           }
 #endif
-          rdma_manager->SetRemoteMRV2(i, buf_types[j], buf_names[j],
+          rdma_mgr->SetRemoteMRV2(i, buf_types[j], buf_names[j],
               rmr.remote_addr, rmr.rkey);
         }
       }
@@ -133,7 +133,7 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
   std::cout << "Set Remote MR done.\n";
 
   // Init Rdma Aggregation Writer
-  rdma_manager->InitAggWriter();
+  rdma_mgr->InitAggWriter();
   std::cout << "Init Agg Writer done.\n";
 
   //  Connect QPs
@@ -142,7 +142,7 @@ void InitTestPtre(const string& hostFile, int comm_size, int comm_rank,
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     done_flag = 1;
     for (int i = 0; i < kSize; i++) {
-      int r = rdma_manager->ConnectQP(i);
+      int r = rdma_mgr->ConnectQP(i);
       if (r < 0) {
         done_flag = 0;
       }
@@ -162,10 +162,10 @@ void LoadGrpcHosts(const string& hostFile, std::vector<string>& grpcHosts) {
   in.close();
 }
 
-void RunGrpcServer(ConsensusManager* cm, RdmaManager* rdma_manager) {
+void RunGrpcServer(ConsensusManager* cm, RdmaMgr* rdma_mgr) {
   RdmaServiceImpl service;
   service.SetConsensusManager(cm);
-  service.SetRdmaManager(rdma_manager);
+  service.SetRdmaMgr(rdma_mgr);
   //service.SetBarrierVariable(barrier_variable);
   std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;

@@ -4,12 +4,14 @@ add_library          (rdma SHARED rdma.cc)
 target_link_libraries(rdma
                         ibverbs)
 
-add_library          (rdma_manager SHARED rdma_manager.cc)
-target_link_libraries(rdma_manager
+add_library          (rdma_mgr SHARED rdma_mgr.cc)
+target_link_libraries(rdma_mgr
   :libtensorflow_framework.so.2
   rdma
   remote_variable
+  pull_variable
   push_variable
+  rdma_channel
   allocator
   #rdma_agg_writer
   )
@@ -18,14 +20,14 @@ add_library          (rdma_grpc_server SHARED grpc_server.cc)
 target_link_libraries(rdma_grpc_server
                         :libtensorflow_framework.so.2
                         rdma_service_grpc_proto
-                        rdma_manager
+                        rdma_mgr
                         consensus_manager
                         )
 
 add_library          (rdma_grpc_client SHARED grpc_client.cc)
 target_link_libraries(rdma_grpc_client
   rdma_service_grpc_proto
-  rdma_manager
+  rdma_mgr
   )
 
 add_library (rdma_task SHARED rdma_task.cc)

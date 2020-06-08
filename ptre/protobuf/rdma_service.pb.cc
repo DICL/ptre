@@ -785,7 +785,7 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "ame\030\001 \001(\t\022\020\n\010src_rank\030\002 \001(\005\"(\n\026AttemptPu"
   "shVarResponse\022\016\n\006result\030\001 \001(\010\":\n\024CancelP"
   "ushVarRequest\022\020\n\010var_name\030\001 \001(\t\022\020\n\010src_r"
-  "ank\030\002 \001(\005\"\027\n\025CancelPushVarResponse*\240\002\n\007B"
+  "ank\030\002 \001(\005\"\027\n\025CancelPushVarResponse*\357\002\n\007B"
   "ufType\022\020\n\014BUF_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_REC"
   "V_BUF\020\001\022\025\n\021BUF_TYPE_SEND_BUF\020\002\022\032\n\026BUF_TY"
   "PE_AGG_BUF_STATE\020\003\022\024\n\020BUF_TYPE_AGG_BUF\020\004"
@@ -793,28 +793,30 @@ const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "G_SEND\020\006\022\034\n\030BUF_TYPE_BARRIER_COUNTER\020\007\022\034"
   "\n\030BUF_TYPE_BARRIER_RELEASE\020\010\022\030\n\024BUF_TYPE"
   "_PUSH_PERMIT\020\t\022\035\n\031BUF_TYPE_PUSH_PERMIT_R"
-  "EAD\020\n2\324\006\n\004Rdma\0223\n\006GetLID\022\023.ptre.GetLIDRe"
-  "quest\032\024.ptre.GetLIDResponse\022<\n\tGetQPAttr"
-  "\022\026.ptre.GetQPAttrRequest\032\027.ptre.GetQPAtt"
-  "rResponse\022Q\n\020GetRemoteAddress\022\035.ptre.Get"
-  "RemoteAddressRequest\032\036.ptre.GetRemoteAdd"
-  "ressResponse\022`\n\025GetRemoteParamAddress\022\"."
-  "ptre.GetRemoteParamAddressRequest\032#.ptre"
-  ".GetRemoteParamAddressResponse\022B\n\013Attemp"
-  "tPush\022\030.ptre.AttemptPushRequest\032\031.ptre.A"
-  "ttemptPushResponse\022K\n\016AttemptPushVar\022\033.p"
-  "tre.AttemptPushVarRequest\032\034.ptre.Attempt"
-  "PushVarResponse\022H\n\rCancelPushVar\022\032.ptre."
-  "CancelPushVarRequest\032\033.ptre.CancelPushVa"
-  "rResponse\022K\n\016NotifyPushDone\022\033.ptre.Notif"
-  "yPushDoneRequest\032\034.ptre.NotifyPushDoneRe"
-  "sponse\0226\n\007Barrier\022\024.ptre.BarrierRequest\032"
-  "\025.ptre.BarrierResponse\022-\n\004Recv\022\021.ptre.Re"
-  "cvRequest\032\022.ptre.RecvResponse\022W\n\022GetRemo"
-  "teAddressV2\022\037.ptre.GetRemoteAddressV2Req"
-  "uest\032 .ptre.GetRemoteAddressV2Response\022<"
-  "\n\tGetPermit\022\026.ptre.GetPermitRequest\032\027.pt"
-  "re.GetPermitResponseb\006proto3"
+  "EAD\020\n\022\025\n\021BUF_TYPE_PULL_KEY\020\013\022\032\n\026BUF_TYPE"
+  "_PULL_TENSOR_A\020\014\022\032\n\026BUF_TYPE_PULL_TENSOR"
+  "_B\020\r2\324\006\n\004Rdma\0223\n\006GetLID\022\023.ptre.GetLIDReq"
+  "uest\032\024.ptre.GetLIDResponse\022<\n\tGetQPAttr\022"
+  "\026.ptre.GetQPAttrRequest\032\027.ptre.GetQPAttr"
+  "Response\022Q\n\020GetRemoteAddress\022\035.ptre.GetR"
+  "emoteAddressRequest\032\036.ptre.GetRemoteAddr"
+  "essResponse\022`\n\025GetRemoteParamAddress\022\".p"
+  "tre.GetRemoteParamAddressRequest\032#.ptre."
+  "GetRemoteParamAddressResponse\022B\n\013Attempt"
+  "Push\022\030.ptre.AttemptPushRequest\032\031.ptre.At"
+  "temptPushResponse\022K\n\016AttemptPushVar\022\033.pt"
+  "re.AttemptPushVarRequest\032\034.ptre.AttemptP"
+  "ushVarResponse\022H\n\rCancelPushVar\022\032.ptre.C"
+  "ancelPushVarRequest\032\033.ptre.CancelPushVar"
+  "Response\022K\n\016NotifyPushDone\022\033.ptre.Notify"
+  "PushDoneRequest\032\034.ptre.NotifyPushDoneRes"
+  "ponse\0226\n\007Barrier\022\024.ptre.BarrierRequest\032\025"
+  ".ptre.BarrierResponse\022-\n\004Recv\022\021.ptre.Rec"
+  "vRequest\032\022.ptre.RecvResponse\022W\n\022GetRemot"
+  "eAddressV2\022\037.ptre.GetRemoteAddressV2Requ"
+  "est\032 .ptre.GetRemoteAddressV2Response\022<\n"
+  "\tGetPermit\022\026.ptre.GetPermitRequest\032\027.ptr"
+  "e.GetPermitResponseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
@@ -850,7 +852,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 2548,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 2627,
   &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 27, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
   file_level_metadata_rdma_5fservice_2eproto, 27, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
@@ -876,6 +878,9 @@ bool BufType_IsValid(int value) {
     case 8:
     case 9:
     case 10:
+    case 11:
+    case 12:
+    case 13:
       return true;
     default:
       return false;

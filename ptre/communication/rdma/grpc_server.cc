@@ -13,8 +13,8 @@ namespace ptre {
 grpc::Status RdmaServiceImpl::GetLID(grpc::ServerContext* ctx,
                                 const GetLIDRequest* req,
                                 GetLIDResponse* res) {
-  if (rdma_manager_ != nullptr) {
-    res->set_lid(rdma_manager_->port_attr().lid);
+  if (rdma_mgr_ != nullptr) {
+    res->set_lid(rdma_mgr_->port_attr().lid);
     return grpc::Status::OK;
   } else {
     return grpc::Status::CANCELLED;
@@ -24,9 +24,9 @@ grpc::Status RdmaServiceImpl::GetLID(grpc::ServerContext* ctx,
 grpc::Status RdmaServiceImpl::GetQPAttr(grpc::ServerContext* ctx,
                                 const GetQPAttrRequest* req,
                                 GetQPAttrResponse* res) {
-  if (rdma_manager_ != nullptr) {
+  if (rdma_mgr_ != nullptr) {
     int src_rank = req->src_rank();
-    struct ibv_qp* qp = rdma_manager_->qp(src_rank);
+    struct ibv_qp* qp = rdma_mgr_->qp(src_rank);
     if (qp) {
       res->set_qpn(qp->qp_num);
       // TODO: Support Custom PSN
@@ -40,8 +40,8 @@ grpc::Status RdmaServiceImpl::GetQPAttr(grpc::ServerContext* ctx,
 grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* ctx,
                                 const GetRemoteAddressRequest* req,
                                 GetRemoteAddressResponse* res) {
-  if (rdma_manager_ != nullptr) {
-    struct ibv_mr* mr = rdma_manager_->GetMR(req->buf_type(), req->var_name());
+  if (rdma_mgr_ != nullptr) {
+    struct ibv_mr* mr = rdma_mgr_->GetMR(req->buf_type(), req->var_name());
     if (mr) {
       res->set_remote_addr((uint64_t) mr->addr);
       res->set_rkey(mr->rkey);
@@ -68,12 +68,13 @@ grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,
 grpc::Status RdmaServiceImpl::NotifyPushDone(grpc::ServerContext* context,
                                       const NotifyPushDoneRequest* request,
                                       NotifyPushDoneResponse* response) {
+#if 0
   //std::cout << "\nServer got NotifyPushDone\n";
   usleep(100);
   int src_rank = request->src_rank();
   auto rvar = cm_->remote_variable(request->var_name());
   if (rvar) {
-    struct ibv_mr* mr = rdma_manager_->GetMR(ptre::BUF_TYPE_RECV_BUF, request->var_name());
+    struct ibv_mr* mr = rdma_mgr_->GetMR(ptre::BUF_TYPE_RECV_BUF, request->var_name());
     LOG(INFO) << "\n"
         << "WRITTEN " << request->var_name() << ":\n"
         << "rcv[0]=" << ((float*) rvar->rcv_data())[0] <<"\n"
@@ -82,6 +83,7 @@ grpc::Status RdmaServiceImpl::NotifyPushDone(grpc::ServerContext* context,
         << "addr=" << mr->addr << ", rkey=" << mr->rkey << ", rcv_buf=" << rvar->rcv_data();
     rvar->NewIncoming(src_rank);
   }
+#endif
   return grpc::Status::OK;
 }
 
@@ -100,8 +102,8 @@ grpc::Status RdmaServiceImpl::GetRemoteAddressV2(grpc::ServerContext* context,
   int src_rank = request->rank();
   BufType type = request->type();
   string name = request->name();
-  struct ibv_mr* mr = rdma_manager_->GetMR(type, name);
-  response->set_rank(rdma_manager_->rank());
+  struct ibv_mr* mr = rdma_mgr_->GetMR(type, name);
+  response->set_rank(rdma_mgr_->rank());
   response->set_type(type);
   response->set_name(name);
   MemoryRegion* mr_proto = response->add_mr();
@@ -137,15 +139,17 @@ grpc::Status RdmaServiceImpl::Recv(grpc::ServerContext* context,
 
 grpc::Status RdmaServiceImpl::GetPermit(grpc::ServerContext* context,
     const GetPermitRequest* request, GetPermitResponse* response) {
+#if 0
   auto rvar = cm_->remote_variable(request->var_name());
   if (rvar) {
     response->set_permit(rvar->permit());
   }
+#endif
   return grpc::Status::OK;
 }
 
-void RdmaServiceImpl::SetRdmaManager(RdmaManager* rdma_manager) {
-  rdma_manager_ = rdma_manager;
+void RdmaServiceImpl::SetRdmaMgr(RdmaMgr* rdma_mgr) {
+  rdma_mgr_ = rdma_mgr;
 }
 
 void RdmaServiceImpl::SetConsensusManager(ConsensusManager* cm) {
@@ -177,6 +181,7 @@ void RdmaServiceImpl::Send(int dst_rank, char* buf, size_t len,
 grpc::Status RdmaServiceImpl::AttemptPushVar(grpc::ServerContext* context,
                                       const AttemptPushVarRequest* request,
                                       AttemptPushVarResponse* response) {
+#if 0
   //LOG(INFO) << "Got AttemptPushVar: " << request->var_name() << ", src=" << request->src_rank();
   int src_rank = request->src_rank();
   string var_name = request->var_name();
@@ -188,6 +193,7 @@ grpc::Status RdmaServiceImpl::AttemptPushVar(grpc::ServerContext* context,
   } else {
     response->set_result(0);
   }
+#endif
 
   return grpc::Status::OK;
 }
@@ -195,22 +201,24 @@ grpc::Status RdmaServiceImpl::AttemptPushVar(grpc::ServerContext* context,
 grpc::Status RdmaServiceImpl::CancelPushVar(grpc::ServerContext* context,
                                       const CancelPushVarRequest* request,
                                       CancelPushVarResponse* response) {
+#if 0
   int src_rank = request->src_rank();
   string var_name = request->var_name();
   auto rvar = cm_->remote_variable(var_name);
   if (rvar) {
     rvar->PopSenderCandidate(src_rank);
   }
+#endif
   return grpc::Status::OK;
 }
-//void GrpcServer::SetRdmaManager(RdmaManager* rdma_manager) {
-//  rdma_manager_ = rdma_manager;
+//void GrpcServer::SetRdmaMgr(RdmaMgr* rdma_mgr) {
+//  rdma_mgr_ = rdma_mgr;
 //}
 
 /* static */
-void GrpcServer::RunServer(RdmaManager* rdma_manager) {
+void GrpcServer::RunServer(RdmaMgr* rdma_mgr) {
   RdmaServiceImpl service;
-  service.SetRdmaManager(rdma_manager);
+  service.SetRdmaMgr(rdma_mgr);
   std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());

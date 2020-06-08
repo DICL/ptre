@@ -8,7 +8,7 @@
 #include <sstream>
 #include <fstream>
 
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/grpc_client.h"
@@ -28,7 +28,7 @@ namespace ptre {
 
 
 ConsensusManager cm;
-RdmaManager* rdma_manager;
+RdmaMgr* rdma_mgr;
 std::unique_ptr<grpc::Server> grpc_server = nullptr;
 std::thread grpc_server_thread;
 std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
@@ -39,7 +39,7 @@ std::vector<std::string> tensor_names = {"my_tensor_0"};
 
 void RunGrpcServer() {
   RdmaServiceImpl service;
-  service.SetRdmaManager(rdma_manager);
+  service.SetRdmaMgr(rdma_mgr);
   service.SetConsensusManager(&cm);
   //service.SetBarrierVariable(barrier_variable);
   std::string server_address("0.0.0.0:50051");
@@ -82,9 +82,9 @@ void init(int argc, char* argv[], Tensor tensor) {
   //}
   grpc_client_cache = std::make_shared<GrpcClientCache>(rank, grpc_hosts);
 
-  //std::cout << "Initializing RdmaManager" << std::endl;
-  rdma_manager = new RdmaManager(size, rank, false);
-  cm.SetRdmaManager(rdma_manager);
+  //std::cout << "Initializing RdmaMgr" << std::endl;
+  rdma_mgr = new RdmaMgr(size, rank, false);
+  cm.SetRdmaMgr(rdma_mgr);
   //is_shutdown = false;
   //background_thread = std::thread(BackgroundThreadLoop);
   cm.InitBufTensor("my_tensor_0", tensor);
@@ -104,8 +104,8 @@ void init(int argc, char* argv[], Tensor tensor) {
       }
       GrpcClient* grpc_client;
       grpc_client_cache->GetClient(i, &grpc_client);
-      grpc_client->SetRdmaManager(rdma_manager);
-      if (!rdma_manager->IsDlidSet(i)) {
+      grpc_client->SetRdmaMgr(rdma_mgr);
+      if (!rdma_mgr->IsDlidSet(i)) {
         int ret = grpc_client->GetRemoteEnv();
         if (ret < 0) {
           done_flag = 0;
@@ -114,7 +114,7 @@ void init(int argc, char* argv[], Tensor tensor) {
       }
       int client_status = 0;
       for (int j = 0; j < tensor_names.size(); j++) {
-        if (rdma_manager->IsRemoteMRSet(i, tensor_names[j])) {
+        if (rdma_mgr->IsRemoteMRSet(i, tensor_names[j])) {
           continue;
         }
         int ret = grpc_client->GetRemoteAddress(tensor_names[j]);
@@ -127,7 +127,7 @@ void init(int argc, char* argv[], Tensor tensor) {
         done_flag = 0;
         continue;
       }
-      if (!rdma_manager->IsRemoteParamMRSet(i)) {
+      if (!rdma_mgr->IsRemoteParamMRSet(i)) {
         int ret = grpc_client->GetRemoteParamAddress();
         if (ret < 0) {
           done_flag = 0;
@@ -147,7 +147,7 @@ void init(int argc, char* argv[], Tensor tensor) {
       if (i == rank) {
         continue;
       }
-      int r = rdma_manager->ConnectQP(i);
+      int r = rdma_mgr->ConnectQP(i);
       if (r < 0) {
         done_flag = 0;
       }
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
   }
   ptre::init(argc, argv, a);
   if (ptre::rank != 0) {
-    ptre::rdma_manager->PushTensorAtomicAddBatch(0, ptre::tensor_names[0], a);
+    ptre::rdma_mgr->PushTensorAtomicAddBatch(0, ptre::tensor_names[0], a);
   } else {
     auto glc = ptre::cm.global_consensus(0);
     auto glc_flat = glc.flat<float>();

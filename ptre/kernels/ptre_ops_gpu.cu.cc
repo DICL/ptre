@@ -134,6 +134,18 @@ struct CopyTensorToSendBuf<GPUDevice, T> {
     */
   }
 };
+
+
+template <typename T>
+struct CopyRemoteToVar<GPUDevice, T> {
+  void operator()(const GPUDevice& d,
+                  typename TTypes<T>::Flat var,
+                  typename TTypes<T>::ConstFlat remote) {
+    auto bytes = sizeof(T) * var.size();
+    d.memcpyHostToDevice(var.data(), remote.data(), bytes);
+  }
+};
+
 }  // namespace functor
 
 template struct functor::Modelaverage<GPUDevice, Eigen::half>;
@@ -147,6 +159,10 @@ template struct functor::LinearWeightedAverageApprox<GPUDevice, double>;
 template struct functor::CopyTensorToSendBuf<GPUDevice, Eigen::half>;
 template struct functor::CopyTensorToSendBuf<GPUDevice, float>;
 template struct functor::CopyTensorToSendBuf<GPUDevice, double>;
+
+template struct functor::CopyRemoteToVar<GPUDevice, Eigen::half>;
+template struct functor::CopyRemoteToVar<GPUDevice, float>;
+template struct functor::CopyRemoteToVar<GPUDevice, double>;
 
 }  // namespace tensorflow
 

@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <chrono>
+#include <sstream>
 
 namespace ptre {
 
@@ -112,11 +113,39 @@ void RemoteVariable::Aggregate(const void* other) {
   }
 }
 
+void RemoteVariable::Aggregate(const void* other,
+                               const Eigen::ThreadPoolDevice& d) {
+  std::lock_guard<std::mutex> guard(mu_);
+  if (agg_state_) {
+    Flat var_flat = tensor_->flat<float>();
+    ConstFlat other_flat((const float*) other, var_flat.size());
+    if (agg_cnt_ == 0) {
+      var_flat.device(d) = other_flat;
+    } else {
+      var_flat.device(d) = var_flat + other_flat;
+    }
+    agg_cnt_++;
+  }
+}
+
 void RemoteVariable::Reduce() {
   std::lock_guard<std::mutex> guard(mu_);
+//std::stringstream ss;  // DEBUG
+//ss << "\nREDUCE BEFORE=" << tensor_->DebugString() << "\n";  // DEBUG
   Flat var_flat = tensor_->flat<float>();
-  ConstScalar m((float*) &agg_cnt_, 1);
+  float m_float = agg_cnt_;
+  ConstScalar m(&m_float, 1);
   var_flat = var_flat / m();
+//ss << "\nREDUCE AFTER=" << tensor_->DebugString() << "\n";  // DEBUG
+//LOG(INFO) << ss.str();  // DEBUG
+}
+
+void RemoteVariable::Reduce(const Eigen::ThreadPoolDevice& d) {
+  std::lock_guard<std::mutex> guard(mu_);
+  Flat var_flat = tensor_->flat<float>();
+  float m_float = agg_cnt_;
+  ConstScalar m(&m_float, 1);
+  var_flat.device(d) = var_flat / m();
 }
 
 int RemoteVariable::AggCount() {

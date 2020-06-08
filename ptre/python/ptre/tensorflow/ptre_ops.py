@@ -51,6 +51,10 @@ def resource_modelaverage(var, var_name):
 def resource_push_tensor(var, var_name):
   return PTRE_LIB.resource_push_tensor(var, 'float32', var_name=var_name)
 
+def resource_update_pull_variable(var, var_name):
+  return PTRE_LIB.resource_update_pull_variable(var, 'float32',
+      var_name=var_name)
+
 def _get_remote_variable(var_name):
   return PTRE_LIB.get_remote_variable(var_name=var_name)
 
@@ -89,6 +93,9 @@ def count_step():
 
 def set_local_step(step):
   PTRE_CDLL.ptre_set_local_step(step)
+
+def create_pull_job():
+  PTRE_CDLL.ptre_create_pull_job()
 
 def broadcast(tensor, root_rank, name):
   name = 'PtreBroadcast_%s' % _normalize_name(tensor.name)

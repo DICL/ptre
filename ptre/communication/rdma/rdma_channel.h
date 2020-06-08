@@ -13,6 +13,7 @@ class RdmaChannel {
   RdmaChannel(struct ibv_context* ctx, struct ibv_qp* qp);
   int PostSend(struct ibv_send_wr& wr);
   int PostRecv(struct ibv_recv_wr& wr);
+
  private:
   //int dst_;
   struct ibv_context* ctx_;

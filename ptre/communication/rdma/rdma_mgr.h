@@ -7,13 +7,15 @@
 #include <thread>
 #include <iostream>
 
-#include "ptre/communication/rdma/rdma.h"
-//#include "ptre/communication/rdma/rdma_agg_writer.h"
-//#include "ptre/communication/grpc/grpc_client_cache.h"
-#include "ptre/protobuf/rdma_service.pb.h"
 #include "ptre/cm/remote_variable.h"
+#include "ptre/communication/pull_variable.h"
 #include "ptre/communication/push_variable.h"
+#include "ptre/communication/rdma/rdma.h"
+#include "ptre/communication/rdma/rdma_channel.h"
 #include "ptre/core/allocator.h"
+#include "ptre/protobuf/rdma_service.pb.h"
+//#include "ptre/communication/grpc/grpc_client_cache.h"
+//#include "ptre/communication/rdma/rdma_agg_writer.h"
 
 #include "tensorflow/core/framework/tensor.h"
 
@@ -26,16 +28,16 @@ using std::endl;
 using tensorflow::Tensor;
 }  // namespace
 
-/// RdmaManager
+/// RdmaMgr
 ///
 /// ibv_context
 /// set memory region
 /// create cq
 /// create qp
-class RdmaManager {
+class RdmaMgr {
  public:
-  RdmaManager(int ptre_size, int ptre_rank);
-  ~RdmaManager();
+  RdmaMgr(int ptre_size, int ptre_rank);
+  ~RdmaMgr();
 
   // Queue Pair Modification Functions
   void INITQP(int dst);
@@ -47,9 +49,13 @@ class RdmaManager {
   int ConnectivityCheck();
   int RecoverQP(int dst);
 
+  RdmaChannel* GetChannel(int dst);
+
   // Memory Region Init Functions
+#if 0
   void SetTrainableVariables(std::vector<RemoteVariable*>& vars,
       const std::vector<string>& names);
+#endif
   void InitMRs(std::vector<RemoteVariable*>& vars);
 
   /// MR management V2
@@ -150,6 +156,8 @@ class RdmaManager {
   uint16_t remote_lid(int dst);
   PushVariable* push_variable(int idx);
   PushVariable* push_variable(const string& var_name);
+  PullVariable* pull_variable(int idx);
+  PullVariable* pull_variable(const string& var_name);
 
  private:
   // PTRE Attributes
@@ -171,9 +179,13 @@ class RdmaManager {
   // RDMA Receive Work Request Array
   std::vector<struct ibv_recv_wr*> recv_wrs_;
 
+  // RDMA Channels
+  std::map<int, RdmaChannel*> channel_table_;
+
   // Variables
   Allocator* allocator_ = nullptr;
   std::map<string, int> var_name_to_index_;
+  std::vector<PullVariable*> pull_variables_;
   std::vector<PushVariable*> push_variables_;
   std::mutex mu_;
 

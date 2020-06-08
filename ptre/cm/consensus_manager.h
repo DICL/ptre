@@ -11,7 +11,7 @@
 #include "ptre/cm/peer_selector.h"
 #include "ptre/cm/remote_variable.h"
 //#include "ptre/cm/tensor_aggregator.h"
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
 //#include "ptre/communication/tcp/tcp_manager.h"
 #include "ptre/core/allocator.h"
@@ -43,7 +43,7 @@ class ConsensusManager {
   void InitBufParam();
 #endif
   bool IsInitialized() { return is_initialized_; }
-  void SetRdmaManager(RdmaManager* rdma_manager);
+  void SetRdmaMgr(RdmaMgr* rdma_mgr);
   void EnqueuePushList(std::vector<const Tensor*>& vars);
 
   void CopyTensorSend(const std::string& name, const Tensor& tensor);
@@ -221,7 +221,7 @@ class ConsensusManager {
   std::mutex mu_;
   std::vector<Tensor*> for_push_;
   bool ready_to_push_ = false;
-  RdmaManager* rdma_manager_ = nullptr;
+  RdmaMgr* rdma_mgr_ = nullptr;
   //std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 
   //TensorAggregator* tensor_aggregator_ = nullptr;

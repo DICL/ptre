@@ -1,6 +1,7 @@
 //#include "ptre/core/ptre_global.h"
 
 #define EIGEN_USE_THREADS
+#define PTRE_GPU_REDUCE
 
 #include "ptre/kernels/ptre_ops.h"
 
@@ -30,6 +31,7 @@
 #include "ptre/communication/grpc/grpc_client_cache.h"
 #include "ptre/communication/rdma/grpc_client.h"
 #include "ptre/communication/rdma/grpc_server.h"
+#include "ptre/communication/rdma/pull_job.h"
 #include "ptre/communication/rdma/rdma.h"
 #include "ptre/communication/rdma/rdma_mgr.h"
 #include "ptre/communication/rdma/rdma_task.h"
@@ -44,8 +46,6 @@
 #include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/types.h"
 
-#define LOGSTEP LOG(INFO) << "[DEBUG,step=" << ptre_global.local_step << "]: "
-
 #define IBV_CALL(D, X) \
   while (!ptre_global.is_shutdown) { \
     std::lock_guard<std::mutex> guard(*ptre_global.qp_mus[D]); \
@@ -57,11 +57,11 @@
     } \
   }
 
-#define NUM_PUSH_THREADS 4
-#define NUM_SEND_POLLING_THREADS 4
-#define NUM_RECV_POLLING_THREADS 1
-#define NUM_AGG_THREADS 21
-#define NUM_AGG_EIGEN_THREADS 8
+#define NUM_POLLING_THREADS 1
+#define NUM_AGG_THREADS 1
+#define NUM_AGG_EIGEN_THREADS 24
+#define NUM_REDUCE_EIGEN_THREADS 32
+//#define NUM_PUSH_THREADS 4
 //#define NUM_RECV_THREADS 1
 
 //using ptre::PushJob;
@@ -87,7 +87,7 @@ using ::ptre::ConsensusManager;
 using ::ptre::Flat;
 using ::ptre::GrpcClient;
 using ::ptre::GrpcClientCache;
-using ::ptre::RdmaManager;
+using ::ptre::RdmaMgr;
 using ::ptre::RdmaServiceImpl;
 using ::ptre::RemoteMR;
 using ::ptre::PushRequest;
@@ -98,6 +98,8 @@ using ::ptre::ConcurrentQueue;
 using ::ptre::ConcurrentUniqueQueue;
 using ::ptre::RecvTask;
 using ::ptre::RPNTask;
+using ::ptre::PullTask;
+using ::ptre::PullJob;
 //using ::ptre::SharedMutex;
 
 using CPUDevice = Eigen::ThreadPoolDevice;
@@ -164,7 +166,7 @@ struct PtreGlobal {
   }
 
   ConsensusManager* cm = nullptr;
-  RdmaManager* rdma_mgr = nullptr;
+  RdmaMgr* rdma_mgr = nullptr;
   std::mutex mu;
   std::mutex q_mu;
   std::queue<int> q;
@@ -186,9 +188,12 @@ struct PtreGlobal {
   std::vector<std::thread> push_threads;
   std::vector<std::thread> send_polling_threads;
   std::vector<std::thread> recv_polling_threads;
+  std::vector<std::thread> polling_threads;
   std::vector<std::thread> aggregation_threads;
   std::vector<std::thread> receive_threads;
   Eigen::ThreadPool* eigen_pool;
+  Eigen::ThreadPool* agg_eigen_pool;
+  Eigen::ThreadPool* reduce_eigen_pool;
 
   int rank;
   int size;
@@ -244,6 +249,11 @@ struct PtreGlobal {
 
   std::mutex rpn_checker_mu;
   std::map<uint64_t, string> rpn_checker;
+
+  std::map<int, PullJob*> pull_jobs;
+  std::mutex job_table_mu;
+  ConcurrentQueue<PullTask*> agg_q;
+  std::map<int, std::map<string, uint64_t>> last_key;
 };
 
 static PtreGlobal ptre_global;
@@ -318,54 +328,49 @@ void PtreBarrier() {
   }
 }
 
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TO
+// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TO
 // Read indicator key
 // Read tensor
 // Read and check indicator key
 //
 // Aggregate
 
-void EnqueuePullTask(PullTask* task) {
-  auto q = GetQueue(task);
-  q.lock();
+void EnqueueAggregation(PullTask* task) {
+  auto&& q = ptre_global.agg_q;
   q.push(task);
 }
 
-// Delete a task object.
-void DeletePullTask(PullTask* task) {
-  const string var_name = task->var_name();
-  auto table = GetVariablePullTaskTable(var_name);
-  PTRE_VAR_LOCK(var_name);
-  auto it = table.begin();
-  while (it != table.end()) {
-    if (*it == task) {
-      it = table.erase(it);
-    } else {
-      it++;
-    }
-  }
-  delete task;
-  PTRE_VAR_UNLOCK(var_name);
-}
-
 void ProcessPullTaskCQ(PullTask* task) {
+  int ret;
+  auto job = reinterpret_cast<PullJob*>(task->job_handle());
   switch (task->GetState()) {
     case PullTask::STATE_TENSOR_READ: {
-      task->PostReadValidation();
+      ret = task->PostReadValidation();
+      if (ret) {
+        job->DeleteTask(task);
+      }
+      break;
     }
     case PullTask::STATE_KEY_READ: {
-      task->PostReadTensor();
+      ret = task->PostReadTensor();
+      if (ret) {
+        job->DeleteTask(task);
+      }
       break;
     }
     case PullTask::STATE_VALIDATION_READ: {
-      if (task->IsTensorValid()) {
-        EnqueueAggregation(task);
+      bool is_valid = false;
+      ret = task->IsTensorValid(&is_valid);
+      if (ret || !is_valid) {
+        job->DeleteTask(task);
       } else {
-        task->PostReadKey();
+        EnqueueAggregation(task);
       }
+      break;
+    }
+    case PullTask::STATE_STOPPED: {
+      job->DeleteTask(task);
       break;
     }
     default: {
@@ -373,10 +378,12 @@ void ProcessPullTaskCQ(PullTask* task) {
     }
   }
 
+#if 0  // DEBUG
   if (task->state() == PullTask::STATE_ABORTED) {
     auto job = reinterpret_cast<PullJob*>(task->job_handle());
     job->DeleteTask(task);
   }
+#endif  // DEBUG
 }
 
 int ProcessCQ(int dst, struct ibv_wc* wcs) {
@@ -390,16 +397,30 @@ int ProcessCQ(int dst, struct ibv_wc* wcs) {
       ProcessPullTaskCQ(task);
     } else {
       LOG(ERROR) << "wc bad status = " << wcs[i].status;
-      LOG(ERROR) << "PullTask Must be freed: " << (void*) task;
+      LOG(ERROR) << task->state() << ", " << task->var_name();
+      auto job = reinterpret_cast<PullJob*>(task->job_handle());
+      job->DeleteTask(task);
+      //LOG(ERROR) << "PullTask Must be freed: " << (void*) task;
     }
   }
   return 0;
 }
 
+void PollingThreadLoop(int tid) {
+  int n = NUM_POLLING_THREADS;
+  int begin = tid * ptre_global.size / n;
+  int end = (tid + 1) * ptre_global.size / n;
+  struct ibv_wc wcs[MAX_CQE_DEFAULT];
+  while (!ptre_global.is_shutdown) {
+    for (int i = begin; i < end; i++) {
+      ProcessCQ(i, wcs);
+    }
+  }
+}
 
 // Share task resource with Modelaverage OpKernel -> ClearPullTasks()
 // NEVER SET STATE TO ABORTED
-void ConcurrentAggThreadLoop() {
+void ConcurrentAggregationThreadLoop() {
   auto&& q = ptre_global.agg_q;
   while (!ptre_global.is_shutdown) {
     PullTask* task;
@@ -408,15 +429,36 @@ void ConcurrentAggThreadLoop() {
     auto rvar = ptre_global.cm->remote_variable(task->var_name());
     if (rvar) {
       if (task->state() == PullTask::STATE_VALID) {
-        rvar->Aggregate(*task->tensor());
-        job->DeleteTask(task);
+        if (ptre_global.last_key[task->dst()][task->var_name()]
+            < task->curr_key()) {
+          Eigen::ThreadPoolDevice d(ptre_global.agg_eigen_pool,
+              NUM_AGG_EIGEN_THREADS);
+          rvar->Aggregate(*task->tensor(), d);
+          ptre_global.last_key[task->dst()][task->var_name()] = 
+              task->curr_key();
+          job->DeleteTask(task);
+        } else {
+#if 0
+          int ret = task->PostReadKey();
+          if (ret) {
+            job->DeleteTask(task);
+          }
+#else
+          job->DeleteTask(task);
+#endif
+        }
       } else {
+#if 0
         int ret = task->PostReadKey();
         if (ret) {
           job->DeleteTask(task);
         }
+#else
+        job->DeleteTask(task);
+#endif
       }
     } else {
+      LOG(ERROR) << "Unknown var_name=" << task->var_name();
       job->DeleteTask(task);
     }
   }
@@ -444,10 +486,10 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
       ptre_global.grpc_hosts);
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
 
-  // Init RdmaManager
+  // Init RdmaMgr
   LOG(INFO) << "Init Rdma Manager";
-  ptre_global.rdma_mgr = new RdmaManager(size, rank);
-  ptre_global.grpc_service.SetRdmaManager(ptre_global.rdma_mgr);
+  ptre_global.rdma_mgr = new RdmaMgr(size, rank);
+  ptre_global.grpc_service.SetRdmaMgr(ptre_global.rdma_mgr);
   for (int i = 0; i < ptre_global.size; i++) {
     ptre_global.qp_mus.push_back(new std::mutex());
   }
@@ -552,41 +594,44 @@ class RegisterVariablesOp : public OpKernel {
     // Retrieve Remote Addresses
     LOG(INFO) << "Exchange Remote Addresses for RDMA Communication";
     for (int i = 0; i < ptre_global.size; i++) {
+//if (i == ptre_global.rank) continue;  // DEBUG
       for (int j = 0; j < num_inputs; j++) {
-        RdmaSetRemoteAddress(i, BUF_TYPE_PULL_KEY, names_[j]);
-        RdmaSetRemoteAddress(i, BUF_TYPE_PULL_TENSOR_A, names_[j]);
-        RdmaSetRemoteAddress(i, BUF_TYPE_PULL_TENSOR_B, names_[j]);
+        RdmaSetRemoteAddress(i, ptre::BUF_TYPE_PULL_KEY, names_[j]);
+        RdmaSetRemoteAddress(i, ptre::BUF_TYPE_PULL_TENSOR_A, names_[j]);
+        RdmaSetRemoteAddress(i, ptre::BUF_TYPE_PULL_TENSOR_B, names_[j]);
       }
     }
 
-    // Init Push Thread
-    LOG(INFO) << "Starting Push Threads: num_threads=" << NUM_PUSH_THREADS;
-    for (int i = 0; i < NUM_PUSH_THREADS; i++) {
-      ptre_global.push_threads.emplace_back(
-          std::thread(ConcurrentPushThreadLoop));
+    for (int i = 0; i < ptre_global.size; i++) {
+      for (int j = 0; j < num_inputs; j++) {
+        ptre_global.last_key[i][names_[j]] = 0;
+      }
     }
 
-    // Polling Thread
-    LOG(INFO) << "Starting Send Polling Threads: num_threads=" << NUM_SEND_POLLING_THREADS;
-    for (int i = 0; i < NUM_SEND_POLLING_THREADS; i++) {
-      ptre_global.send_polling_threads.emplace_back(
-          std::thread(SendCQProcessThreadLoop, i));
+    // Init Polling Threads
+    LOG(INFO) << "Starting Polling Threads: num_threads=" << NUM_POLLING_THREADS;
+    for (int i = 0; i < NUM_POLLING_THREADS; i++) {
+      ptre_global.polling_threads.emplace_back(
+          std::thread(PollingThreadLoop, i));
     }
-    LOG(INFO) << "Starting Recv Polling Threads: num_threads=" << NUM_RECV_POLLING_THREADS;
-    for (int i = 0; i < NUM_RECV_POLLING_THREADS; i++) {
-      ptre_global.recv_polling_threads.emplace_back(
-          std::thread(RecvCQProcessThreadLoop, i));
-    }
-
     // Init Aggregation Thread
-    LOG(INFO) << "Starting Aggregation Threads: num_threads=" << NUM_AGG_THREADS;
-    //ptre_global.eigen_pool = new Eigen::ThreadPool(NUM_AGG_EIGEN_THREADS);
-    ptre_global.eigen_pool = new Eigen::ThreadPool(NUM_AGG_THREADS);
+    LOG(INFO) << "Starting Aggregation Threads: num_threads="
+        << NUM_AGG_THREADS;
+    //ptre_global.eigen_pool = new Eigen::ThreadPool(NUM_AGG_THREADS);
     //Eigen::ThreadPoolDevice d(&pool, NUM_AGG_EIGEN_THREADS);
     for (int i = 0; i < NUM_AGG_THREADS; i++) {
       ptre_global.aggregation_threads.emplace_back(
-          std::thread(AggregationThreadLoop, i));
+          std::thread(ConcurrentAggregationThreadLoop));
     }
+    int agg_pool_size = NUM_AGG_THREADS * NUM_AGG_EIGEN_THREADS;
+    LOG(INFO) << "AGG_EIGEN_THREADS=" << NUM_AGG_EIGEN_THREADS
+        << ", POOL_SIZE=" << agg_pool_size;
+    ptre_global.agg_eigen_pool = new Eigen::ThreadPool(agg_pool_size);
+#ifdef PTRE_CPU_REDUCE
+    LOG(INFO) << "REDUCE_EIGEN_THREADS=" << NUM_REDUCE_EIGEN_THREADS;
+    ptre_global.reduce_eigen_pool =
+        new Eigen::ThreadPool(NUM_REDUCE_EIGEN_THREADS);
+#endif
 
     LOG(INFO) << "[2/2] Done Registering Variables";
   }
@@ -683,8 +728,9 @@ void ClearPullJobs() {
 }
 
 void CreatePullJob(int step, int num_pull) {
+  //auto last_time = std::chrono::system_clock::now();
   std::map<int, std::vector<string>> task_init_attr;
-  std::map<bool> checker;
+  std::map<int, bool> checker;
   for (int i = 0; i < num_pull; i++) {
     int dst;
     do {
@@ -698,11 +744,15 @@ void CreatePullJob(int step, int num_pull) {
   ptre_global.job_table_mu.lock();
   ptre_global.pull_jobs[step] = new_job;
   ptre_global.job_table_mu.unlock();
+  //auto curr_time = std::chrono::system_clock::now();
+  //std::chrono::duration<double> since_last = curr_time - last_time;
+  //LOG(INFO) << __PRETTY_FUNCTION__ << ": " << since_last.count() / 1000 << "msec";
 }
 
 void EnqueuePullTasks(const string& var_name, int num_pull) {
   // TODO: add tasks to the job.
   // TODO: post task
+//auto last_time = std::chrono::system_clock::now();
   int step = ptre_global.local_step;
   auto job = ptre_global.pull_jobs[step];
   std::vector<int> dsts;
@@ -714,24 +764,32 @@ void EnqueuePullTasks(const string& var_name, int num_pull) {
     // TODO: check with CQ process thread
     int ret = task->PostReadKey();
     if (ret) {
-      job->DeleteTask(dst, var_name);
+LOG(ERROR) << "Failed to PostReadKey()";  // DEBUG
+      //job->DeleteTask(dst, var_name);
+      job->DeleteTask(task);
     }
   }
+//auto curr_time = std::chrono::system_clock::now();
+//std::chrono::duration<double> since_last = curr_time - last_time;
+//LOG(INFO) << __PRETTY_FUNCTION__ << ": " << since_last.count() / 1000 << "msec";
 }
 
 void StopPullTasks(const string& var_name) {
+  //auto last_time = std::chrono::system_clock::now();
   std::lock_guard<std::mutex> guard(ptre_global.job_table_mu);
   auto&& job_table = ptre_global.pull_jobs;
   for (auto&& it : job_table) {
     it.second->StopTasks(var_name);
   }
+  //auto curr_time = std::chrono::system_clock::now();
+  //std::chrono::duration<double> since_last = curr_time - last_time;
+  //LOG(INFO) << __PRETTY_FUNCTION__ << ": " << since_last.count() / 1000 << "msec";
 }
 
 static Status ModelaverageShapeFn(InferenceContext* c) {
   ShapeHandle unused;
   ShapeHandle s = ShapeOrHandleShape(c, 0);                  // var
   if (c->num_outputs() > 0) {
-  :wa
     c->set_output(0, s);
   }
   return Status::OK();
@@ -753,10 +811,13 @@ class ModelaverageOp : public OpKernel {
     if (!rvar) return;
 
     StopPullTasks(var_name_);
-    rvar->StopAggregation();
+    rvar->StopAggregation();  // DEBUG
+#ifdef PTRE_CPU_REDUCE
     int num_incomings = rvar->agg_count() - 1;
     if (num_incomings > 0) {
-      rvar->Reduce();
+      Eigen::ThreadPoolDevice rdev(ptre_global.reduce_eigen_pool,
+          NUM_REDUCE_EIGEN_THREADS);
+      rvar->Reduce(rdev);  // DEBUG
       core::RefCountPtr<Var> ref;
       LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
       Tensor var = *ref->tensor();
@@ -764,6 +825,25 @@ class ModelaverageOp : public OpKernel {
       const Device& d = ctx->template eigen_device<Device>();
       functor::CopyRemoteToVar<Device, T>()(d, var.flat<T>(), remote.flat<T>());
     }
+#else
+#ifdef PTRE_GPU_REDUCE
+    int num_incomings = rvar->agg_count();
+    if (num_incomings > 0) {
+      core::RefCountPtr<Var> ref;
+      LookupResource(ctx, HandleFromInput(ctx, 0), &ref);
+      Tensor var = *ref->tensor();
+
+      T m_type_t = T(num_incomings + 1);
+      typename TTypes<T>::ConstScalar m(&m_type_t, 1);
+
+      const Tensor remote = *rvar->tensor();
+      const Device& d = ctx->template eigen_device<Device>();
+      functor::Modelaverage<Device, T>()(d, var.flat<T>(), m,
+          remote.flat<T>());
+      //rvar->set_last_key(ptre_global.local_step);
+    }
+#endif  // #ifdef PTRE_GPU_REDUCE
+#endif  // #ifdef PTRE_CPU_REDUCE
     rvar->StartAggregation();
     EnqueuePullTasks(var_name_, ptre_global.num_push);
 
@@ -831,6 +911,7 @@ void PtreClearQueueAndEnqueueRequest() {
 }
 
 void ClearTasks(const string& var_name) {
+#if 0
   //LOG(INFO) << "Clear Tasks: " << var_name;
   auto&& q = ptre_global.push_q;
   auto&& mu = ptre_global.push_q_mu;
@@ -855,6 +936,7 @@ void ClearTasks(const string& var_name) {
     }
   }
   ptre_global.rpn_checker_mu.unlock();
+#endif
 }
 
 void EnqueueTasks(const string& var_name, int num_push) {
@@ -1003,15 +1085,20 @@ class UpdatePullVariableOp : public OpKernel {
     T* next_buf = (T*) pvar->next_data();
     typename TTypes<T>::Flat next_flat(next_buf, var.flat<T>().size());
     const Device& d = ctx->template eigen_device<Device>();
-    pvar->SetNextKey(ptre_global.local_step);
+    pvar->SetNextKey(ptre_global.local_step + 1);
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), next_flat);
 
     pvar->Switch();
 
+#ifdef PTRE_CPU_REDUCE
     auto rvar = ptre_global.cm->remote_variable(var_name_);
     if (rvar) {
-      rvar->Aggregate(pvar->curr_data());
+      Eigen::ThreadPoolDevice adev(ptre_global.agg_eigen_pool,
+          NUM_AGG_EIGEN_THREADS);
+      rvar->Aggregate(pvar->curr_data(), adev);
+//LOG(INFO) << var.DeviceSafeDebugString() << "==" << ((float*) pvar->curr_data())[0] << "==" << rvar->tensor()->DebugString();  // DEBUG
     }
+#endif
   }
  private:
   string var_name_;
@@ -1197,6 +1284,11 @@ void ptre_set_local_step(int local_step) {
   ptre_global.agg_cnts.resize(local_step + 1);
 }
 
+void ptre_create_pull_job() {
+  tensorflow::ClearPullJobs();
+  tensorflow::CreatePullJob(ptre_global.local_step, ptre_global.num_push);
+}
+
 void ptre_barrier() {
   tensorflow::PtreBarrier();
 }
@@ -1208,43 +1300,59 @@ void ptre_print_counter_summary_epoch() {
   float avg_bytes = 0;
   float avg_count = 0;
   std::stringstream ss;
-  for (auto&& name : ptre_global.trainable_var_names) {
-    int sum = 0;
-    std::vector<int> l;
-    for (int i = begin; i < end; i++) {
-      sum += ptre_global.agg_cnts[i][name];
-      l.push_back(ptre_global.agg_cnts[i][name]);
+  ss << "\n===AGGREGATION COUNTER SUMMARY per epoch===\n";
+  ss << "n=" << n << std::endl;
+  if (n > 0) {
+    for (auto&& name : ptre_global.trainable_var_names) {
+      int sum = 0;
+      std::vector<int> l;
+      for (int i = begin; i < end; i++) {
+        sum += ptre_global.agg_cnts[i][name];
+        l.push_back(ptre_global.agg_cnts[i][name]);
+      }
+      std::sort(l.begin(), l.end(), std::greater<int>());
+      float avg = (float) sum / n;
+      avg_count += avg;
+      ss << "(" << avg << ", " << l[n / 2] << ") ";
+      avg_bytes += avg * ptre_global.cm->remote_variable(name)->tensor()
+          ->AllocatedBytes();
     }
-    std::sort(l.begin(), l.end(), std::greater<int>());
-    float avg = (float) sum / (n - 1);
-    avg_count += avg;
-    ss << "(" << avg << ", " << l[(n - 1) / 2] << ") ";
-    avg_bytes += avg * ptre_global.cm->remote_variable(name)->rcv_length();
   }
   ptre_global.agg_cnts_last = end;
-  LOG(INFO) << ss.str() << "\nAVG COUNT=" << avg_count << ", AVG BYTES=" << (int) avg_bytes << ", n=" << n;
+  ss << "\nAVG COUNT=" << avg_count << std::endl;
+  ss << "AVG BYTES=" << (int) avg_bytes << std::endl;
+  LOG(INFO) << ss.str();
 }
 
 void ptre_print_counter_summary() {
-  int n = ptre_global.agg_cnts.size();
+  int begin = 1;
+  int end = ptre_global.agg_cnts.size();
+  int n = end - begin;
   float avg_bytes = 0;
   float avg_count = 0;
-  for (auto&& name : ptre_global.trainable_var_names) {
-    int sum = 0;
-    std::vector<int> l;
-    for (int i = 1; i < n; i++) {
-      sum += ptre_global.agg_cnts[i][name];
-      l.push_back(ptre_global.agg_cnts[i][name]);
+  std::stringstream ss;
+  ss << "\n===AGGREGATION COUNTER SUMMARY===\n";
+  ss << "n=" << n << std::endl;
+  if (n > 0) {
+    for (auto&& name : ptre_global.trainable_var_names) {
+      int sum = 0;
+      std::vector<int> l;
+      for (int i = begin; i < end; i++) {
+        sum += ptre_global.agg_cnts[i][name];
+        l.push_back(ptre_global.agg_cnts[i][name]);
+      }
+      std::sort(l.begin(), l.end(), std::greater<int>());
+      float avg = (float) sum / n;
+      avg_count += avg;
+      ss << name << ": avg=" << avg
+          << ", mid=" << l[n / 2] << std::endl;
+      avg_bytes += avg * ptre_global.cm->remote_variable(name)->tensor()
+          ->AllocatedBytes();
     }
-    std::sort(l.begin(), l.end(), std::greater<int>());
-    float avg = (float) sum / (n - 1);
-    avg_count += avg;
-    LOG(INFO) << name << ": avg=" << avg
-        << ", mid=" << l[(n - 1) / 2];
-    avg_bytes += avg * ptre_global.cm->remote_variable(name)->rcv_length();
   }
-  LOG(INFO) << "AVG COUNT=" << avg_count;
-  LOG(INFO) << "AVG BYTES=" << (int) avg_bytes;
+  ss << "AVG COUNT=" << avg_count << std::endl;
+  ss << "AVG BYTES=" << (int) avg_bytes << std::endl;
+  LOG(INFO) << ss.str();
 }
 
 }

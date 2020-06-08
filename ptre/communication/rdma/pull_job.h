@@ -20,6 +20,11 @@ class PullJob {
   void DeleteTask(PullTask* task);
   void StopTasks(const string& var_name);
   int NumLiveTasks();
+
+ private:
+  int step_;
+  int num_dsts_;
+  std::map<int, std::map<string, PullTask*>> task_tables_;
 };
 
 }  // namespace ptre

@@ -1,4 +1,4 @@
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -11,7 +11,7 @@
 
 namespace ptre {
 
-RdmaManager::RdmaManager(int ptre_size, int ptre_rank) {
+RdmaMgr::RdmaMgr(int ptre_size, int ptre_rank) {
   ptre_size_ = ptre_size;
   ptre_rank_ = ptre_rank;
 
@@ -72,9 +72,9 @@ RdmaManager::RdmaManager(int ptre_size, int ptre_rank) {
   }
 }
 
-RdmaManager::~RdmaManager() { }
+RdmaMgr::~RdmaMgr() { }
 
-void RdmaManager::INITQP(int dst) {
+void RdmaMgr::INITQP(int dst) {
   // INIT QP
   int ret;
   struct ibv_qp_attr attr;
@@ -92,7 +92,7 @@ void RdmaManager::INITQP(int dst) {
   }
 }
 
-void RdmaManager::RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,
+void RdmaMgr::RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,
     uint32_t remote_psn = 0) {
   // INIT -> RTR
   int ret;
@@ -122,7 +122,7 @@ void RdmaManager::RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,
   }
 }
 
-void RdmaManager::RTSQP(int dst, uint32_t my_psn = 0) {
+void RdmaMgr::RTSQP(int dst, uint32_t my_psn = 0) {
   // RTR -> RTS
   int ret;
   struct ibv_qp_attr attr;
@@ -146,7 +146,7 @@ void RdmaManager::RTSQP(int dst, uint32_t my_psn = 0) {
   }
 }
 
-void RdmaManager::RESETQP(int dst) {
+void RdmaMgr::RESETQP(int dst) {
   // Reset QP
   int ret;
   struct ibv_qp_attr attr;
@@ -159,12 +159,12 @@ void RdmaManager::RESETQP(int dst) {
   }
 }
 
-void RdmaManager::ConnectQP(int dst, uint32_t remote_qpn) {
+void RdmaMgr::ConnectQP(int dst, uint32_t remote_qpn) {
   RTRQP(dst, remote_lids_[dst], remote_qpn);
   RTSQP(dst);
 }
 
-int RdmaManager::ConnectivityCheck() {
+int RdmaMgr::ConnectivityCheck() {
   LOG(INFO) << "Checking QP Connectivities";
   int ret = 0;
   int send_buf = ptre_rank_;
@@ -279,7 +279,7 @@ int RdmaManager::ConnectivityCheck() {
   return ret;
 }
 
-int RdmaManager::RecoverQP(int dst) {
+int RdmaMgr::RecoverQP(int dst) {
   int ret;
   struct ibv_qp* qp = qps_[dst];
   struct ibv_qp_attr attr;
@@ -302,7 +302,19 @@ int RdmaManager::RecoverQP(int dst) {
   return 0;
 }
 
-void RdmaManager::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
+RdmaChannel* RdmaMgr::GetChannel(int dst) {
+  if (dst >= ptre_size_) return NULL;
+
+  auto search = channel_table_.find(dst);
+  if (search == channel_table_.end()) {
+    RdmaChannel* channel = new RdmaChannel(ctx_, qps_[dst]);
+    channel_table_[dst] = channel;
+  }
+  return channel_table_[dst];
+}
+
+#if 0
+void RdmaMgr::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
     const std::vector<string>& names) {
   std::vector<size_t> sizes;
   for (int i = 0; i < vars.size(); i++) {
@@ -338,13 +350,13 @@ void RdmaManager::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
     var_name_to_index_[names[i]] = i;
   }
 }
+#endif
 
 // PullVariable
-// 
-void RdmaManager::InitMRs(std::vector<RemoteVariable*>& vars) {
+void RdmaMgr::InitMRs(std::vector<RemoteVariable*>& vars) {
   std::vector<size_t> sizes;
   for (int i = 0; i < vars.size(); i++) {
-    size_t tensor_size = var[i]->tensor()->AllocatedBytes();
+    size_t tensor_size = vars[i]->tensor()->AllocatedBytes();
     sizes.push_back(tensor_size);
     sizes.push_back(tensor_size);
     sizes.push_back(sizeof(struct PullKey));
@@ -352,7 +364,7 @@ void RdmaManager::InitMRs(std::vector<RemoteVariable*>& vars) {
   allocator_ = new Allocator(sizes);
 
   for (int i = 0; i < vars.size(); i++) {
-    PullVariable* pvar = new PullVariable(*var[i]->tensor(), var[i]->name(),
+    PullVariable* pvar = new PullVariable(*vars[i]->tensor(), vars[i]->name(),
         allocator_);
     pull_variables_.push_back(pvar);
     var_name_to_index_[pvar->name()] = i;
@@ -366,7 +378,7 @@ void RdmaManager::InitMRs(std::vector<RemoteVariable*>& vars) {
   }
 }
 
-int RdmaManager::var_name_to_index(const string& var_name) {
+int RdmaMgr::var_name_to_index(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);
   if (search == var_name_to_index_.end()) {
     LOG(ERROR) << "KEY NOT FOUND: " << var_name;
@@ -375,16 +387,16 @@ int RdmaManager::var_name_to_index(const string& var_name) {
   return search->second;
 }
 
-void RdmaManager::set_remote_lid(int dst, uint16_t lid) {
+void RdmaMgr::set_remote_lid(int dst, uint16_t lid) {
   remote_lids_[dst] = lid;
 }
 
-uint16_t RdmaManager::remote_lid(int dst) {
+uint16_t RdmaMgr::remote_lid(int dst) {
   return remote_lids_[dst];
 }
 
 #if 0
-void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
+void RdmaMgr::InitTensorMR(int dst_rank, const std::string& name,
                                Tensor* recv, Tensor* send) {
   tensorflow::StringPiece strpc;
   size_t length;
@@ -428,7 +440,7 @@ void RdmaManager::InitTensorMR(int dst_rank, const std::string& name,
   //          ", lkey=" << mr->lkey << ", rkey=" << mr->rkey << std::endl;
 }
 
-void RdmaManager::InitParamMR(bool* is_new_incoming,
+void RdmaMgr::InitParamMR(bool* is_new_incoming,
                               bool* send_in_flag) {
   size_t length;
   void* addr;
@@ -453,14 +465,13 @@ void RdmaManager::InitParamMR(bool* is_new_incoming,
 #endif
 
 /// MR management V2
-void RdmaManager::RegisterMR(const BufType buf_type, const string& name,
+void RdmaMgr::RegisterMR(const BufType buf_type, const string& name,
     void* buf, size_t length, int access = IBV_ACCESS_LOCAL_WRITE) {
   struct ibv_mr* mr = ibv_reg_mr(pd_, buf, length, access);
   if (mr == NULL) {
     LOG(ERROR) << "ibv_reg_mr failed : (type, name, buf, length, remote)=("
         << buf_type << ", " << name << ", " << buf << ", " << length
         << "), errno=" << errno;
-    exit(1);
   }
   mrs_[buf_type][name] = mr;
   access_flags_[buf_type][name] = access;
@@ -472,7 +483,7 @@ void RdmaManager::RegisterMR(const BufType buf_type, const string& name,
 }
 
 /// Return value is the number of buffers remotely writable.
-int RdmaManager::GetRemoteAccessBufInfos(std::vector<BufType>* out_buf_types,
+int RdmaMgr::GetRemoteAccessBufInfos(std::vector<BufType>* out_buf_types,
                                          std::vector<string>* out_names) {
   int cnt = 0;
   for (auto it : access_flags_) {
@@ -492,7 +503,7 @@ int RdmaManager::GetRemoteAccessBufInfos(std::vector<BufType>* out_buf_types,
   return cnt;
 }
 
-bool RdmaManager::IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
+bool RdmaMgr::IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
                                   const string& name) {
   auto rank_search = rmrs_.find(dst_rank);
   if (rank_search != rmrs_.end()) {
@@ -509,13 +520,13 @@ bool RdmaManager::IsRemoteMRSetV2(const int dst_rank, const BufType buf_type,
   return false;
 }
 
-void RdmaManager::SetRemoteMRV2(const int dst_rank, const BufType buf_type,
+void RdmaMgr::SetRemoteMRV2(const int dst_rank, const BufType buf_type,
     const string& name, const uint64_t remote_addr, const uint32_t rkey) {
   rmrs_[dst_rank][buf_type].emplace(name, RemoteMR { remote_addr, rkey });
 
 }
 
-int RdmaManager::RdmaRead(int dst, const BufType buf_type,
+int RdmaMgr::RdmaRead(int dst, const BufType buf_type,
     const string& var_name, struct ibv_mr* read_mr, size_t read_length) {
   int ret;
   // Retrieve remote address
@@ -565,7 +576,7 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type,
   return -1;
 }
 
-int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
+int RdmaMgr::RdmaRead(int dst, const BufType buf_type, const string& name,
     void* read_buf, size_t read_length) {
   struct ibv_mr* mr = ibv_reg_mr(pd_, read_buf, read_length,
       IBV_ACCESS_LOCAL_WRITE);
@@ -578,7 +589,7 @@ int RdmaManager::RdmaRead(int dst, const BufType buf_type, const string& name,
   return ret;
 }
 
-int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
+int RdmaMgr::RdmaWrite(int dst, const BufType buf_type,
     const string& var_name, struct ibv_mr* send_mr, size_t send_length,
     uint32_t* imm_data) {
   int ret;
@@ -634,7 +645,7 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
   return -1;
 }
 
-int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
+int RdmaMgr::RdmaWrite(int dst, const BufType buf_type,
     const string& var_name, void* send_buf, size_t send_length,
     uint32_t* imm_data) {
   struct ibv_mr* mr = ibv_reg_mr(pd_, send_buf, send_length, 0);
@@ -647,7 +658,7 @@ int RdmaManager::RdmaWrite(int dst, const BufType buf_type,
   return ret;
 }
 
-struct ibv_mr* RdmaManager::GetMR(const BufType buf_type, const string& name) {
+struct ibv_mr* RdmaMgr::GetMR(const BufType buf_type, const string& name) {
   if (mrs_.find(buf_type) != mrs_.end()) {
     auto&& inner = mrs_[buf_type];
     if (inner.find(name) != inner.end()) {
@@ -657,12 +668,12 @@ struct ibv_mr* RdmaManager::GetMR(const BufType buf_type, const string& name) {
   return NULL;
 }
 
-void RdmaManager::SetRemoteAddress(int dst_rank, const BufType buf_type,
+void RdmaMgr::SetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, const uint64_t remote_addr, const uint32_t rkey) {
   rmrs_[dst_rank][buf_type].emplace(name, RemoteMR { remote_addr, rkey });
 }
 
-int RdmaManager::GetRemoteAddress(int dst_rank, const BufType buf_type,
+int RdmaMgr::GetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, uint64_t* out_addr, uint32_t* out_rkey) {
   auto dst_search = rmrs_.find(dst_rank);
   if (dst_search == rmrs_.end()) {
@@ -684,7 +695,7 @@ int RdmaManager::GetRemoteAddress(int dst_rank, const BufType buf_type,
   return 0;
 }
 
-void RdmaManager::ProcessCQ() {
+void RdmaMgr::ProcessCQ() {
 #if 0
   std::cout << "Start ProcessCQ()" << std::endl;
   while (true) {
@@ -721,36 +732,36 @@ void RdmaManager::ProcessCQ() {
 #endif
 }
 
-void RdmaManager::Poll(int num_comps) {
+void RdmaMgr::Poll(int num_comps) {
   LOG(ERROR) << "Not Implemented.";
   exit(1);
   struct ibv_wc wcs[num_comps];
   //ptre_poll_cq(cq_, num_comps, wcs);
 }
 
-//void RdmaManager::InitTensorMRs(int dst_rank, const std::string& name,
+//void RdmaMgr::InitTensorMRs(int dst_rank, const std::string& name,
 //                                const Tensor& recv, const Tensor& send) {
 
-bool RdmaManager::IsRemoteMRSet(int rank, const std::string& name) {
+bool RdmaMgr::IsRemoteMRSet(int rank, const std::string& name) {
   RemoteTensorId id{ rank, name };
   return (tensor_rmrs_.find(id) != tensor_rmrs_.end());
 }
 
-void RdmaManager::SetRemoteMR(int rank, const std::string& name,
+void RdmaMgr::SetRemoteMR(int rank, const std::string& name,
                               uint64_t remote_addr, uint32_t rkey) {
   tensor_rmrs_.emplace(RemoteTensorId{ rank, name }, RemoteMR { remote_addr, rkey });
   //std::cout << "RemoteMR is set for rank=" << rank << ", name=" << name <<
   //          ", remote_addr=" << (void*) remote_addr << ", rkey=" << rkey << std::endl;
 }
 
-RemoteMR RdmaManager::GetRemoteMR(const std::string& name) {
+RemoteMR RdmaMgr::GetRemoteMR(const std::string& name) {
   auto mr = recv_mrs_[name];
   uint64_t remote_addr = (uint64_t) mr->addr;
   uint32_t rkey = mr->rkey;
   return RemoteMR{ remote_addr, rkey };
 }
 
-int RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
+int RdmaMgr::RdmaWriteTensor(int dst_rank, const std::string& name,
                                  const Tensor& tensor, bool atomic_add) {
   int num_wrs = 0;
   auto data = tensor.tensor_data();
@@ -785,7 +796,7 @@ int RdmaManager::RdmaWriteTensor(int dst_rank, const std::string& name,
 }
 
 #if 0
-int RdmaManager::PushTensorAtomicAdd(int dst_rank, const std::string& name,
+int RdmaMgr::PushTensorAtomicAdd(int dst_rank, const std::string& name,
                                      const Tensor& tensor) {
   int num_wrs = 0;
   auto data = tensor.tensor_data();
@@ -867,7 +878,7 @@ int RdmaManager::PushTensorAtomicAdd(int dst_rank, const std::string& name,
   //ptre_poll_cq(cq_, 1, &wc);
 }
 
-int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
+int RdmaMgr::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
                                           const Tensor& tensor) {
   int num_wrs = 0;
   auto data = tensor.tensor_data();
@@ -1000,7 +1011,7 @@ int RdmaManager::PushTensorAtomicAddBatch(int dst_rank, const std::string& name,
   return num_wrs;
 }
 
-void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
+void RdmaMgr::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
   size_t buffer_size = sizeof(bool);
   uint64_t src_addr = (uint64_t) flag;
   struct ibv_mr *mr = send_in_flag_mr_;
@@ -1024,13 +1035,13 @@ void RdmaManager::RdmaWriteIncomingFlag(int dst_rank, bool* flag) {
 }
 #endif
 
-bool RdmaManager::AttemptPush(int dst_rank) {
+bool RdmaMgr::AttemptPush(int dst_rank) {
   //GrpcClient* client = grpc_client_cache_->GetClient(dst_rank, &client);
   //bool ret = client->AttemptPush();
   //return ret;
 }
 
-int RdmaManager::PushTensor(int dst_rank, string name, const Tensor& tensor) {
+int RdmaMgr::PushTensor(int dst_rank, string name, const Tensor& tensor) {
   auto data = tensor.tensor_data();
   size_t buffer_size = (size_t) tensor.TotalBytes();
   uint64_t src_addr = (uint64_t) data.begin();
@@ -1054,10 +1065,10 @@ int RdmaManager::PushTensor(int dst_rank, string name, const Tensor& tensor) {
     std::cout << "post_write failed." << std::endl;
   }
 }
-int RdmaManager::NotifyPushDone(int dst_rank) {
+int RdmaMgr::NotifyPushDone(int dst_rank) {
 }
 
-int RdmaManager::PushAndNotify(int dst, const string& var_name) {
+int RdmaMgr::PushAndNotify(int dst, const string& var_name) {
   int ret;
   int read_permit = -1;
   // 1. Read Permit Table
@@ -1088,7 +1099,7 @@ int RdmaManager::PushAndNotify(int dst, const string& var_name) {
   }
 }
 
-int RdmaManager::ReceivePushNotify(int dst) {
+int RdmaMgr::ReceivePushNotify(int dst) {
   int ret;
   struct ibv_qp* qp = qps_[dst];
   struct ibv_recv_wr* wr = recv_wrs_[dst];
@@ -1100,7 +1111,7 @@ int RdmaManager::ReceivePushNotify(int dst) {
   return 0;
 }
 
-int RdmaManager::PollPushNotify(int dst) {
+int RdmaMgr::PollPushNotify(int dst) {
   struct ibv_cq* cq = recv_cqs_[dst];
   struct ibv_wc wc;
   int num_comps = ibv_poll_cq(cq, 1, &wc);
@@ -1118,15 +1129,15 @@ int RdmaManager::PollPushNotify(int dst) {
 }
 
 
-void RdmaManager::InitPush(int idx) {
+void RdmaMgr::InitPush(int idx) {
   auto&& var = push_variables_[idx];
   var->StopPush();
 }
-void RdmaManager::SetPushReady(int idx) {
+void RdmaMgr::SetPushReady(int idx) {
   auto&& var = push_variables_[idx];
   var->StartPush();
 }
-void RdmaManager::SetPushReady(const string& var_name) {
+void RdmaMgr::SetPushReady(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);
   if (search == var_name_to_index_.end()) {
     LOG(ERROR) << "KEY NOT FOUND: " << var_name;
@@ -1135,7 +1146,7 @@ void RdmaManager::SetPushReady(const string& var_name) {
   int idx = search->second;
   SetPushReady(idx);
 }
-bool RdmaManager::IsPushReady(int idx) {
+bool RdmaMgr::IsPushReady(int idx) {
   auto&& var = push_variables_[idx];
   if (var->GetState() == 1) {
     return true;
@@ -1143,7 +1154,7 @@ bool RdmaManager::IsPushReady(int idx) {
     return false;
   }
 }
-bool RdmaManager::IsPushReady(const string& var_name) {
+bool RdmaMgr::IsPushReady(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);
   if (search == var_name_to_index_.end()) {
     LOG(ERROR) << "KEY NOT FOUND: " << var_name;
@@ -1153,28 +1164,29 @@ bool RdmaManager::IsPushReady(const string& var_name) {
   return IsPushReady(idx);
 }
 
-struct ibv_context* RdmaManager::ctx() {
+struct ibv_context* RdmaMgr::ctx() {
   return ctx_;
 }
-struct ibv_port_attr RdmaManager::port_attr() {
+struct ibv_port_attr RdmaMgr::port_attr() {
   return port_attr_;
 }
-struct ibv_pd* RdmaManager::pd() {
+struct ibv_pd* RdmaMgr::pd() {
   return pd_;
 }
-struct ibv_qp* RdmaManager::qp(int dst) {
+struct ibv_qp* RdmaMgr::qp(int dst) {
   if (dst < qps_.size()) {
     return qps_[dst];
   }
   return NULL;
 }
-PushVariable* RdmaManager::push_variable(int idx) {
+PushVariable* RdmaMgr::push_variable(int idx) {
   if (idx < push_variables_.size()) {
     return push_variables_[idx];
   }
   return NULL;
 }
-PushVariable* RdmaManager::push_variable(const string& var_name) {
+
+PushVariable* RdmaMgr::push_variable(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);
   if (search == var_name_to_index_.end()) {
     LOG(ERROR) << "KEY NOT FOUND: " << var_name;
@@ -1184,8 +1196,25 @@ PushVariable* RdmaManager::push_variable(const string& var_name) {
   return push_variable(idx);
 }
 
-//struct ibv_qp* RdmaManager::qp(int dest_rank) { return qps_[dest_rank]; }
-//struct ibv_cq* RdmaManager::send_cq(int dst) { return send_cqs_[dst]; }
-//struct ibv_cq* RdmaManager::recv_cq(int dst) { return recv_cqs_[dst]; }
+PullVariable* RdmaMgr::pull_variable(int idx) {
+  if (idx < pull_variables_.size()) {
+    return pull_variables_[idx];
+  }
+  return NULL;
+}
+
+PullVariable* RdmaMgr::pull_variable(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    return NULL;
+  }
+  int idx = search->second;
+  return pull_variable(idx);
+}
+
+//struct ibv_qp* RdmaMgr::qp(int dest_rank) { return qps_[dest_rank]; }
+//struct ibv_cq* RdmaMgr::send_cq(int dst) { return send_cqs_[dst]; }
+//struct ibv_cq* RdmaMgr::recv_cq(int dst) { return recv_cqs_[dst]; }
 
 }  // namespace ptre

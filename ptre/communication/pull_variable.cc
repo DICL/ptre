@@ -10,7 +10,7 @@ PullVariable::PullVariable(const Tensor& var, const string& name,
 
   length_ = var.AllocatedBytes();
   for (int i = 0; i < 2; i++) {
-    data_ptrs_[i] = a->Allocate(length);
+    data_ptrs_[i] = a->Allocate(length_);
   }
   name_ = name;
 }

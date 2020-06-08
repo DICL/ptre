@@ -7,7 +7,7 @@
 #include "ptre/tests/test_server_lib.h"
 #include "ptre/cm/consensus_manager.h"
 #include "ptre/cm/tensor_aggregator.h"
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 #include "ptre/communication/rdma/grpc_server.h"
 #include "ptre/communication/rdma/grpc_client.h"
 #include "ptre/communication/grpc/grpc_client_cache.h"
@@ -20,7 +20,7 @@
 using std::string;
 
 using ptre::ConsensusManager;
-using ptre::RdmaManager;
+using ptre::RdmaMgr;
 using ptre::GrpcClient;
 using ptre::GrpcClientCache;
 using ptre::BufType;
@@ -41,7 +41,7 @@ extern std::vector<string> kGrpcHosts;
 std::vector<string> kTensorNames;
 std::vector<Tensor*> kTensors;
 ConsensusManager* kCm;
-RdmaManager* kRdmaManager;
+RdmaMgr* kRdmaMgr;
 
 std::thread kAggThread;
 std::thread kWriterThread;
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "kCm=" << kCm << std::endl;
   ptre::InitTestPtre(kHostFile, kSize, kRank, kTensorNames, kTensors, kCm,
-      kRdmaManager);
+      kRdmaMgr);
   std::cout << "InitTestPtre done.\n";
   std::cout << "kCm=" << kCm << std::endl;
   Tensor other;

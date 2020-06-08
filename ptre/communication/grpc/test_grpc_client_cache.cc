@@ -6,7 +6,7 @@
 
 void RunGrpcServer() {
   RdmaServiceImpl service;
-  service.SetRdmaManager(ptre_global.rdma_manager);
+  service.SetRdmaMgr(ptre_global.rdma_mgr);
   service.SetConsensusManager(&ptre_global.cm);
   std::string server_address("0.0.0.0:50051");
   grpc::ServerBuilder builder;

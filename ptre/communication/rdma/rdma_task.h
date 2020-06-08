@@ -6,7 +6,7 @@
 
 #include "ptre/communication/comm_types.h"
 #include "ptre/communication/rdma/rdma.h"
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 
 namespace ptre {
 
@@ -27,7 +27,7 @@ class RPNTask {
     STATE_WRITE,
   };
 
-  RPNTask(RdmaManager* rdma_mgr, int dst, const string& var_name) {
+  RPNTask(RdmaMgr* rdma_mgr, int dst, const string& var_name) {
     id_ = (uint64_t) this;
     rdma_mgr_ = rdma_mgr;
     comm_rank_ = rdma_mgr_->rank();
@@ -58,7 +58,7 @@ class RPNTask {
  private:
   uint64_t id_;
   //QPMgr* qp_mgr_;
-  RdmaManager* rdma_mgr_;
+  RdmaMgr* rdma_mgr_;
   int comm_rank_;
   int dst_;
   string var_name_;
@@ -77,7 +77,7 @@ class RPNTask {
 
 class RecvTask {
  public:
-  RecvTask(RdmaManager* rdma_mgr, int dst) {
+  RecvTask(RdmaMgr* rdma_mgr, int dst) {
     id_ = (uint64_t) this;
     rdma_mgr_ = rdma_mgr;
     dst_ = dst;
@@ -100,7 +100,7 @@ class RecvTask {
 
  private:
   uint64_t id_;
-  RdmaManager* rdma_mgr_;
+  RdmaMgr* rdma_mgr_;
   int dst_;
   // WR
   void* buf_;
@@ -122,23 +122,27 @@ class PullTask {
     STATE_STOPPED,
   };
 
-  PullTask(RdmaManager* rdma_mgr, int dst, RemoteVariable* var,
+  PullTask(RdmaMgr* rdma_mgr, int dst, RemoteVariable* var,
            void* job_handle);
   ~PullTask();
 
+  void SetState(enum TaskState state);
   int GetState();
   // lock-free
   int state();
   int PostReadKey();
-  void PostReadTensor();
-  void PostReadValidation();
-  bool IsTensorValid();
+  int PostReadTensor();
+  int PostReadValidation();
+  bool IsTensorValid(bool* out);
   Tensor* tensor();
   const string& var_name() { return var_name_; }
   void* job_handle() { return job_handle_; }
+  uint64_t curr_key() { return key_read_.keys[key_read_.curr]; }
+  int dst() { return dst_; }
 
  private:
-  RdmaManager* rdma_mgr_;
+  RdmaMgr* rdma_mgr_;
+  RdmaChannel* channel_;
   int dst_;
   string var_name_;
   void* job_handle_;

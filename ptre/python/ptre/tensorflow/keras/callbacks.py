@@ -91,6 +91,18 @@ class PushModelCallback(Callback):
   def on_batch_end(self, batch, logs=None):
     self._step = self._step + 1
 
+class PullModelCallback(Callback):
+  def __init__(self, period=10):
+    super(PullModelCallback, self).__init__()
+    self._step = 0
+    self._period = period
+
+  def on_batch_begin(self, batch, logs=None):
+    ptre.set_local_step(self._step)
+    self._step = self._step + 1
+    ptre.create_pull_job()
+
+
 class PrintVariablesCallback(Callback):
   def __init__(self, verbose=True):
     super(PrintVariablesCallback, self).__init__()

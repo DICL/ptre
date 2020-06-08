@@ -6,14 +6,14 @@
 #include <string>
 
 #include "ptre/cm/consensus_manager.h"
-#include "ptre/communication/rdma/rdma_manager.h"
+#include "ptre/communication/rdma/rdma_mgr.h"
 
 using ptre::ConsensusManager;
-using ptre::RdmaManager;
+using ptre::RdmaMgr;
 
 struct PtreGlobal {
   ConsensusManager cm;
-  RdmaManager* rdma_manager;
+  RdmaMgr* rdma_mgr;
   //std::vector<Tensor*> remote_tensors;
   std::mutex mu;
   //std::queue<PtreRequest> request_queue;

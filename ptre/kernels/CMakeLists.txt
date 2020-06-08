@@ -33,7 +33,7 @@ target_link_libraries(ptre_ops
                       cublas
                       job_def
                       consensus_manager
-                      rdma_manager
+                      rdma_mgr
                       rdma_grpc_server
                       rdma_grpc_client
                       grpc_client_cache
