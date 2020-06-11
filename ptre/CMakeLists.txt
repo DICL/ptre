@@ -4,10 +4,9 @@
 #                      rdma_mgr)
                     
 
-add_subdirectory(cm)
-add_subdirectory(communication)
+add_subdirectory(common)
+add_subdirectory(tensorflow)
 add_subdirectory(core)
-add_subdirectory(kernels)
 add_subdirectory(protobuf)
 add_subdirectory(lib)
 

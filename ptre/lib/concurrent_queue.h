@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <condition_variable>
+#include <chrono>
 #include <mutex>
 #include <queue>
 #include <deque>
@@ -16,6 +17,7 @@ class ConcurrentQueue {
   void push(T&& value);
   void pop();
   void wait_and_pop(T& p);
+  bool wait_for_and_pop(int sec, T& p);
 
  protected:
   std::mutex mu_;
@@ -61,6 +63,23 @@ void ConcurrentQueue<T>::wait_and_pop(T& p) {
   p = q_.front();
   q_.pop();
   lk.unlock();
+}
+
+template <typename T>
+bool ConcurrentQueue<T>::wait_for_and_pop(int sec, T& p) {
+  std::unique_lock<std::mutex> lk(mu_);
+  bool ret;
+  if (cv_.wait_for(lk, std::chrono::seconds(sec),
+                   [&] { return !q_.empty(); })) {
+    //p = std::move(q_.front());
+    p = q_.front();
+    q_.pop();
+    ret = true;
+  } else {
+    ret = false;
+  }
+  lk.unlock();
+  return ret;
 }
 
 template <typename T>

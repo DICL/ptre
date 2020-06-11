@@ -4,7 +4,7 @@
 #include <string>
 #include <chrono>
 
-#include "ptre/cm/tensor_aggregator.h"
+#include "ptre/common/cm/tensor_aggregator.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/ThreadPool"
 

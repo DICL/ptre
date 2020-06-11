@@ -97,7 +97,8 @@ def create_modelaverage_optimizer(optimizer, name, apply_after_reduce, mode):
               scope_name), distribution.extended.colocate_vars_with(var):
             update_ops.extend(
                 distribution.extended.update(
-                    var, apply_ma_and_grad, args=(grad,), group=False))
+                    #var, apply_ma_and_grad, args=(grad,), group=False))
+                    var, apply_grad_and_ma, args=(grad,), group=False))
 
         any_symbolic = any(isinstance(i, ops.Operation) or
                            tf_utils.is_symbolic_tensor(i) for i in update_ops)

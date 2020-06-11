@@ -5,12 +5,12 @@
 #include <chrono>
 
 #include "ptre/tests/test_server_lib.h"
-#include "ptre/cm/consensus_manager.h"
-#include "ptre/cm/tensor_aggregator.h"
-#include "ptre/communication/rdma/rdma_mgr.h"
-#include "ptre/communication/rdma/grpc_server.h"
-#include "ptre/communication/rdma/grpc_client.h"
-#include "ptre/communication/grpc/grpc_client_cache.h"
+#include "ptre/common/cm/consensus_manager.h"
+#include "ptre/common/cm/tensor_aggregator.h"
+#include "ptre/common/communication/rdma/rdma_mgr.h"
+#include "ptre/common/communication/rdma/grpc_server.h"
+#include "ptre/common/communication/rdma/grpc_client.h"
+#include "ptre/common/communication/grpc/grpc_client_cache.h"
 
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/types.h"

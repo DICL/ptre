@@ -4,7 +4,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/platform/mutex.h"
 #include "ptre/rpc/ptre_service_impl.h"
-#include "ptre/cm/remote_store.h"
+#include "ptre/common/cm/remote_store.h"
 
 namespace tensorflow {
 

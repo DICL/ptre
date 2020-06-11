@@ -24,6 +24,8 @@ from ptre.tensorflow.ptre_ops import register_variables
 from ptre.tensorflow.ptre_ops import resource_modelaverage
 from ptre.tensorflow.ptre_ops import resource_push_tensor
 from ptre.tensorflow.ptre_ops import resource_update_pull_variable
+from ptre.tensorflow.ptre_ops import resource_remote_variable
+from ptre.tensorflow.ptre_ops import resource_publish_variable
 from ptre.tensorflow.ptre_ops import set_broadcast_not_done
 from ptre.tensorflow.ptre_ops import set_local_step
 from ptre.tensorflow.ptre_ops import set_push

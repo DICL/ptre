@@ -8,7 +8,7 @@ import time
 
 from tensorflow.python.framework import load_library
 
-PTRE_LIB_PATH = '/home/wkim/ptre/build/ptre/kernels/libptre_ops.so'
+PTRE_LIB_PATH = '/home/wkim/ptre/build/ptre/tensorflow/kernels/libptre_ops.so'
 #PTRE_LIB_PATH = '/home/wkim/.local/lib/python2.7/site-packages/ptre/tensorflow/libptre_ops.so'
 PTRE_LIB = load_library.load_op_library(PTRE_LIB_PATH)
 PTRE_CDLL = ctypes.CDLL(PTRE_LIB_PATH, mode=ctypes.RTLD_GLOBAL)
@@ -44,6 +44,14 @@ def unset_push():
 
 def is_new_incoming():
   return PTRE_CDLL.ptre_is_new_incoming()
+
+def resource_remote_variable(resource, var_name):
+  return PTRE_LIB.ptre_resource_remote_variable(resource, 'float32',
+      var_name=var_name)
+
+def resource_publish_variable(resource, var_name):
+  return PTRE_LIB.ptre_resource_publish_variable(resource, 'float32',
+      var_name=var_name)
 
 def resource_modelaverage(var, var_name):
   return PTRE_LIB.resource_modelaverage(var, 'float32', var_name=var_name)
@@ -114,3 +122,6 @@ def print_counter_summary():
 
 def print_counter_summary_epoch():
   PTRE_CDLL.ptre_print_counter_summary_epoch()
+
+def resource_remote_variable(var, var_name):
+  return PTRE_LIB.resource_remote_variable(var, var_name)

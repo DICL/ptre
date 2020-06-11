@@ -19,7 +19,7 @@ add_definitions(-DGOOGLE_CUDA=1)
 
 add_subdirectory(ptre)
 
-#add_library(test_ops SHARED ptre/kernels/test_ops.cc)
+#add_library(test_ops SHARED ptre/tensorflow/kernels/test_ops.cc)
 #target_link_libraries(test_ops :libtensorflow_framework.so.2)
 
 #add_executable(ptre
@@ -28,6 +28,6 @@ set(CMAKE_VERBOSE_MAKEFILE true)
 set(CMAKE_CXX_STANDARD 11)
 #set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_BUILD_TYPE MinSizeRel)
-set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_BUILD_TYPE MinSizeRel)
+#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")

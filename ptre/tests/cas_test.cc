@@ -8,10 +8,10 @@
 #include <sstream>
 #include <fstream>
 
-#include "ptre/communication/rdma/rdma_mgr.h"
-#include "ptre/communication/grpc/grpc_client_cache.h"
-#include "ptre/communication/rdma/grpc_server.h"
-#include "ptre/communication/rdma/grpc_client.h"
+#include "ptre/common/communication/rdma/rdma_mgr.h"
+#include "ptre/common/communication/grpc/grpc_client_cache.h"
+#include "ptre/common/communication/rdma/grpc_server.h"
+#include "ptre/common/communication/rdma/grpc_client.h"
 
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/types.h"
