@@ -27,7 +27,7 @@ void load_grpc_hosts(const string& grpc_hosts_file) {
 void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.size = size;
   ptre_global.rank = rank;
-  ptre_global.is_shutdown = false;
+  ptre_global.shutdown = false;
 
   // Init Grpc Service
   LOG(INFO) << "Init Grpc Service";
@@ -302,24 +302,26 @@ int ProcessCQ(int dst, struct ibv_wc* wcs) {
   return 0;
 }
 
+#if 0
 void PollingThreadLoop(int tid) {
   int n = NUM_POLLING_THREADS;
   int begin = tid * ptre_global.size / n;
   int end = (tid + 1) * ptre_global.size / n;
   struct ibv_wc wcs[MAX_CQE_DEFAULT];
-  while (!ptre_global.is_shutdown) {
+  while (!ptre_global.shutdown) {
     for (int i = begin; i < end; i++) {
       ProcessCQ(i, wcs);
     }
   }
 }
+#endif
 
 // Share task resource with Modelaverage OpKernel -> ClearPullTasks()
 // NEVER SET STATE TO ABORTED
 void ConcurrentAggregationThreadLoop() {
   auto&& q = ptre_global.agg_q;
   auto&& mu = ptre_global.agg_q_mu;
-  while (!ptre_global.is_shutdown) {
+  while (!ptre_global.shutdown) {
     PullTask* task = NULL;
     mu.lock();
     if (q.size() > 0) {
@@ -395,7 +397,7 @@ void RdmaSetRemoteAddress(int dst, BufType buf_type, const string& var_name) {
   int ret;
   do {
     ret = client->GetRemoteAddress(buf_type, var_name, &remote_addr, &rkey);
-  } while (ret && !ptre_global.is_shutdown);
+  } while (ret && !ptre_global.shutdown);
   ptre_global.rdma_mgr->SetRemoteAddress(dst, buf_type, var_name,
       remote_addr, rkey);
 }
@@ -449,11 +451,17 @@ void RegisterTrainableVariables(OpContext* context,
   }
 
   // Init Polling Threads
+#if 0
   LOG(INFO) << "Starting Polling Threads: num_threads=" << NUM_POLLING_THREADS;
   for (int i = 0; i < NUM_POLLING_THREADS; i++) {
     ptre_global.send_polling_threads.emplace_back(
         std::thread(PollingThreadLoop, i));
   }
+#else
+  ptre_global.polling_threads.emplace_back(
+      std::thread(PollingThreadLoop));
+#endif
+#if 0
   // Init Aggregation Thread
   LOG(INFO) << "Starting Aggregation Threads: num_threads="
       << NUM_AGG_THREADS;
@@ -471,6 +479,7 @@ void RegisterTrainableVariables(OpContext* context,
   LOG(INFO) << "REDUCE_EIGEN_THREADS=" << NUM_REDUCE_EIGEN_THREADS;
   ptre_global.reduce_eigen_pool =
       new Eigen::ThreadPool(NUM_REDUCE_EIGEN_THREADS);
+#endif
 #endif
 
   LOG(INFO) << "[2/2] Done Registering Variables";
@@ -491,7 +500,7 @@ int ptre_init(int size, int rank, char* grpc_hosts_file, int selection_strategy,
 void ptre_finalize(unsigned int wait_time) {
   sleep(wait_time);
   ShutdownGrpcServer();
-  ptre_global.is_shutdown = true;
+  ptre_global.shutdown = true;
 }
 
 int ptre_size() {
@@ -622,6 +631,25 @@ void ptre_print_counter_summary() {
 
 }
 
+namespace {
+
+bool IncrementTensorCount(std::unique_ptr<MessageTable>& message_table,
+                          Request msg, int comm_size) {
+  auto name = msg.tensor_name();
+  auto table_iter = message_table->find(name);
+  if (table_iter == message_table->end()) {
+    message_table->emplace(name, std::vector<Request>({msg}));
+    table_iter = message_table->find(name);
+  } else {
+    table_iter->second.push_back(msg);
+  }
+
+  int count = table_iter->second.size();
+  return count == comm_size;
+}
+
+}
+
 struct RvarRequest {
   OpContext* context;
   string var_name;
@@ -650,7 +678,7 @@ void PerformGetRemoteVariable(RvarRequest req) {
   EnqueuePullTasks(req.var_name, ptre_global.num_push);
 }
 
-bool RunLoopOnce(PtreGlobal& state) {
+bool RunLoopOnceRvar(PtreGlobal& state) {
   std::deque<RvarRequest> reqs;
   rvar_queue_mu.lock();
   while (rvar_queue.empty()) {
@@ -664,11 +692,11 @@ bool RunLoopOnce(PtreGlobal& state) {
     PerformGetRemoteVariable(req);
   }
 
-  return !state.is_shutdown;
+  return !state.shutdown;
 }
 
-void BackgroundThreadLoop(PtreGlobal& state) {
-  while (RunLoopOnce(state)) continue;
+void BackgroundThreadLoopRvar(PtreGlobal& state) {
+  while (RunLoopOnceRvar(state)) continue;
 }
 
 Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
@@ -690,6 +718,157 @@ Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
   return Status::OK();
 }
 
+void BackgroundThreadLoop(PtreGlobal& state) {
+#if 0
+  int rank = ptre_rank();
+  int size = ptre_size();
+
+  bool is_coordinator = rank == 0;
+  if (is_coordinator) {
+    ptre_global.message_table =
+        std::unique_ptr<MessageTable>(new MessageTable());
+  }
+
+  bool should_shut_down = false;
+  do {
+    std::queue<Request> message_queue;
+    {
+      std::lock_guard<std::mutex> guard(ptre_global.mu);
+      while (!ptre_global.message_queue.empty()) {
+        Request message = ptre_global.message_queue.front();
+        ptre_global.message_queue.pop();
+        message_queue.push(message);
+      }
+    }
+
+    std::vector<string> ready_to_reduce;
+    while (!message_queue.empty()) {
+      Request message = message_queue.front();
+      message_queue.pop();
+
+      if (is_coordinator) {
+        bool reduce =
+            IncrementTensorCount(ptre_global.message_table, message, size);
+        if (reduce) {
+          ready_to_reduce.push_back(message.tensor_name());
+        }
+      } else {
+        string encoded_message;
+        message.SerializeToString(&encoded_message);
+        MPI_Send(encoded_message.c_str(), encoded_message.length() + 1,
+                 MPI_BYTE, RANK_ZERO, TAG_NOTIFY, MPI_COMM_WORLD);
+      }
+    }
+
+    if (is_coordinator) {
+      int completed_ranks = 1;
+
+    }
+
+  } while (should_shut_down);
+#else
+  while (RunLoopOnce(state)) continue;
+#endif
+}
+
+bool RunLoopOnce(PtreGlobal& state) {
+
+  std::vector<Response> response_list;
+
+  for (auto& response : response_list) {
+    PerformOperation(response, state);
+  }
+}
+
+void PerformOperation(Response response, PtreGlobal& state) {
+  std::vector<TensorTableEntry> entries;
+  {
+    std::lock_guard<std::mutex> guard(ptre_global.mu);
+    string& name = response.tensor_names()[0];
+    auto search = ptre_global.tensor_table.find(name);
+    assert(search != ptre_global.tensor_table.end());
+    entries.push_back(std::move(search->second));
+    ptre_global.tensor_table.erase(search);
+  }
+
+  // TODO: Use OperationManager after generalizing operations.
+  Status status;
+#if 0
+  try {
+    status = op_mgr->ExecuteOperation(entries, response);
+  } catch (const std::exception& ex) {
+    status = errors::Unknown("PerformOperation");
+  }
+#else
+  status = PtreAllreduce(
+      static_cast<const void*>(entries[0].tensor->tensor_data().data()),
+      (void*) entries[0].output->tensor_data().data(),
+      (int) entries[0].tensor->num_elements());
+
+
+#endif
+}
+
+Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count) {
+}
+
+Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
+                              const string node_name, StatusCallback callback,
+                              ReduceOp reduce_op) {
+  Status status;
+  Request message;
+  message.set_request_rank(ptre_rank());
+  message.set_tensor_name(node_name);
+  message.set_tensor_dtype(tensor->dtype());
+
+  TensorTableEntry entry;
+  entry.name = node_name;
+  entry.context = ctx;
+  entry.tensor = tensor;
+  entry.output = output;
+  entry.dtype = input_tensor->dtype();
+  entry.callback = callback;
+
+  std::lock_guard<std:mutex> guard(ptre_global.mu);
+  ptre_global.tensor_table.emplace(entry.name, entry);
+  ptre_global.message_queue.push(message);
+}
+
+// RDMA Operations
+int ProcessCQRdmaAsyncTask(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
+  int ne = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
+  assert(ne >= 0);
+  std::vector<RdmaAsyncTask*> bad_tasks;
+  for (int i = 0; i < ne; i++) {
+    RdmaAsyncTask* task = reinterpret_cast<RdmaAsyncTask*>(wcs[i].wr_id);
+    if (wcs[i].status == IBV_WC_SUCCESS) {
+      task->Done();
+    } else {
+      bad_tasks.push_back(task);
+    }
+  }
+  if (bad_tasks.size() > 0) {
+    auto channel = ptre_global.rdma_mgr->GetChannel(dst);
+    LOG(ERROR) << "Recovering RdmaChannel for rank=" << dst;
+    assert(channel->Recover() == 0);
+    for (auto&& task : bad_tasks) {
+      task->DoneFailure();
+    }
+  }
+}
+void PollingThreadLoop() {
+  struct ibv_wc wcs[MAX_CQE_DEFAULT];
+  do {
+    for (int dst = 0; dst < ptre_size(); dst++) {
+      struct ibv_cq* cq = ptre_global.rdma_mgr->send_cq(dst);
+      ProcessCQRdmaAsyncTask(dst, cq, wcs);
+    }
+    for (int dst = 0; dst < ptre_size(); dst++) {
+      struct ibv_cq* cq = ptre_global.rdma_mgr->recv_cq(dst);
+      ProcessCQRdmaAsyncTask(dst, cq, wcs);
+    }
+  } while (!ptre_global.shutdown);
+}
 
 }  // namespace common
 }  // namespace ptre

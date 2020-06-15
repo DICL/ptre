@@ -49,25 +49,11 @@ namespace tensorflow {
 
 using std::string;
 
-/*
-using ::tensorflow::AsyncOpKernel;
-using ::tensorflow::OpKernel;
-using ::tensorflow::OpKernelConstruction;
-using ::tensorflow::OpKernelContext;
-using ::tensorflow::Status;
-*/
-
 using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
 
 using ::tensorflow::shape_inference::InferenceContext;
 using ::tensorflow::shape_inference::ShapeHandle;
-/*
-using ::tensorflow::shape_inference::DimensionHandle;
-using ::tensorflow::DT_INVALID;
-using ::tensorflow::DEVICE_CPU;
-using ::tensorflow::DEVICE_GPU;
-*/
 
 static ShapeHandle ShapeOrHandleShape(InferenceContext* c, int input) {
   auto* handle_data = c->input_handle_shapes_and_types(input);
@@ -129,6 +115,53 @@ class BroadcastOp : public OpKernel {
   int root_rank_;
 };
 REGISTER_KERNEL_BUILDER(Name("Broadcast").Device(DEVICE_CPU), BroadcastOp);
+
+// --------------------------------------------------------------------------
+
+REGISTER_OP("PtreAllreduce")
+  .Input("tensor: T")
+  .Output("sum: T")
+  .Attr("T: numbertype")
+  .Attr("reduce_op: int")
+  .SetShapeFn([](InferenceContext* c) {
+    c->set_output(0, c->input(0));
+    return Status::OK();
+  });
+class PtreAllreduceOp : public AsyncOpKernel {
+ public:
+  explicit PtreAllreduceOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("reduce_op", &reduce_op_));
+  }
+
+  void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
+    auto node_name = name();
+    //auto device = GetDeviceID(ctx);
+    auto tensor = ctx->input(0);
+    ptre::common::ReduceOp reduce_op =
+        static_cast<ptre::common::ReduceOp>(reduce_op_);
+    Tensor* output;
+    OP_REQUIRES_OK_ASYNC(
+        ctx, ctx->allocate_output(0, tensor.shape(), &output), done);
+    Status enqueue_result = EnqueueTensorAllreduce(
+        ctx, tensor, output, node_name,
+        [ctx, done](const Status& status) {
+          ctx->SetStatus(status);
+          done();
+        }, reduce_op);
+    OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
+  }
+
+ private:
+  int reduce_op_;
+};
+REGISTER_KERNEL_BUILDER(Name("PtreAllreduce").Device(DEVICE_CPU),
+                        PtreAllreduceOp);
+#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+REGISTER_KERNEL_BUILDER(Name("PtreAllreduce").Device(DEVICE_GPU),
+                        PtreAllreduceOp);
+#endif
+
+// --------------------------------------------------------------------------
 
 REGISTER_OP("PtreResourceRemoteVariable")
   .Input("var: resource")

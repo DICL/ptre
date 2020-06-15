@@ -19,6 +19,10 @@ namespace common {
 
 using ::std::string;
 
+enum class ReduceOp {
+  AVERAGE
+};
+
 void load_grpc_hosts(const string& grpc_hosts_file);
 void InitComm(int size, int rank, const string& grpc_hosts_file);
 
@@ -77,6 +81,10 @@ void ptre_print_counter_summary();
 Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
                                 Tensor* output, Tensor* num_agg,
                                 StatusCallback callback);
+
+Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
+                              const string node_name, StatusCallback callback,
+                              ReduceOp reduce_op);
 
 }  // namespace common
 }  // namespace ptre

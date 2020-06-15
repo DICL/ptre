@@ -40,6 +40,9 @@ class RdmaMgr {
   RdmaMgr(int ptre_size, int ptre_rank);
   ~RdmaMgr();
 
+  int comm_rank() { return ptre_rank_; }
+  int comm_size() { return ptre_size_; }
+
   // Queue Pair Modification Functions
   void INITQP(int dst);
   void RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,

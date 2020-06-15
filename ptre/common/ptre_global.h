@@ -18,6 +18,9 @@
 namespace ptre {
 namespace common {
 
+using std::string;
+using MessageTable = std::unordered_map<string, std::vector<Request>>;
+
 struct PtreGlobal {
   PtreGlobal();
   ~PtreGlobal();
@@ -25,6 +28,9 @@ struct PtreGlobal {
   ConsensusManager* cm = nullptr;
   RdmaMgr* rdma_mgr = nullptr;
   std::mutex mu;
+
+  std::queue<Request> message_queue;
+  std::unique_ptr<MessageTable> message_table;
   std::mutex q_mu;
   std::queue<int> q;
   //std::queue<std::shared_ptr<PushRequest>> req_q;
@@ -113,6 +119,9 @@ struct PtreGlobal {
   std::mutex agg_q_mu;
   std::map<int, std::map<string, uint64_t>> last_key;
   std::map<int, std::map<string, int>> peer_agg_cnt;
+
+  std::mutex tensor_table_mu;
+  std::map<string, OpRecord> tensor_table;
 };
 
 }  // namespace common
