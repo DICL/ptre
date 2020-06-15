@@ -5,6 +5,7 @@
 
 #include "ptre/common/common.h"
 #include "ptre/common/communication/rdma/rdma_task.h"
+#include "ptre/common/message.h"
 
 #define NUM_POLLING_THREADS 1
 #define NUM_AGG_THREADS 1

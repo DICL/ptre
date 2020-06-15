@@ -804,12 +804,14 @@ void PerformOperation(Response response, PtreGlobal& state) {
       static_cast<const void*>(entries[0].tensor->tensor_data().data()),
       (void*) entries[0].output->tensor_data().data(),
       (int) entries[0].tensor->num_elements());
-
-
 #endif
 }
 
 Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count) {
+  int ret;
+  RdmaContext ctx(ptre_global.rdma_mgr);
+  ret = RdmaAllreduce(sendbuf, recvbuf, count, PTRE_FLOAT32, 0, &ctx);
+
 }
 
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
@@ -835,24 +837,24 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
 }
 
 // RDMA Operations
-int ProcessCQRdmaAsyncTask(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
+int ProcessCQRdmaRequest(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
   int ne = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
   assert(ne >= 0);
-  std::vector<RdmaAsyncTask*> bad_tasks;
+  std::vector<RdmaRequest*> bad_reqs;
   for (int i = 0; i < ne; i++) {
-    RdmaAsyncTask* task = reinterpret_cast<RdmaAsyncTask*>(wcs[i].wr_id);
+    RdmaRequest* req = reinterpret_cast<RdmaRequest*>(wcs[i].wr_id);
     if (wcs[i].status == IBV_WC_SUCCESS) {
-      task->Done();
+      req->Done();
     } else {
-      bad_tasks.push_back(task);
+      bad_reqs.push_back(req);
     }
   }
-  if (bad_tasks.size() > 0) {
+  if (bad_reqs.size() > 0) {
     auto channel = ptre_global.rdma_mgr->GetChannel(dst);
     LOG(ERROR) << "Recovering RdmaChannel for rank=" << dst;
     assert(channel->Recover() == 0);
-    for (auto&& task : bad_tasks) {
-      task->DoneFailure();
+    for (auto&& req : bad_reqs) {
+      req->DoneFailure();
     }
   }
 }
@@ -861,11 +863,11 @@ void PollingThreadLoop() {
   do {
     for (int dst = 0; dst < ptre_size(); dst++) {
       struct ibv_cq* cq = ptre_global.rdma_mgr->send_cq(dst);
-      ProcessCQRdmaAsyncTask(dst, cq, wcs);
+      ProcessCQRdmaRequest(dst, cq, wcs);
     }
     for (int dst = 0; dst < ptre_size(); dst++) {
       struct ibv_cq* cq = ptre_global.rdma_mgr->recv_cq(dst);
-      ProcessCQRdmaAsyncTask(dst, cq, wcs);
+      ProcessCQRdmaRequest(dst, cq, wcs);
     }
   } while (!ptre_global.shutdown);
 }
