@@ -20,10 +20,6 @@ namespace common {
 
 using ::std::string;
 
-enum class ReduceOp {
-  AVERAGE
-};
-
 void load_grpc_hosts(const string& grpc_hosts_file);
 void InitComm(int size, int rank, const string& grpc_hosts_file);
 
@@ -49,7 +45,11 @@ void StopPullTasks(const string& var_name);
 void EnqueueAggregation(PullTask* task);
 void ProcessPullTaskCQ(PullTask* task);
 int ProcessCQ(int dst, struct ibv_wc* wcs);
+#if 0
 void PollingThreadLoop(int tid);
+#else
+void PollingThreadLoop();
+#endif
 void ConcurrentAggregationThreadLoop();
 
 void RdmaSetRemoteAddress(int dst, BufType buf_type, const string& var_name);
@@ -86,6 +86,8 @@ Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
                               const string node_name, StatusCallback callback,
                               ReduceOp reduce_op);
+
+Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count);
 
 }  // namespace common
 }  // namespace ptre

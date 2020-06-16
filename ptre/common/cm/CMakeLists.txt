@@ -13,6 +13,7 @@ target_link_libraries(consensus_manager
   remote_variable
   grpc_client_cache
   allocator
+  message
   )
 
 #add_library(tensor_aggregator SHARED tensor_aggregator.cc)

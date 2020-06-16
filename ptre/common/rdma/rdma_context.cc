@@ -12,7 +12,7 @@ RdmaContext::RdmaContext(RdmaMgr* rdma_mgr) {
   }
 }
 
-RdmaContext::get_channel(int comm_rank) {
+RdmaChannel* RdmaContext::get_channel(int comm_rank) {
   auto search = channel_table_.find(comm_rank);
   assert(search != channel_table_.end());
   return search->second;

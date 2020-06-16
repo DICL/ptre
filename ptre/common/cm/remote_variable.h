@@ -8,6 +8,8 @@
 #include "ptre/core/allocator.h"
 #include "ptre/tensorflow/types.h"
 #include "tensorflow/core/framework/tensor.h"
+#include "ptre/common/message.h"
+#include "ptre/common/common.h"
 
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 
@@ -16,7 +18,6 @@ namespace common {
 
 using std::string;
 using ::tensorflow::Tensor;
-using ::tensorflow::DataType;
 using ::tensorflow::TensorShape;
 
 class RemoteVariable {

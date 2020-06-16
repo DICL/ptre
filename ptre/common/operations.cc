@@ -4,6 +4,8 @@
 
 #include "ptre/common/logging.h"
 #include "ptre/common/ptre_global.h"
+#include "ptre/common/rdma/rdma_context.h"
+#include "ptre/common/rdma/rdma_mpi.h"
 
 namespace ptre {
 namespace common {
@@ -718,6 +720,8 @@ Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
   return Status::OK();
 }
 
+bool RunLoopOnce(PtreGlobal& state);
+
 void BackgroundThreadLoop(PtreGlobal& state) {
 #if 0
   int rank = ptre_rank();
@@ -771,6 +775,8 @@ void BackgroundThreadLoop(PtreGlobal& state) {
 #endif
 }
 
+void PerformOperation(Response response, PtreGlobal& state);
+
 bool RunLoopOnce(PtreGlobal& state) {
 
   std::vector<Response> response_list;
@@ -784,7 +790,7 @@ void PerformOperation(Response response, PtreGlobal& state) {
   std::vector<TensorTableEntry> entries;
   {
     std::lock_guard<std::mutex> guard(ptre_global.mu);
-    string& name = response.tensor_names()[0];
+    const string& name = response.tensor_names()[0];
     auto search = ptre_global.tensor_table.find(name);
     assert(search != ptre_global.tensor_table.end());
     entries.push_back(std::move(search->second));
@@ -803,14 +809,15 @@ void PerformOperation(Response response, PtreGlobal& state) {
   status = PtreAllreduce(
       static_cast<const void*>(entries[0].tensor->tensor_data().data()),
       (void*) entries[0].output->tensor_data().data(),
-      (int) entries[0].tensor->num_elements());
+      (int) entries[0].tensor->NumElements());
 #endif
 }
 
 Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count) {
   int ret;
   RdmaContext ctx(ptre_global.rdma_mgr);
-  ret = RdmaAllreduce(sendbuf, recvbuf, count, PTRE_FLOAT32, 0, &ctx);
+  ret = RdmaAllreduce(sendbuf, recvbuf, count, DataType::DT_FLOAT,
+      ReduceOp::REDUCE_SUM, &ctx);
 
 }
 
@@ -821,18 +828,17 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
   Request message;
   message.set_request_rank(ptre_rank());
   message.set_tensor_name(node_name);
-  message.set_tensor_dtype(tensor->dtype());
+  message.set_tensor_type(tensor->dtype());
 
   TensorTableEntry entry;
-  entry.name = node_name;
+  entry.tensor_name = node_name;
   entry.context = ctx;
   entry.tensor = tensor;
   entry.output = output;
-  entry.dtype = input_tensor->dtype();
   entry.callback = callback;
 
-  std::lock_guard<std:mutex> guard(ptre_global.mu);
-  ptre_global.tensor_table.emplace(entry.name, entry);
+  std::lock_guard<std::mutex> guard(ptre_global.mu);
+  ptre_global.tensor_table.emplace(entry.tensor_name, entry);
   ptre_global.message_queue.push(message);
 }
 
@@ -858,6 +864,7 @@ int ProcessCQRdmaRequest(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
     }
   }
 }
+
 void PollingThreadLoop() {
   struct ibv_wc wcs[MAX_CQE_DEFAULT];
   do {

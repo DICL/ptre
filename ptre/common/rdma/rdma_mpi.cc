@@ -1,5 +1,7 @@
 #include "ptre/common/rdma/rdma_mpi.h"
 
+#include "ptre/common/message.h"
+
 namespace ptre {
 namespace common {
 
@@ -7,7 +9,7 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
              RdmaContext* ctx) {
   RdmaRequest* request = new RdmaRequest();
 
-  struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), buf,
+  struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf),
       count * DataType_Size(datatype), 0);
   assert(mr != NULL);
   request->set_mr(mr);
@@ -118,7 +120,7 @@ int RdmaBcast(void* buffer, int count, DataType datatype, int root,
     assert(ret == 0);
   }
 
-  retrun 0;
+  return 0;
 }
 
 
@@ -135,7 +137,7 @@ int RdmaReduce(const void* sendbuf, void* recvbuf, int count, DataType datatype,
 
   inbuf = (char*) malloc(dtsize);
   if (comm_rank == root) {
-    if (sendbuf != 1) {
+    if (sendbuf != COMM_IN_PLACE) {
       memcpy(recvbuf, sendbuf, count * dtsize);
     }
 
@@ -172,9 +174,9 @@ int RdmaAllreduceNonOverlapping(const void* sendbuf, void* recvbuf, int count,
   int ret, comm_rank;
   comm_rank = ctx->comm_rank();
 
-  if (sendbuf == 1) {
+  if (sendbuf == COMM_IN_PLACE) {
     if (comm_rank == 0) {
-      ret = RdmaReduce(1, recvbuf, count, datatype, op, 0, ctx);
+      ret = RdmaReduce(COMM_IN_PLACE, recvbuf, count, datatype, op, 0, ctx);
     } else {
       ret = RdmaReduce(recvbuf, NULL, count, datatype, op, 0, ctx);
     }
@@ -193,7 +195,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   char *tmpsend = NULL, *tmprecv = NULL, *inbuf[2] = {NULL, NULL};
   size_t true_lb, true_extnt, lb, extnt;
   size_t block_offset, max_real_segsize;
-  PtreRequest* reqs[2] = {NULL, NULL};
+  RdmaRequest reqs[2];
   size_t dtsize;
 
   comm_size = ctx->comm_size();
@@ -202,8 +204,8 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
 
   // Special case for comm_size == 1
   if (comm_size == 1) {
-    if (sendbuf != 1) {
-      memcpy(recvbuf, sendbuf, count * Datatype_Size(datatype));
+    if (sendbuf != COMM_IN_PLACE) {
+      memcpy(recvbuf, sendbuf, count * DataType_Size(datatype));
     }
     return 0;
   }
@@ -230,8 +232,8 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     assert(inbuf[1] != NULL);
   }
 
-  if (sendbuf != 1) {
-    memcpy(recvbuf, sendbuf, count * Datatype_Size(datatype));
+  if (sendbuf != COMM_IN_PLACE) {
+    memcpy(recvbuf, sendbuf, count * DataType_Size(datatype));
   }
 
   // Computation Loop
@@ -322,7 +324,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     tmpsend = (char*) recvbuf + send_block_offset * dtsize;
 
     ret = RdmaSendrecv(tmpsend, block_count, datatype, send_to, 0, tmprecv,
-        max_segcount, datatype, recv_from, 0, ctx, NULL, comm_rank);
+        max_segcount, datatype, recv_from, 0, ctx, NULL);
     assert(ret == 0);
   }
 

@@ -14,6 +14,7 @@
 #include "ptre/common/communication/rdma/pull_job.h"
 #include "ptre/common/communication/rdma/rdma_mgr.h"
 #include "ptre/common/communication/rdma/rdma_task.h"
+#include "ptre/common/message.h"
 
 namespace ptre {
 namespace common {
@@ -31,6 +32,10 @@ struct PtreGlobal {
 
   std::queue<Request> message_queue;
   std::unique_ptr<MessageTable> message_table;
+
+  std::vector<std::thread> polling_threads;
+
+
   std::mutex q_mu;
   std::queue<int> q;
   //std::queue<std::shared_ptr<PushRequest>> req_q;
@@ -45,7 +50,7 @@ struct PtreGlobal {
   RdmaServiceImpl grpc_service;
   // Grpc Server
   std::unique_ptr<grpc::Server> grpc_server = nullptr;
-  std::atomic<bool> is_shutdown;
+  std::atomic<bool> shutdown;
   // Background thread running PTRE communication.
   std::thread grpc_server_thread;
   std::vector<std::thread> push_threads;
@@ -121,7 +126,7 @@ struct PtreGlobal {
   std::map<int, std::map<string, int>> peer_agg_cnt;
 
   std::mutex tensor_table_mu;
-  std::map<string, OpRecord> tensor_table;
+  std::map<string, TensorTableEntry> tensor_table;
 };
 
 }  // namespace common

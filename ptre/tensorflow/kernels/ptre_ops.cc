@@ -143,7 +143,7 @@ class PtreAllreduceOp : public AsyncOpKernel {
     OP_REQUIRES_OK_ASYNC(
         ctx, ctx->allocate_output(0, tensor.shape(), &output), done);
     Status enqueue_result = EnqueueTensorAllreduce(
-        ctx, tensor, output, node_name,
+        ctx, &tensor, output, node_name,
         [ctx, done](const Status& status) {
           ctx->SetStatus(status);
           done();
