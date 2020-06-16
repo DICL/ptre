@@ -33,3 +33,5 @@ target_link_libraries(operations
 add_executable(operations_test operations_test.cc)
 target_link_libraries(operations_test
   operations)
+#target_compile_definitions(operations_test
+#  PRIVATE NDEBUG)

@@ -19,32 +19,54 @@ PtreGlobal::PtreGlobal() {
 }
 
 PtreGlobal::~PtreGlobal() {
-  LOG(INFO) << "Join Push Threads: " << push_threads.size();
-  for (auto& t : push_threads) {
-    if (t.joinable()) {
-      t.join();
+  shutdown = true;
+
+  if (polling_threads.size() > 0) {
+    DVLOG(0) << "Join Polling Threads(num_threads="<< polling_threads.size()
+        << ")";
+    for (auto& t: polling_threads) {
+      if (t.joinable()) t.join();
     }
   }
-  LOG(INFO) << "Join Send Polling Threads: " << send_polling_threads.size();
-  for (auto& t : send_polling_threads) {
-    if (t.joinable()) {
-      t.join();
+
+  if (push_threads.size() > 0) {
+    DVLOG(0) << "Join Push Threads: " << push_threads.size();
+    for (auto& t : push_threads) {
+      if (t.joinable()) {
+        t.join();
+      }
     }
   }
-  LOG(INFO) << "Join Recv Polling Threads: " << recv_polling_threads.size();
-  for (auto& t : recv_polling_threads) {
-    if (t.joinable()) {
-      t.join();
+
+  if (send_polling_threads.size() > 0) {
+    DVLOG(0) << "Join Send Polling Threads: " << send_polling_threads.size();
+    for (auto& t : send_polling_threads) {
+      if (t.joinable()) {
+        t.join();
+      }
     }
   }
-  LOG(INFO) << "Join Grpc Server Thread";
+
+  if (recv_polling_threads.size() > 0) {
+    DVLOG(0) << "Join Recv Polling Threads: " << recv_polling_threads.size();
+    for (auto& t : recv_polling_threads) {
+      if (t.joinable()) {
+        t.join();
+      }
+    }
+  }
+
+  DVLOG(0) << "Join Grpc Server Thread";
   if (grpc_server_thread.joinable()) {
     grpc_server_thread.join();
   }
-  LOG(INFO) << "Join Aggregation Threads: " << aggregation_threads.size();
-  for (auto& t : aggregation_threads) {
-    if (t.joinable()) {
-      t.join();
+
+  if (aggregation_threads.size() > 0) {
+    DVLOG(0) << "Join Aggregation Threads: " << aggregation_threads.size();
+    for (auto& t : aggregation_threads) {
+      if (t.joinable()) {
+        t.join();
+      }
     }
   }
   //for (auto& t : receive_threads) {
@@ -52,11 +74,11 @@ PtreGlobal::~PtreGlobal() {
   //    t.join();
   //  }
   //}
-  LOG(INFO) << "Delete EigenThreadpools";
+  DVLOG(0) << "Delete EigenThreadpools";
   delete eigen_pool;
   delete agg_eigen_pool;
   delete reduce_eigen_pool;
-  LOG(INFO) << "Destruction Done.";
+  DVLOG(0) << "Destruction Done.";
   //if (qp_recover_thread.joinable()) {
   //  qp_recover_thread.join();
   //}

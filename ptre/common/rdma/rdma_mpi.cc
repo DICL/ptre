@@ -1,6 +1,8 @@
 #include "ptre/common/rdma/rdma_mpi.h"
 
+#include "ptre/common/logging.h"
 #include "ptre/common/message.h"
+
 
 namespace ptre {
 namespace common {
@@ -224,6 +226,9 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   }
   max_segcount = early_segcount;
   max_real_segsize = max_segcount * dtsize;
+  DVLOG(0) << "\nearly_segcount=" << early_segcount
+           << "\nlate_segcount=" << late_segcount
+           << "\nsplit_rank=" << split_rank;
 
   inbuf[0] = (char*) malloc(max_real_segsize);
   assert(inbuf[0] != NULL);
@@ -244,6 +249,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   ret = RdmaIrecv(inbuf[inbi], max_segcount, datatype, recv_from, 0, ctx,
       &reqs[inbi]);
   assert(ret == 0);
+  DVLOG(0) << "RdmaIrecv Done, ret=" << ret;
   if (comm_rank < split_rank) {
     block_offset = comm_rank * early_segcount;
     block_count = early_segcount;
@@ -254,6 +260,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   tmpsend = ((char*) recvbuf) + block_offset * dtsize;
   ret = RdmaSend(tmpsend, block_count, datatype, send_to, 0, ctx);
   assert(ret == 0);
+  DVLOG(0) << "RdmaSend Done, ret=" << ret;
 
   for (k = 2; k < comm_size; k++) {
     const int prevblock = (comm_rank + comm_size - k + 1) % comm_size;

@@ -74,6 +74,9 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     PtreBarrier();
   } while (ret);
 
+  LOG(INFO) << "Starting Polling Thread Loop";
+  ptre_global.polling_threads.emplace_back(std::thread(PollingThreadLoop));
+
   LOG(INFO) << "[1/2] Done InitComm";
 }
 
@@ -460,8 +463,6 @@ void RegisterTrainableVariables(OpContext* context,
         std::thread(PollingThreadLoop, i));
   }
 #else
-  ptre_global.polling_threads.emplace_back(
-      std::thread(PollingThreadLoop));
 #endif
 #if 0
   // Init Aggregation Thread
@@ -490,8 +491,8 @@ void RegisterTrainableVariables(OpContext* context,
 
 extern "C" {
 
-int ptre_init(int size, int rank, char* grpc_hosts_file, int selection_strategy,
-              int num_push) {
+int ptre_init(int size, int rank, const char* grpc_hosts_file,
+              int selection_strategy, int num_push) {
   ptre_global.num_push = num_push;
   ptre_global.peer_selector = selection_strategy;
   InitComm(size, rank, grpc_hosts_file);

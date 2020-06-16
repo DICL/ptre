@@ -58,8 +58,8 @@ void RegisterTrainableVariables(OpContext* context,
 
 extern "C" {
 
-int ptre_init(int size, int rank, char* grpc_hosts_file, int selection_strategy,
-              int num_push);
+int ptre_init(int size, int rank, const char* grpc_hosts_file,
+              int selection_strategy, int num_push);
 
 void ptre_finalize(unsigned int wait_time);
 
