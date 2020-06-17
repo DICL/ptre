@@ -22,7 +22,9 @@ class RdmaRequest {
   int status_;
   struct ibv_mr* mr_;
   std::mutex mu_;
+#ifndef RDMA_REQUEST_BUSY_WAIT
   std::condition_variable cv_;
+#endif
   bool done_;
 };
 

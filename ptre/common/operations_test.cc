@@ -6,7 +6,7 @@
 using std::string;
 using namespace ptre::common;
 
-const size_t kSize_1 = 64;
+const size_t kSize_1 = 128;
 
 void print_arr(float arr[], int count) {
   std::stringstream ss;
@@ -28,17 +28,28 @@ int main(int argc, char* argv[]) {
 
   ptre_init(comm_size, comm_rank, hostfile.c_str(), 0, 1);
 
+#if 0
   float t1[kSize_1];
   float r1[kSize_1];
+#else
+  float t1[1024];
+  float r1[1024];
+#endif
   for (int i = 0; i < kSize_1; i++) {
     t1[i] = 0.1 * comm_rank;
   }
   print_arr(t1, kSize_1);
 
-  //PtreAllreduce(COMM_IN_PLACE, (void*) t1, kSize_1);
+#if 0
   PtreAllreduce((void*) t1, (void*) r1, kSize_1);
-
   print_arr(r1, kSize_1);
+#else
+  PtreAllreduce(COMM_IN_PLACE, (void*) t1, kSize_1);
+  print_arr(t1, kSize_1);
+#endif
+
+
+  ptre_finalize(1);
 
   return 0;
 }

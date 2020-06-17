@@ -5,6 +5,7 @@ target_link_libraries(rdma_context
 add_library(rdma_request SHARED rdma_request.cc)
 target_link_libraries(rdma_request
   ibverbs)
+#target_compile_definitions(rdma_request PRIVATE RDMA_REQUEST_BUSY_WAIT)
 
 add_library(rdma_mpi SHARED rdma_mpi.cc)
 target_link_libraries(rdma_mpi

@@ -6,6 +6,7 @@
 #include "ptre/common/common.h"
 #include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/message.h"
+#include "ptre/common/ptre_global.h"
 
 #define NUM_POLLING_THREADS 1
 #define NUM_AGG_THREADS 1
@@ -26,6 +27,8 @@ void InitComm(int size, int rank, const string& grpc_hosts_file);
 void RunGrpcServer();
 
 void ShutdownGrpcServer();
+
+PtreGlobal& PtreGlobalState();
 
 void PtreSend(int dst_rank, char* buf, size_t len, const string& name);
 

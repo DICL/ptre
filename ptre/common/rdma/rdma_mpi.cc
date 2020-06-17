@@ -1,5 +1,7 @@
 #include "ptre/common/rdma/rdma_mpi.h"
 
+#include <unistd.h>
+
 #include "ptre/common/logging.h"
 #include "ptre/common/message.h"
 
@@ -9,6 +11,7 @@ namespace common {
 
 int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
              RdmaContext* ctx) {
+  int ret;
   RdmaRequest* request = new RdmaRequest();
 
   struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf),
@@ -33,9 +36,11 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
   do {
     channel->PostSend(wr);
     request->Join();
+    //if (request->status() != 0) continue;
   } while (false);
-  ibv_dereg_mr(mr);
-  int ret = request->status();
+  ret = ibv_dereg_mr(mr);
+  assert(ret == 0);
+  ret = request->status();
   delete request;
   return ret;
 }
@@ -66,10 +71,12 @@ int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
 }
 
 int RdmaWait(RdmaRequest* request, Status* status) {
+  int ret;
   request->Join();
   struct ibv_mr* mr = request->mr();
-  ibv_dereg_mr(mr);
-  int ret = request->status();
+  ret = ibv_dereg_mr(mr);
+  assert(ret == 0);
+  ret = request->status();
   return ret;
 }
 
@@ -194,10 +201,11 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
                       DataType datatype, ReduceOp op, RdmaContext* ctx) {
   int ret, line, comm_rank, comm_size, k, recv_from, send_to, block_count, inbi;
   int early_segcount, late_segcount, split_rank, max_segcount;
-  char *tmpsend = NULL, *tmprecv = NULL, *inbuf[2] = {NULL, NULL};
+  char *tmpsend = NULL, *tmprecv = NULL;
+  char* inbuf[2] = {NULL, NULL};
   size_t true_lb, true_extnt, lb, extnt;
   size_t block_offset, max_real_segsize;
-  RdmaRequest reqs[2];
+  RdmaRequest* reqs[2];
   size_t dtsize;
 
   comm_size = ctx->comm_size();
@@ -226,10 +234,6 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   }
   max_segcount = early_segcount;
   max_real_segsize = max_segcount * dtsize;
-  DVLOG(0) << "\nearly_segcount=" << early_segcount
-           << "\nlate_segcount=" << late_segcount
-           << "\nsplit_rank=" << split_rank;
-
   inbuf[0] = (char*) malloc(max_real_segsize);
   assert(inbuf[0] != NULL);
   if (comm_size > 2) {
@@ -246,10 +250,10 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   recv_from = (comm_rank + comm_size - 1) % comm_size;
 
   inbi = 0;
-  ret = RdmaIrecv(inbuf[inbi], max_segcount, datatype, recv_from, 0, ctx,
-      &reqs[inbi]);
+  reqs[inbi] = new RdmaRequest();
+  ret = RdmaIrecv((void*) inbuf[inbi], max_segcount, datatype, recv_from, 0,
+      ctx, reqs[inbi]);
   assert(ret == 0);
-  DVLOG(0) << "RdmaIrecv Done, ret=" << ret;
   if (comm_rank < split_rank) {
     block_offset = comm_rank * early_segcount;
     block_count = early_segcount;
@@ -258,21 +262,22 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     block_count = late_segcount;
   }
   tmpsend = ((char*) recvbuf) + block_offset * dtsize;
-  ret = RdmaSend(tmpsend, block_count, datatype, send_to, 0, ctx);
+  ret = RdmaSend((void*) tmpsend, block_count, datatype, send_to, 0, ctx);
   assert(ret == 0);
-  DVLOG(0) << "RdmaSend Done, ret=" << ret;
 
   for (k = 2; k < comm_size; k++) {
     const int prevblock = (comm_rank + comm_size - k + 1) % comm_size;
 
     inbi = inbi ^ 0x1;
 
-    ret = RdmaIrecv(inbuf[inbi], max_segcount, datatype, recv_from, 0, ctx,
-        &reqs[inbi]);
+    reqs[inbi] = new RdmaRequest();
+    ret = RdmaIrecv((void*) inbuf[inbi], max_segcount, datatype, recv_from, 0,
+        ctx, reqs[inbi]);
     assert(ret == 0);
 
-    ret = RdmaWait(&reqs[inbi ^ 0x1], NULL);
+    ret = RdmaWait(reqs[inbi ^ 0x1], NULL);
     assert(ret == 0);
+    delete reqs[inbi ^ 0x1];
 
     if (prevblock < split_rank) {
       block_offset = prevblock * early_segcount;
@@ -289,12 +294,13 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
       tmp_arr_a[idx] += tmp_arr_b[idx];
     }
 
-    ret = RdmaSend(tmprecv, block_count, datatype, send_to, 0, ctx);
+    ret = RdmaSend((void*) tmprecv, block_count, datatype, send_to, 0, ctx);
     assert(ret == 0);
   }
 
-  ret = RdmaWait(&reqs[inbi], NULL);
+  ret = RdmaWait(reqs[inbi], NULL);
   assert(ret == 0);
+  delete reqs[inbi];
 
   recv_from = (comm_rank + 1) % comm_size;
   if (recv_from < split_rank) {
@@ -330,8 +336,8 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     tmprecv = (char*) recvbuf + recv_block_offset * dtsize;
     tmpsend = (char*) recvbuf + send_block_offset * dtsize;
 
-    ret = RdmaSendrecv(tmpsend, block_count, datatype, send_to, 0, tmprecv,
-        max_segcount, datatype, recv_from, 0, ctx, NULL);
+    ret = RdmaSendrecv((void*) tmpsend, block_count, datatype, send_to, 0,
+        (void*) tmprecv, max_segcount, datatype, recv_from, 0, ctx, NULL);
     assert(ret == 0);
   }
 

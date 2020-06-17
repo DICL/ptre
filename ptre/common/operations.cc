@@ -3,7 +3,6 @@
 #include <fstream>
 
 #include "ptre/common/logging.h"
-#include "ptre/common/ptre_global.h"
 #include "ptre/common/rdma/rdma_context.h"
 #include "ptre/common/rdma/rdma_mpi.h"
 
@@ -97,6 +96,10 @@ void ShutdownGrpcServer() {
   if (ptre_global.grpc_server != nullptr) {
     ptre_global.grpc_server->Shutdown();
   }
+}
+
+PtreGlobal& PtreGlobalState() {
+  return ptre_global;
 }
 
 // Non-blocking
@@ -853,6 +856,8 @@ int ProcessCQRdmaRequest(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
     if (wcs[i].status == IBV_WC_SUCCESS) {
       req->Done();
     } else {
+      DVLOG(0) << "wc.status=" << wcs[i].status << ", opcode="
+          << wcs[i].opcode << ", mr=" << (uint64_t) req->mr()->addr;
       bad_reqs.push_back(req);
     }
   }

@@ -9,9 +9,18 @@ RdmaRequest::RdmaRequest() {
 }
 
 int RdmaRequest::Join() {
+#ifdef RDMA_REQUEST_BUSY_WAIT
+  bool ret = false;
+  do {
+    mu_.lock();
+    if (done_) ret = true;
+    mu_.unlock();
+  } while (!ret);
+#else
   std::unique_lock<std::mutex> lk(mu_);
   cv_.wait(lk, [&] { return done_; });
   lk.unlock();
+#endif
   return status_;
 }
 
@@ -21,7 +30,9 @@ void RdmaRequest::Done() {
     status_ = 0;
     done_ = true;
   }
-  cv_.notify_all();
+#ifndef RDMA_REQUEST_BUSY_WAIT
+  cv_.notify_one();
+#endif
 }
 
 void RdmaRequest::DoneFailure() {
@@ -30,7 +41,9 @@ void RdmaRequest::DoneFailure() {
     status_ = 1;
     done_ = true;
   }
-  cv_.notify_all();
+#ifndef RDMA_REQUEST_BUSY_WAIT
+  cv_.notify_one();
+#endif
 }
 
 void RdmaRequest::set_mr(struct ibv_mr* mr) {

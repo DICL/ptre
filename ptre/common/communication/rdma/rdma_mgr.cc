@@ -42,8 +42,8 @@ RdmaMgr::RdmaMgr(int ptre_size, int ptre_rank) {
     qp_init_attr.qp_type = IBV_QPT_RC;
     qp_init_attr.cap.max_send_wr = MAX_QP_WR_DEFAULT;
     qp_init_attr.cap.max_recv_wr = MAX_QP_WR_DEFAULT;
-    qp_init_attr.cap.max_send_sge = 1;
-    qp_init_attr.cap.max_recv_sge = 1;
+    qp_init_attr.cap.max_send_sge = 4;
+    qp_init_attr.cap.max_recv_sge = 4;
     qp = ibv_create_qp(pd_, &qp_init_attr);
     if (!qp) {
       LOG(ERROR) << "Failed to create QP for rank=" << i;
@@ -57,6 +57,7 @@ RdmaMgr::RdmaMgr(int ptre_size, int ptre_rank) {
   remote_lids_.resize(ptre_size_);
 
   // Init Receive Work Request Array
+#if 0
   for (int i = 0; i < ptre_size_; i++) {
     void* buf = malloc(1);
     struct ibv_mr* mr = ibv_reg_mr(pd_, buf, 1, IBV_ACCESS_LOCAL_WRITE);
@@ -71,6 +72,7 @@ RdmaMgr::RdmaMgr(int ptre_size, int ptre_rank) {
     wr->num_sge = 1;
     recv_wrs_.push_back(wr);
   }
+#endif
 }
 
 RdmaMgr::~RdmaMgr() { }

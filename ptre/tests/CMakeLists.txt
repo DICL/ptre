@@ -1,3 +1,11 @@
+add_executable(send_recv_test send_recv_test.cc)
+target_link_libraries(send_recv_test
+  operations
+  rdma_mpi
+  rdma_context
+  ptre_global)
+
+
 #add_executable(cas_test cas_test.cc)
 #target_link_libraries(cas_test
 #  rdma_mgr
