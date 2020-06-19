@@ -18,7 +18,6 @@ target_link_libraries(consensus_manager
 
 #add_library(tensor_aggregator SHARED tensor_aggregator.cc)
 #target_link_libraries(tensor_aggregator
-#  pthread
 #  rdma)
 
 add_library(push_permit SHARED push_permit.cc)
@@ -29,7 +28,6 @@ target_link_libraries(push_permit
 add_library(remote_variable SHARED remote_variable.cc)
 target_link_libraries(remote_variable
   :libtensorflow_framework.so.2
-  pthread
   #push_permit
   allocator
   )

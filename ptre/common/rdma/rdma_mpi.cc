@@ -132,6 +132,25 @@ int RdmaBcast(void* buffer, int count, DataType datatype, int root,
   return 0;
 }
 
+/*
+int RdmaBarrier(RdmaContext* ctx) {
+  int ret, my_rank, comm_size;
+  comm_size = ctx->comm_size();
+  if (comm_size == 1) return;
+
+  my_rank = ctx->comm_rank();
+  int mask = 0x1;
+  while (mask < size) {
+    int dst = (my_rank + mask) % size;
+    RdmaSend(dst, NULL, 0, "PtreBarrier");
+    int src = (my_rank - mask + size) % size;
+    PtreRecv(src, NULL, 0, "PtreBarrier");
+    mask <<= 1;
+  }
+}
+*/
+  
+
 
 // TODO: Optimize this using a tree structure
 int RdmaReduce(const void* sendbuf, void* recvbuf, int count, DataType datatype,
@@ -144,7 +163,7 @@ int RdmaReduce(const void* sendbuf, void* recvbuf, int count, DataType datatype,
 
   dtsize = DataType_Size(datatype);
 
-  inbuf = (char*) malloc(dtsize);
+  inbuf = (char*) malloc(count * dtsize);
   if (comm_rank == root) {
     if (sendbuf != COMM_IN_PLACE) {
       memcpy(recvbuf, sendbuf, count * dtsize);
@@ -214,6 +233,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
 
   // Special case for comm_size == 1
   if (comm_size == 1) {
+    DVLOG(0) << "Special case for comm_size == 1";
     if (sendbuf != COMM_IN_PLACE) {
       memcpy(recvbuf, sendbuf, count * DataType_Size(datatype));
     }
@@ -235,10 +255,10 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   max_segcount = early_segcount;
   max_real_segsize = max_segcount * dtsize;
   inbuf[0] = (char*) malloc(max_real_segsize);
-  assert(inbuf[0] != NULL);
+  if (inbuf[0] == NULL) return 1;
   if (comm_size > 2) {
     inbuf[1] = (char*) malloc(max_real_segsize);
-    assert(inbuf[1] != NULL);
+    if (inbuf[1] == NULL) return 1;
   }
 
   if (sendbuf != COMM_IN_PLACE) {
@@ -253,7 +273,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   reqs[inbi] = new RdmaRequest();
   ret = RdmaIrecv((void*) inbuf[inbi], max_segcount, datatype, recv_from, 0,
       ctx, reqs[inbi]);
-  assert(ret == 0);
+  //assert(ret == 0);
   if (comm_rank < split_rank) {
     block_offset = comm_rank * early_segcount;
     block_count = early_segcount;
@@ -263,7 +283,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   }
   tmpsend = ((char*) recvbuf) + block_offset * dtsize;
   ret = RdmaSend((void*) tmpsend, block_count, datatype, send_to, 0, ctx);
-  assert(ret == 0);
+  //assert(ret == 0);
 
   for (k = 2; k < comm_size; k++) {
     const int prevblock = (comm_rank + comm_size - k + 1) % comm_size;
@@ -273,10 +293,10 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     reqs[inbi] = new RdmaRequest();
     ret = RdmaIrecv((void*) inbuf[inbi], max_segcount, datatype, recv_from, 0,
         ctx, reqs[inbi]);
-    assert(ret == 0);
+    //assert(ret == 0);
 
     ret = RdmaWait(reqs[inbi ^ 0x1], NULL);
-    assert(ret == 0);
+    //assert(ret == 0);
     delete reqs[inbi ^ 0x1];
 
     if (prevblock < split_rank) {
@@ -288,18 +308,20 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     }
     tmprecv = ((char*) recvbuf) + block_offset * dtsize;
     // TODO: Apply DataType other than float
+#if 1
     float* tmp_arr_a = (float*) tmprecv;
     float* tmp_arr_b = (float*) inbuf[inbi ^ 0x1];
     for (int idx = 0; idx < block_count; idx++) {
       tmp_arr_a[idx] += tmp_arr_b[idx];
     }
+#endif
 
     ret = RdmaSend((void*) tmprecv, block_count, datatype, send_to, 0, ctx);
-    assert(ret == 0);
+    //assert(ret == 0);
   }
 
   ret = RdmaWait(reqs[inbi], NULL);
-  assert(ret == 0);
+  //assert(ret == 0);
   delete reqs[inbi];
 
   recv_from = (comm_rank + 1) % comm_size;
@@ -312,11 +334,13 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   }
   tmprecv = ((char*) recvbuf) + block_offset * dtsize;
   // TODO: Apply DataType other than float
+#if 1
   float* tmp_arr_a = (float*) tmprecv;
   float* tmp_arr_b = (float*) inbuf[inbi];
   for (int idx = 0; idx < block_count; idx++) {
     tmp_arr_a[idx] += tmp_arr_b[idx];
   }
+#endif
 
   // Distribution Loop
   send_to = (comm_rank + 1) % comm_size;
@@ -338,7 +362,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
 
     ret = RdmaSendrecv((void*) tmpsend, block_count, datatype, send_to, 0,
         (void*) tmprecv, max_segcount, datatype, recv_from, 0, ctx, NULL);
-    assert(ret == 0);
+    //assert(ret == 0);
   }
 
   if (inbuf[0] != NULL) free(inbuf[0]);

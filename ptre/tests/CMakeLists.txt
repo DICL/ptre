@@ -1,9 +1,27 @@
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -pthread")
+
+include_directories(
+  /home/wkim/.local/include/libmongoc-1.0
+  /home/wkim/.local/include/bsoncxx/v_noabi
+  /home/wkim/.local/include/mongocxx/v_noabi)
+
+
 add_executable(send_recv_test send_recv_test.cc)
 target_link_libraries(send_recv_test
   operations
   rdma_mpi
   rdma_context
   ptre_global)
+
+add_executable(allreduce_test allreduce_test.cc)
+target_link_libraries(allreduce_test
+  operations)
+
+add_executable(send_test send_test.cc)
+target_link_libraries(send_test
+  operations
+  mongocxx
+  bsoncxx)
 
 
 #add_executable(cas_test cas_test.cc)

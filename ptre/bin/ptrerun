@@ -24,7 +24,7 @@ for i, elem in enumerate(cmd_list):
     cmd_list[i] = subprocess.check_output(['which', 'python']).decode('utf-8').rstrip("\n")
   if elem.endswith('.py'):
     cmd_list[i] = os.path.abspath(elem)
-  else:
+  elif os.path.isfile(elem):
     cmd_list[i] = os.path.abspath(elem)
 pypath = os.environ.get('PYTHONPATH')
 pypath_cmds = 'export PYTHONPATH=%s' % pypath
@@ -71,28 +71,32 @@ def open_channel(rank, client, hostname, channels):
   client.connect(hostname)
   channel = client.get_transport().open_session()
   channels[rank] = channel
-  print("Connected to", hostname, '(RANK=%d)' % rank)
+  #print("Connected to", hostname, '(RANK=%d)' % rank)
 
   cmd = '%s -rank %d' % (cmd_base, i)
   channel.exec_command(cmd)
   pid = int(channel.recv(8))
   pids.append(pid)
-  print('[RANK:%d] Launched the application' % i, '(PID=%d)' % pid)
+  #print('[RANK:%d] Launched the application' % i, '(PID=%d)' % pid)
   ch_stdout = channel.makefile()
   ch_stderr = channel.makefile_stderr()
 
   while not shutdown:
+    has_been_ready = False
     if channel.recv_stderr_ready():
+      has_been_ready = True
       line = ch_stderr.readline()
       print(line, file=stderrs[i], end='')
       if args.printall or i == 0:
         q.put((i, line))
-      continue
     if channel.recv_ready():
+      has_been_ready = True
       line = ch_stdout.readline()
       print(line, file=stdouts[i], end='')
       if args.printall or i == 0:
         q.put((i, line))
+    if has_been_ready:
+      continue
     if not channel.recv_ready() and not channel.recv_stderr_ready():
       if channel.exit_status_ready():
         q.put(None)

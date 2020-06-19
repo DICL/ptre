@@ -31,14 +31,14 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.shutdown = false;
 
   // Init Grpc Service
-  LOG(INFO) << "Init Grpc Service";
+  DVLOG(0) << "Init Grpc Service";
   load_grpc_hosts(grpc_hosts_file);
   ptre_global.grpc_client_cache = std::make_shared<GrpcClientCache>(rank,
       ptre_global.grpc_hosts);
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
 
   // Init RdmaMgr
-  LOG(INFO) << "Init Rdma Manager";
+  DVLOG(0) << "Init Rdma Manager";
   ptre_global.rdma_mgr = new RdmaMgr(size, rank);
   ptre_global.grpc_service.SetRdmaMgr(ptre_global.rdma_mgr);
   for (int i = 0; i < ptre_global.size; i++) {
@@ -46,7 +46,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   }
 
   // Connect Queue Pairs
-  LOG(INFO) << "Connect Queue Pairs";
+  DVLOG(0) << "Connect Queue Pairs";
   for (int i = 0; i < ptre_global.size; i++) {
     GrpcClient* client;
     ptre_global.grpc_client_cache->GetClient(i, &client);
@@ -73,10 +73,10 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     PtreBarrier();
   } while (ret);
 
-  LOG(INFO) << "Starting Polling Thread Loop";
+  DVLOG(0) << "Starting Polling Thread Loop";
   ptre_global.polling_threads.emplace_back(std::thread(PollingThreadLoop));
 
-  LOG(INFO) << "[1/2] Done InitComm";
+  DVLOG(0) << "[1/2] Done InitComm";
 }
 
 void RunGrpcServer() {
@@ -822,7 +822,6 @@ Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count) {
   RdmaContext ctx(ptre_global.rdma_mgr);
   ret = RdmaAllreduce(sendbuf, recvbuf, count, DataType::DT_FLOAT,
       ReduceOp::REDUCE_SUM, &ctx);
-
 }
 
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,

@@ -168,7 +168,7 @@ void RdmaMgr::ConnectQP(int dst, uint32_t remote_qpn) {
 }
 
 int RdmaMgr::ConnectivityCheck() {
-  LOG(INFO) << "Checking QP Connectivities";
+  DVLOG(0) << "Checking QP Connectivities";
   int ret = 0;
   int send_buf = ptre_rank_;
   struct ibv_mr* send_mr = ibv_reg_mr(pd_, (void*) &send_buf, sizeof(send_buf),
@@ -268,7 +268,7 @@ int RdmaMgr::ConnectivityCheck() {
 
   for (int i = 0; i < ptre_size_; i++) {
     if (recover[i]) {
-      LOG(INFO) << "Recovering QP for dst=" << i;
+      LOG(ERROR) << "Recovering QP for dst=" << i;
       RecoverQP(i);
     }
   }
@@ -278,7 +278,7 @@ int RdmaMgr::ConnectivityCheck() {
     ibv_dereg_mr(recv_mr_arr[i]);
   }
 
-  LOG(INFO) << "Done Connectivity Check: " << ret;
+  DVLOG(0) << "Done Connectivity Check: " << ret;
   return ret;
 }
 
