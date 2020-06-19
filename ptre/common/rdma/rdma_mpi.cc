@@ -16,7 +16,10 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
 
   struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf),
       count * DataType_Size(datatype), 0);
-  assert(mr != NULL);
+  if (!mr) {
+    LOG(ERROR) << "Failed to register MR @ " << __PRETTY_FUNCTION__;
+    return 1;
+  }
   request->set_mr(mr);
 
   struct ibv_sge sge;
@@ -39,7 +42,11 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
     //if (request->status() != 0) continue;
   } while (false);
   ret = ibv_dereg_mr(mr);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "Failed to deregister MR @ " << __PRETTY_FUNCTION__;
+    return 1;
+  }
+
   ret = request->status();
   delete request;
   return ret;
@@ -51,7 +58,11 @@ int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
 
   struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), buf,
       count * DataType_Size(datatype), IBV_ACCESS_LOCAL_WRITE);
-  assert(mr != NULL);
+  if (!mr) {
+    LOG(ERROR) << "Failed to register MR @ " << __PRETTY_FUNCTION__;
+    return 1;
+  }
+
   request->set_mr(mr);
 
   struct ibv_sge sge;
@@ -75,7 +86,10 @@ int RdmaWait(RdmaRequest* request, Status* status) {
   request->Join();
   struct ibv_mr* mr = request->mr();
   ret = ibv_dereg_mr(mr);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "Failed to deregister MR @ " << __PRETTY_FUNCTION__;
+    return 1;
+  }
   ret = request->status();
   return ret;
 }
@@ -85,10 +99,14 @@ int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
   int ret;
   RdmaRequest request;
   ret = RdmaIrecv(buf, count, datatype, source, tag, ctx, &request);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "RdmaIrecv returned " << ret << " @ " << __PRETTY_FUNCTION__;
+  }
 
   ret = RdmaWait(&request, status);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "RdmaWait returned " << ret << " @ " << __PRETTY_FUNCTION__;
+  }
 
   return 0;
 }
@@ -100,13 +118,19 @@ int RdmaSendrecv(const void* sendbuf, int sendcount, DataType sendtype,
   int ret;
   RdmaRequest request;
   ret = RdmaIrecv(recvbuf, recvcount, recvtype, source, recvtag, ctx, &request);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "RdmaIrecv returned " << ret << " @ " << __PRETTY_FUNCTION__;
+  }
 
   ret = RdmaSend(sendbuf, sendcount, sendtype, dest, sendtag, ctx);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "RdmaSend returned " << ret << " @ " << __PRETTY_FUNCTION__;
+  }
 
   ret = RdmaWait(&request, status);
-  assert(ret == 0);
+  if (ret) {
+    LOG(ERROR) << "RdmaWait returned " << ret << " @ " << __PRETTY_FUNCTION__;
+  }
 
   return 0;
 }
@@ -122,11 +146,16 @@ int RdmaBcast(void* buffer, int count, DataType datatype, int root,
     for (int i = 0; i < comm_size; i++) {
       if (i == comm_rank) continue;
       ret = RdmaSend(buffer, count, datatype, i, 0, ctx);
-      assert(ret == 0);
+      if (ret) {
+        LOG(ERROR) << "RdmaSend returned " << ret << " @ "
+            << __PRETTY_FUNCTION__;
+      }
     }
   } else {
     ret = RdmaRecv(buffer, count, datatype, root, 0, ctx, NULL);
-    assert(ret == 0);
+    if (ret) {
+      LOG(ERROR) << "RdmaRecv returned " << ret << " @ " << __PRETTY_FUNCTION__;
+    }
   }
 
   return 0;
@@ -149,7 +178,7 @@ int RdmaBarrier(RdmaContext* ctx) {
   }
 }
 */
-  
+
 
 
 // TODO: Optimize this using a tree structure
@@ -172,7 +201,10 @@ int RdmaReduce(const void* sendbuf, void* recvbuf, int count, DataType datatype,
     for (int i = 0; i < comm_size; i++) {
       if (i == comm_rank) continue;
       ret = RdmaRecv(inbuf, count, datatype, i, 0, ctx, NULL);
-      assert(ret == 0);
+      if (ret) {
+        LOG(ERROR) << "RdmaRecv returned " << ret << " @ "
+            << __PRETTY_FUNCTION__;
+      }
 
       // TODO: Apply DataType other than float
       float* tmp_arr_a = (float*) recvbuf;
@@ -183,7 +215,9 @@ int RdmaReduce(const void* sendbuf, void* recvbuf, int count, DataType datatype,
     }
   } else {
     ret = RdmaSend(sendbuf, count, datatype, root, 0, ctx);
-    assert(ret == 0);
+    if (ret) {
+      LOG(ERROR) << "RdmaSend returned " << ret << " @ " << __PRETTY_FUNCTION__;
+    }
   }
 
   if (inbuf != NULL) free(inbuf);
