@@ -7,6 +7,8 @@
 #include "ptre/common/rdma/rdma_context.h"
 #include "ptre/common/ptre_global.h"
 
+#include <infiniband/verbs.h>
+
 #include <bsoncxx/builder/stream/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/json.hpp>
@@ -31,7 +33,6 @@ int main(int argc, char* argv[]) {
   rank = ptre_rank();
   size = ptre_size();
   PtreGlobal& ptre_global = PtreGlobalState();
-  RdmaContext ctx(ptre_global.rdma_mgr);
 
   const size_t bytes = (argc > 7) ? atol(argv[1]) : 4096;
   const int warmup_iters = 5;
@@ -39,8 +40,12 @@ int main(int argc, char* argv[]) {
   chrono::system_clock::time_point tps[iters][2];
   void* arr = aligned_alloc(64, bytes);
   const int count = bytes / sizeof(float);
+  struct ibv_mr* mr;
 
   if (rank == 0) {
+    mr = ibv_reg_mr(ptre_global.rdma_mgr->pd(), arr, bytes, 0);
+    RdmaContext ctx(ptre_global.rdma_mgr, mr);
+
     // Warmup
     for (int i = 0; i < warmup_iters; i++) {
       RdmaSend((void*) arr, count, DataType::DT_FLOAT, 1, 0, &ctx);
@@ -56,6 +61,10 @@ int main(int argc, char* argv[]) {
       tps[i][1] = chrono::system_clock::now();
     }
   } else {
+    mr = ibv_reg_mr(ptre_global.rdma_mgr->pd(), arr, bytes,
+        IBV_ACCESS_LOCAL_WRITE);
+    RdmaContext ctx(ptre_global.rdma_mgr, NULL, mr);
+
     // Warmup
     for (int i = 0; i < warmup_iters; i++) {
       RdmaRecv((void*) arr, count, DataType::DT_FLOAT, 0, 0, &ctx, NULL);
@@ -70,6 +79,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  ibv_dereg_mr(mr);
   ptre_finalize(0);
 
   if (rank == 0) {

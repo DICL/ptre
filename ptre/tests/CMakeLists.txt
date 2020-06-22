@@ -21,7 +21,8 @@ add_executable(send_test send_test.cc)
 target_link_libraries(send_test
   operations
   mongocxx
-  bsoncxx)
+  bsoncxx
+  ibverbs)
 
 
 #add_executable(cas_test cas_test.cc)
@@ -35,7 +36,7 @@ target_link_libraries(send_test
 #  rdma_grpc_client)
 
 #add_executable(agg_test agg_test.cc)
-#target_link_libraries(agg_test 
+#target_link_libraries(agg_test
 #  pthread
 #  :libtensorflow_framework.so.2
 #  tensor_aggregator)

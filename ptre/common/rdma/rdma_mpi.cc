@@ -9,23 +9,36 @@
 namespace ptre {
 namespace common {
 
-int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
-             RdmaContext* ctx) {
+int RdmaWait(RdmaRequest* request, Status* status) {
   int ret;
-  RdmaRequest* request = new RdmaRequest();
-
-  struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf),
-      count * DataType_Size(datatype), 0);
-  if (!mr) {
-    LOG(ERROR) << "Failed to register MR @ " << __PRETTY_FUNCTION__;
-    return 1;
+  request->Join();
+  struct ibv_mr* mr = request->mr();
+  if (mr != NULL) {
+    ret = ibv_dereg_mr(mr);
+    if (ret) {
+      LOG(ERROR) << "Failed to deregister MR @ " << __PRETTY_FUNCTION__;
+      return 1;
+    }
   }
-  request->set_mr(mr);
+  ret = request->status();
+  return ret;
+}
+
+int RdmaIsend(const void* buf, int count, DataType datatype, int dest, int tag,
+              RdmaContext* ctx, RdmaRequest* request) {
+  int ret;
+  size_t length = count * DataType_Size(datatype);
+
+  struct ibv_mr* mr = ctx->send_mr();
+  if (mr == NULL) {
+    mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length, 0);
+    request->set_mr(mr);
+  }
 
   struct ibv_sge sge;
   memset(&sge, 0, sizeof(sge));
-  sge.addr = (uint64_t) mr->addr;
-  sge.length = mr->length;
+  sge.addr = (uint64_t) buf;
+  sge.length = length;
   sge.lkey = mr->lkey;
   struct ibv_send_wr wr;
   memset(&wr, 0, sizeof(wr));
@@ -36,39 +49,43 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
   wr.send_flags = IBV_SEND_SIGNALED;
 
   auto channel = ctx->get_channel(dest);
-  do {
-    channel->PostSend(wr);
-    request->Join();
-    //if (request->status() != 0) continue;
-  } while (false);
-  ret = ibv_dereg_mr(mr);
+  ret = channel->PostSend(wr);
+  return ret;
+}
+
+int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
+             RdmaContext* ctx) {
+  int ret;
+  RdmaRequest request;
+  ret = RdmaIsend(buf, count, datatype, dest, tag, ctx, &request);
   if (ret) {
-    LOG(ERROR) << "Failed to deregister MR @ " << __PRETTY_FUNCTION__;
-    return 1;
+    LOG(ERROR) << "RdmaIsend returned " << ret << " @ " << __PRETTY_FUNCTION__;
   }
 
-  ret = request->status();
-  delete request;
-  return ret;
+  ret = RdmaWait(&request, NULL);
+  if (ret) {
+    LOG(ERROR) << "RdmaWait returned " << ret << " @ " << __PRETTY_FUNCTION__;
+  }
+
+  return 0;
 }
 
 int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
               RdmaContext* ctx, RdmaRequest* request) {
   int ret;
+  size_t length = count * DataType_Size(datatype);
 
-  struct ibv_mr* mr = ibv_reg_mr(ctx->pd(), buf,
-      count * DataType_Size(datatype), IBV_ACCESS_LOCAL_WRITE);
-  if (!mr) {
-    LOG(ERROR) << "Failed to register MR @ " << __PRETTY_FUNCTION__;
-    return 1;
+  struct ibv_mr* mr = ctx->recv_mr();
+  if (mr == NULL) {
+    mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length,
+        IBV_ACCESS_LOCAL_WRITE);
+    request->set_mr(mr);
   }
-
-  request->set_mr(mr);
 
   struct ibv_sge sge;
   memset(&sge, 0, sizeof(sge));
-  sge.addr = (uint64_t) mr->addr;
-  sge.length = mr->length;
+  sge.addr = (uint64_t) buf;
+  sge.length = length;
   sge.lkey = mr->lkey;
   struct ibv_recv_wr wr;
   memset(&wr, 0, sizeof(wr));
@@ -78,19 +95,6 @@ int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
 
   auto channel = ctx->get_channel(source);
   ret = channel->PostRecv(wr);
-  return ret;
-}
-
-int RdmaWait(RdmaRequest* request, Status* status) {
-  int ret;
-  request->Join();
-  struct ibv_mr* mr = request->mr();
-  ret = ibv_dereg_mr(mr);
-  if (ret) {
-    LOG(ERROR) << "Failed to deregister MR @ " << __PRETTY_FUNCTION__;
-    return 1;
-  }
-  ret = request->status();
   return ret;
 }
 

@@ -10,13 +10,16 @@
 namespace ptre {
 namespace common {
 
+int RdmaWait(RdmaRequest* request, Status* status);
+
+int RdmaIsend(const void* buf, int count, DataType datatype, int dest, int tag,
+              RdmaContext* ctx, RdmaRequest* request);
+
 int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
              RdmaContext* ctx);
 
 int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
               RdmaContext* ctx, RdmaRequest* request);
-
-int RdmaWait(RdmaRequest* request, Status* status);
 
 int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
              RdmaContext* ctx, Status* status);
