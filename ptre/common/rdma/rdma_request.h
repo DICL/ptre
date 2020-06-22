@@ -19,13 +19,13 @@ class RdmaRequest {
   struct ibv_mr* mr() { return mr_; }
 
  private:
-  int status_;
+  volatile int status_;
   struct ibv_mr* mr_;
   std::mutex mu_;
 #ifndef RDMA_REQUEST_BUSY_WAIT
   std::condition_variable cv_;
 #endif
-  bool done_;
+  //volatile bool done_;
 };
 
 }  // namespace common

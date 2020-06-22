@@ -15,7 +15,8 @@ target_link_libraries(send_recv_test
 
 add_executable(allreduce_test allreduce_test.cc)
 target_link_libraries(allreduce_test
-  operations)
+  operations
+  ibverbs)
 
 add_executable(send_test send_test.cc)
 target_link_libraries(send_test

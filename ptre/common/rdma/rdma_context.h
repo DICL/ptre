@@ -11,6 +11,20 @@
 namespace ptre {
 namespace common {
 
+class MRCache {
+ public:
+  struct ibv_mr* RegisterSendMR(struct ibv_pd* pd, void* buf, size_t length);
+  struct ibv_mr* RegisterRecvMR(struct ibv_pd* pd, void* buf, size_t length);
+  bool HasSendMR(void* buf);
+  bool HasRecvMR(void* buf);
+  struct ibv_mr* send_mr(const void* buf);
+  struct ibv_mr* recv_mr(const void* buf);
+
+ private:
+  std::map<const void*, struct ibv_mr*> send_mr_table_;
+  std::map<const void*, struct ibv_mr*> recv_mr_table_;
+};
+
 class RdmaContext {
  public:
   RdmaContext(RdmaMgr* rdma_mgr, struct ibv_mr* send_mr = NULL,
@@ -19,16 +33,17 @@ class RdmaContext {
   int comm_rank() { return comm_rank_; }
   int comm_size() { return comm_size_; }
   RdmaChannel* get_channel(int comm_rank);
-  struct ibv_mr* send_mr() { return send_mr_; }
-  struct ibv_mr* recv_mr() { return recv_mr_; }
+  void RegisterSendBuffer(void* sendbuf, size_t length);
+  void RegisterRecvBuffer(void* recvbuf, size_t length);
+  struct ibv_mr* send_mr(const void* buf);
+  struct ibv_mr* recv_mr(const void* buf);
 
  protected:
   int comm_rank_;
   int comm_size_;
   struct ibv_pd* pd_;
   std::map<int, RdmaChannel*> channel_table_;
-  struct ibv_mr* send_mr_;
-  struct ibv_mr* recv_mr_;
+  MRCache mr_cache_;
 };
 
 }  // namespace common

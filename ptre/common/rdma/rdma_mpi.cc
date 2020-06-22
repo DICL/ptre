@@ -10,8 +10,8 @@ namespace ptre {
 namespace common {
 
 int RdmaWait(RdmaRequest* request, Status* status) {
-  int ret;
-  request->Join();
+  int ret, join_ret;
+  join_ret = request->Join();
   struct ibv_mr* mr = request->mr();
   if (mr != NULL) {
     ret = ibv_dereg_mr(mr);
@@ -20,8 +20,8 @@ int RdmaWait(RdmaRequest* request, Status* status) {
       return 1;
     }
   }
-  ret = request->status();
-  return ret;
+  //ret = request->status();
+  return join_ret;
 }
 
 int RdmaIsend(const void* buf, int count, DataType datatype, int dest, int tag,
@@ -29,7 +29,7 @@ int RdmaIsend(const void* buf, int count, DataType datatype, int dest, int tag,
   int ret;
   size_t length = count * DataType_Size(datatype);
 
-  struct ibv_mr* mr = ctx->send_mr();
+  struct ibv_mr* mr = ctx->send_mr(buf);
   if (mr == NULL) {
     mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length, 0);
     request->set_mr(mr);
@@ -75,10 +75,9 @@ int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
   int ret;
   size_t length = count * DataType_Size(datatype);
 
-  struct ibv_mr* mr = ctx->recv_mr();
+  struct ibv_mr* mr = ctx->recv_mr(buf);
   if (mr == NULL) {
-    mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length,
-        IBV_ACCESS_LOCAL_WRITE);
+    mr = ibv_reg_mr(ctx->pd(), buf, length, IBV_ACCESS_LOCAL_WRITE);
     request->set_mr(mr);
   }
 

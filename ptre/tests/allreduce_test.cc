@@ -4,6 +4,8 @@
 #include "ptre/common/ptre_global.h"
 #include "/home/wkim/wild/mpi_tests/allreduce_test.h"
 
+#include <infiniband/verbs.h>
+
 #include <string>
 #include <cstdio>
 #include <vector>

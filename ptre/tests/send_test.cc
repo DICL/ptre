@@ -122,8 +122,9 @@ int main(int argc, char* argv[]) {
     bsoncxx::document::value doc_value = builder
         << "name" << "RdmaSend"
         << "lib" << "ptre"
+        << "tag" << "mr caching + busy wait"
         << "lib_info" << bsoncxx::builder::stream::open_document
-          << "commit" << "469d34e30ab5eede225b17b4c0696d1ebc921466"
+          << "commit" << "5a6f00041d14b1aeb336e890261b3b7e49b15d57"
         << close_document
         << "optimizer" << "-O3"
         << "parameters" << bsoncxx::builder::stream::open_document
@@ -155,7 +156,7 @@ int main(int argc, char* argv[]) {
     mongocxx::client client(mongocxx::uri("mongodb://localhost:27018"));
 
     mongocxx::database db = client["research"];
-    mongocxx::collection coll = db["collectiveCommunication"];
+    mongocxx::collection coll = db["coll_staging"];
 
     bsoncxx::stdx::optional<mongocxx::result::insert_one> result =
         coll.insert_one(std::move(doc_value));

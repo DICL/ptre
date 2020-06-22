@@ -1,24 +1,21 @@
 #include "ptre/common/rdma/rdma_request.h"
+//#include "ptre/lib/cache_ctl.h"
 
 namespace ptre {
 namespace common {
 
 RdmaRequest::RdmaRequest() {
   mr_ = NULL;
-  done_ = false;
+  //done_ = false;
+  status_ = -1;
 }
 
 int RdmaRequest::Join() {
 #ifdef RDMA_REQUEST_BUSY_WAIT
-  bool ret = false;
-  do {
-    mu_.lock();
-    if (done_) ret = true;
-    mu_.unlock();
-  } while (!ret);
+  while (status_ < 0) continue;
 #else
   std::unique_lock<std::mutex> lk(mu_);
-  cv_.wait(lk, [&] { return done_; });
+  cv_.wait(lk, [&] { return (status_ >= 0); });
   lk.unlock();
 #endif
   return status_;
@@ -28,7 +25,9 @@ void RdmaRequest::Done() {
   {
     std::lock_guard<std::mutex> guard(mu_);
     status_ = 0;
-    done_ = true;
+    //cache_ctl::clflush((char*) &status_, sizeof(status_));
+    //done_ = true;
+    //cache_ctl::clflush((char*) &done_, sizeof(done_));
   }
 #ifndef RDMA_REQUEST_BUSY_WAIT
   cv_.notify_one();
@@ -39,7 +38,7 @@ void RdmaRequest::DoneFailure() {
   {
     std::lock_guard<std::mutex> guard(mu_);
     status_ = 1;
-    done_ = true;
+    //done_ = true;
   }
 #ifndef RDMA_REQUEST_BUSY_WAIT
   cv_.notify_one();
