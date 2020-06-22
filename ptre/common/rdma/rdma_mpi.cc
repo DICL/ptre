@@ -292,9 +292,11 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   max_segcount = early_segcount;
   max_real_segsize = max_segcount * dtsize;
   inbuf[0] = (char*) malloc(max_real_segsize);
+  //ctx->RegisterRecvBuffer((void*) inbuf[0], max_real_segsize);
   if (inbuf[0] == NULL) return 1;
   if (comm_size > 2) {
     inbuf[1] = (char*) malloc(max_real_segsize);
+    //ctx->RegisterRecvBuffer((void*) inbuf[1], max_real_segsize);
     if (inbuf[1] == NULL) return 1;
   }
 

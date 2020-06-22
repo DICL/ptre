@@ -2,7 +2,6 @@
 #include "ptre/common/rdma/rdma_mpi.h"
 #include "ptre/common/rdma/rdma_context.h"
 #include "ptre/common/ptre_global.h"
-#include "/home/wkim/wild/mpi_tests/allreduce_test.h"
 
 #include <infiniband/verbs.h>
 
@@ -11,50 +10,169 @@
 #include <vector>
 #include <chrono>
 
+#include <bsoncxx/builder/stream/array.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/json.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/stdx.hpp>
+#include <mongocxx/uri.hpp>
+#include <mongocxx/instance.hpp>
+
+using bsoncxx::builder::stream::close_array;
+using bsoncxx::builder::stream::close_document;
+using bsoncxx::builder::stream::document;
+using bsoncxx::builder::stream::finalize;
+using bsoncxx::builder::stream::open_array;
+using bsoncxx::builder::stream::open_document;
 using namespace std;
 using namespace ptre::common;
 
 int main(int argc, char* argv[]) {
   string hostfile = argv[4];
-  int comm_size = atoi(argv[6]);
-  int comm_rank = atoi(argv[8]);
+  int comm_size, comm_rank;
 
   ptre_init(comm_size, comm_rank, hostfile.c_str(), 0, 1);
-
+  ptre_init(atoi(argv[argc - 3]), atoi(argv[argc - 1]), argv[argc - 5], 0, 1);
+  comm_rank = ptre_rank();
+  comm_size = ptre_size();
   PtreGlobal& ptre_global = PtreGlobalState();
   RdmaContext ctx(ptre_global.rdma_mgr);
 
-  int num_tensors = atoi(argv[1]);
-  size_t total_bytes = atol(argv[2]);
-
-  assert(total_bytes % sizeof(float) == 0);
-  int num_elems = total_bytes / sizeof(float);
-  assert(num_elems >= num_tensors);
-
-  vector<pair<float*, int>> tensors;
-  wkim_init_tensors(num_elems, num_tensors, comm_rank, &tensors);
-  vector<pair<float*, int>> recvs;
-  for (int i = 0; i < tensors.size(); i++) {
-    recvs.emplace_back(new float[tensors[i].second], tensors[i].second);
+  size_t size;
+  if (argc < 2) {
+    cout << "Usage: " << argv[0] << " size\n";
+    return 1;
+  }
+  size = atol(argv[1]);
+  if (size % sizeof(float) != 0) {
+    cout << "size must be a multiple of sizeof(float)\n";
+    return 1;
   }
 
-  chrono::system_clock::time_point begin = chrono::system_clock::now();
-  for (int i = 0; i < tensors.size(); i++) {
-    RdmaAllreduce((void*) tensors[i].first, recvs[i].first, tensors[i].second,
-        DataType::DT_FLOAT, ReduceOp::REDUCE_SUM, &ctx);
-  }
-  chrono::system_clock::time_point end = chrono::system_clock::now();
-  chrono::milliseconds dur =
-      chrono::duration_cast<chrono::milliseconds>(end - begin);
+  const int warmup_iters = 5;
+  const int iters = 20;
+  chrono::system_clock::time_point tps[iters][2];
+  float* send_arr = (float*) malloc(size);
+  float* recv_arr = (float*) malloc(size);
+  int count = size / sizeof(float);
 
-  if (!wkim_validate_allreduce(comm_size, recvs)) {
-    LOG(ERROR) << "Validation Failed!";
-  } else {
-    LOG(INFO) << (int) dur.count() << " msec";
+  for (int i = 0; i < count; i++) {
+    send_arr[i] = 0.1 * (comm_rank + 1);
   }
 
+  // Warmup
+  for (int i = 0; i < warmup_iters; i++) {
+    RdmaAllreduce((void*) send_arr, (void*) recv_arr, 1, DataType::DT_FLOAT,
+        ReduceOp::REDUCE_SUM, &ctx);
+  }
+  for (int i = 0; i < warmup_iters; i++) {
+    RdmaAllreduce((void*) send_arr, (void*) recv_arr, count, DataType::DT_FLOAT,
+        ReduceOp::REDUCE_SUM, &ctx);
+  }
   PtreBarrier();
+  // Benchmark
+  for (int i = 0; i < iters; i++) {
+    tps[i][0] = chrono::system_clock::now();
+    RdmaAllreduce((void*) send_arr, (void*) recv_arr, count, DataType::DT_FLOAT,
+        ReduceOp::REDUCE_SUM, &ctx);
+    tps[i][1] = chrono::system_clock::now();
+  }
+
   ptre_finalize(0);
+
+  if (comm_rank == 0) {
+    float reduced_expect = 0;
+    bool valid = true;
+    for (int i = 0; i < comm_size; i++) {
+      reduced_expect += 0.1 * (i + 1);
+    }
+    for (int i = 0; i < count; i++) {
+      if (recv_arr[i] < reduced_expect * 0.99
+          || recv_arr[i] > 1.01 * reduced_expect) {
+        valid = false;
+        break;
+      }
+    }
+    if (!valid) {
+      cout << "Validation Failed\n";
+      return 1;
+    }
+    array<long int, iters> ns_arr;
+    array<long int, iters> us_arr;
+    array<long int, iters> ms_arr;
+    array<long int, iters> s_arr;
+    for (int i = 0; i < iters; i++) {
+      auto dur_ns = chrono::duration_cast<chrono::nanoseconds>(tps[i][1] - tps[i][0]).count();
+      auto dur_us = chrono::duration_cast<chrono::microseconds>(tps[i][1] - tps[i][0]).count();
+      auto dur_ms = chrono::duration_cast<chrono::milliseconds>(tps[i][1] - tps[i][0]).count();
+      auto dur_s = chrono::duration_cast<chrono::seconds>(tps[i][1] - tps[i][0]).count();
+      ns_arr[i] = dur_ns;
+      us_arr[i] = dur_us;
+      ms_arr[i] = dur_ms;
+      s_arr[i] = dur_s;
+    }
+    sort(ns_arr.begin(), ns_arr.end());
+    sort(us_arr.begin(), us_arr.end());
+    sort(ms_arr.begin(), ms_arr.end());
+    sort(s_arr.begin(), s_arr.end());
+
+    long int ns_sum;
+    long int us_sum;
+    long int ms_sum;
+    long int s_sum;
+    for (int i = iters / 4; i < 3 * iters / 4; i++) {
+      ns_sum += ns_arr[i];
+      us_sum += us_arr[i];
+      ms_sum += ms_arr[i];
+      s_sum += s_arr[i];
+    }
+    long int ns_mean = 2 * ns_sum / iters;
+    long int us_mean = 2 * us_sum / iters;
+    long int ms_mean = 2 * ms_sum / iters;
+    long int s_mean = 2 * s_sum / iters;
+    cout << ns_mean << endl;
+
+    auto builder = bsoncxx::builder::stream::document{};
+    bsoncxx::document::value doc_value = builder
+        << "name" << "RdmaAllreduce"
+        << "lib" << "ptre"
+        << "optimizer" << "-O3"
+        << "parameters" << bsoncxx::builder::stream::open_document
+          << "warmup_iters" << warmup_iters
+          << "iters" << iters
+          << "size" << int64_t(size)
+          << "np" << comm_size
+          << "mean_type" << "interquartile"
+        << close_document
+        << "measures" << bsoncxx::builder::stream::open_document
+          << "ns" << bsoncxx::builder::stream::open_document
+            << "mean" << ns_mean
+          << close_document
+          << "us" << bsoncxx::builder::stream::open_document
+            << "mean" << us_mean
+          << close_document
+          << "ms" << bsoncxx::builder::stream::open_document
+            << "mean" << ms_mean
+          << close_document
+          << "s" << bsoncxx::builder::stream::open_document
+            << "mean" << s_mean
+          << close_document
+        << close_document
+        << bsoncxx::builder::stream::finalize;
+
+#if 1
+    cout << bsoncxx::to_json(doc_value) << endl;
+#else
+    mongocxx::instance instance{};
+    mongocxx::client client(mongocxx::uri("mongodb://localhost:27018"));
+
+    mongocxx::database db = client["research"];
+    mongocxx::collection coll = db["coll_staging"];
+
+    bsoncxx::stdx::optional<mongocxx::result::insert_one> result =
+        coll.insert_one(std::move(doc_value));
+#endif
+  }
 
   return 0;
 }

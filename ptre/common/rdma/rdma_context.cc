@@ -16,6 +16,13 @@ struct ibv_mr* MRCache::RegisterRecvMR(struct ibv_pd* pd, void* buf,
   recv_mr_table_[buf] = mr;
   return mr;
 }
+void MRCache::DeregisterSendMR(void* sendbuf) {
+  ibv_dereg_mr(send_mr(sendbuf));
+}
+
+void MRCache::DeregisterRecvMR(void* recvbuf) {
+  ibv_dereg_mr(recv_mr(recvbuf));
+}
 
 bool MRCache::HasSendMR(void* buf) {
   return (send_mr_table_.find(buf) != send_mr_table_.end());
@@ -60,8 +67,16 @@ void RdmaContext::RegisterSendBuffer(void* sendbuf, size_t length) {
   mr_cache_.RegisterSendMR(pd_, sendbuf, length);
 }
 
-void RdmaContext::RegisterRecvBuffer(void* recvbuf, size_t length) { 
+void RdmaContext::RegisterRecvBuffer(void* recvbuf, size_t length) {
   mr_cache_.RegisterRecvMR(pd_, recvbuf, length);
+}
+
+void RdmaContext::DeregisterSendBuffer(void* sendbuf) {
+  mr_cache_.DeregisterSendMR(sendbuf);
+}
+
+void RdmaContext::DeregisterRecvBuffer(void* recvbuf) {
+  mr_cache_.DeregisterRecvMR(recvbuf);
 }
 
 struct ibv_mr* RdmaContext::send_mr(const void* buf) {

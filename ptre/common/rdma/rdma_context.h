@@ -15,6 +15,8 @@ class MRCache {
  public:
   struct ibv_mr* RegisterSendMR(struct ibv_pd* pd, void* buf, size_t length);
   struct ibv_mr* RegisterRecvMR(struct ibv_pd* pd, void* buf, size_t length);
+  void DeregisterSendMR(void* sendbuf);
+  void DeregisterRecvMR(void* recvbuf);
   bool HasSendMR(void* buf);
   bool HasRecvMR(void* buf);
   struct ibv_mr* send_mr(const void* buf);
@@ -35,6 +37,8 @@ class RdmaContext {
   RdmaChannel* get_channel(int comm_rank);
   void RegisterSendBuffer(void* sendbuf, size_t length);
   void RegisterRecvBuffer(void* recvbuf, size_t length);
+  void DeregisterSendBuffer(void* sendbuf);
+  void DeregisterRecvBuffer(void* recvbuf);
   struct ibv_mr* send_mr(const void* buf);
   struct ibv_mr* recv_mr(const void* buf);
 
