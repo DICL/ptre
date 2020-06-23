@@ -17,6 +17,8 @@ class RdmaRequest {
   int status() { return status_; }
   void set_mr(struct ibv_mr* mr);
   struct ibv_mr* mr() { return mr_; }
+  void set_imm_data(uint32_t imm_data);
+  uint32_t imm_data() const { return imm_data_; }
 
  private:
   volatile int status_;
@@ -25,6 +27,7 @@ class RdmaRequest {
 #ifndef RDMA_REQUEST_BUSY_WAIT
   std::condition_variable cv_;
 #endif
+  uint32_t imm_data_;
   //volatile bool done_;
 };
 

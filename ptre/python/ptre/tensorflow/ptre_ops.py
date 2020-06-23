@@ -21,7 +21,9 @@ def init(comm_size, comm_rank, grpc_hosts_file=None, comm=None,
          selection_strategy=0, num_push=1):
   if grpc_hosts_file is None:
     grpc_hosts_file = "/home/wkim/experiments/grpc_hosts"
-  PTRE_CDLL.ptre_init(comm_size, comm_rank, grpc_hosts_file, selection_strategy, num_push)
+  PTRE_CDLL.ptre_init(comm_size, comm_rank,
+      ctypes.c_char_p(grpc_hosts_file.encode('utf-8')),
+      selection_strategy, num_push)
 
 def init_rdma_grpc_service():
   PTRE_CDLL.ptre_init_rdma_grpc_service()

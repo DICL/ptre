@@ -22,24 +22,20 @@ int RdmaRequest::Join() {
 }
 
 void RdmaRequest::Done() {
-  {
-    std::lock_guard<std::mutex> guard(mu_);
-    status_ = 0;
-    //cache_ctl::clflush((char*) &status_, sizeof(status_));
-    //done_ = true;
-    //cache_ctl::clflush((char*) &done_, sizeof(done_));
-  }
+  std::lock_guard<std::mutex> guard(mu_);
+  status_ = 0;
+  //cache_ctl::clflush((char*) &status_, sizeof(status_));
+  //done_ = true;
+  //cache_ctl::clflush((char*) &done_, sizeof(done_));
 #ifndef RDMA_REQUEST_BUSY_WAIT
   cv_.notify_one();
 #endif
 }
 
 void RdmaRequest::DoneFailure() {
-  {
-    std::lock_guard<std::mutex> guard(mu_);
-    status_ = 1;
-    //done_ = true;
-  }
+  std::lock_guard<std::mutex> guard(mu_);
+  status_ = 1;
+  //done_ = true;
 #ifndef RDMA_REQUEST_BUSY_WAIT
   cv_.notify_one();
 #endif
@@ -47,6 +43,10 @@ void RdmaRequest::DoneFailure() {
 
 void RdmaRequest::set_mr(struct ibv_mr* mr) {
   mr_ = mr;
+}
+
+void RdmaRequest::set_imm_data(uint32_t imm_data) {
+  imm_data_ = imm_data;
 }
 
 }  // namespace common

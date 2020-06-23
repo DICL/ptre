@@ -7,6 +7,8 @@
 #include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/message.h"
 #include "ptre/common/ptre_global.h"
+#include "ptre/common/rdma/rdma_context.h"
+#include "ptre/common/rdma/rdma_mpi.h"
 
 #define NUM_POLLING_THREADS 1
 #define NUM_AGG_THREADS 1

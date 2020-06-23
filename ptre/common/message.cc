@@ -11,7 +11,7 @@ std::size_t DataType_Size(DataType value) {
       return sizeof(float);
     }
     default: {
-      assert(0);
+      return 1;
     }
   }
 }

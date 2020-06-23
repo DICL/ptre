@@ -13,6 +13,10 @@ int RdmaChannel::PostSend(struct ibv_send_wr& wr) {
   struct ibv_send_wr* bad_wr;
   mu_.lock();
   ret = ibv_post_send(qp_, &wr, &bad_wr);
+  if (ret) {
+    LOG(ERROR) << "Failed ibv_post_send @ " << __PRETTY_FUNCTION__
+        << ": ret=" << ret;
+  }
   mu_.unlock();
   return ret;
 }
@@ -22,6 +26,10 @@ int RdmaChannel::PostRecv(struct ibv_recv_wr& wr) {
   struct ibv_recv_wr* bad_wr;
   mu_.lock();
   ret = ibv_post_recv(qp_, &wr, &bad_wr);
+  if (ret) {
+    LOG(ERROR) << "Failed ibv_post_recv @ " << __PRETTY_FUNCTION__
+        << ": ret=" << ret;
+  }
   mu_.unlock();
   return ret;
 }

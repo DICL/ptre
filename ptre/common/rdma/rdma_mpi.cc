@@ -1,6 +1,7 @@
 #include "ptre/common/rdma/rdma_mpi.h"
 
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #include "ptre/common/logging.h"
 #include "ptre/common/message.h"
@@ -104,15 +105,107 @@ int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
   ret = RdmaIrecv(buf, count, datatype, source, tag, ctx, &request);
   if (ret) {
     LOG(ERROR) << "RdmaIrecv returned " << ret << " @ " << __PRETTY_FUNCTION__;
+    return 1;
   }
 
   ret = RdmaWait(&request, status);
   if (ret) {
     LOG(ERROR) << "RdmaWait returned " << ret << " @ " << __PRETTY_FUNCTION__;
+    return 1;
   }
-
   return 0;
 }
+
+int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
+                     int count, DataType dtype, int dst, int tag,
+                     RdmaContext* ctx) {
+  int ret;
+  RdmaRequest request;
+  size_t length = count * DataType_Size(dtype);
+
+  struct ibv_mr* mr = ctx->send_mr(buf);
+  if (mr == NULL) {
+    mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length, 0);
+    if (mr == NULL) {
+      LOG(ERROR) << "Failed to register MR";
+      return 1;
+    }
+    request.set_mr(mr);
+  }
+
+  struct ibv_sge sge;
+  memset(&sge, 0, sizeof(sge));
+  sge.addr = (uint64_t) buf;
+  sge.length = length;
+  sge.lkey = mr->lkey;
+  struct ibv_send_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.wr_id = (uint64_t) &request;
+  wr.sg_list = &sge;
+  wr.num_sge = 1;
+  wr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
+  wr.send_flags = IBV_SEND_SIGNALED;
+  wr.imm_data = htonl(imm_data);
+  wr.wr.rdma.remote_addr = ra.remote_addr;
+  wr.wr.rdma.rkey = ra.rkey;
+
+  auto channel = ctx->get_channel(dst);
+  ret = channel->PostSend(wr);
+  if (ret) {
+    LOG(ERROR) << "Failed PostSend";
+    return 1;
+  }
+
+  ret = RdmaWait(&request, NULL);
+  return 0;
+}
+
+int RdmaRecvWithImm(void* buf, uint32_t* out_imm_data, int count,
+                    DataType dtype, int src, int tag, RdmaContext* ctx,
+                    Status* status) {
+  int ret;
+  RdmaRequest request;
+  size_t length = count * DataType_Size(dtype);
+
+  struct ibv_mr* mr;
+  if (buf != NULL) {
+    mr = ctx->recv_mr(buf);
+    if (mr == NULL) {
+      mr = ibv_reg_mr(ctx->pd(), buf, length,
+          IBV_ACCESS_LOCAL_WRITE
+          | IBV_ACCESS_REMOTE_WRITE
+          | IBV_ACCESS_REMOTE_READ);
+      request.set_mr(mr);
+    }
+  }
+
+  struct ibv_sge sge;
+  if (buf != NULL) {
+    memset(&sge, 0, sizeof(sge));
+    sge.addr = (uint64_t) buf;
+    sge.length = length;
+    sge.lkey = mr->lkey;
+  }
+  struct ibv_recv_wr wr;
+  memset(&wr, 0, sizeof(wr));
+  wr.wr_id = (uint64_t) &request;
+  wr.sg_list = (buf != NULL) ? &sge : NULL;
+  wr.num_sge = (buf != NULL) ? 1 : 0;
+
+  auto channel = ctx->get_channel(src);
+  ret = channel->PostRecv(wr);
+  if (ret) {
+    LOG(ERROR) << "PostRecv Failed @ " << __PRETTY_FUNCTION__
+        << ": ret=" << ret;
+    return 1;
+  }
+
+  ret = RdmaWait(&request, NULL);
+
+  *out_imm_data = request.imm_data();
+  return 0;
+}
+
 
 int RdmaSendrecv(const void* sendbuf, int sendcount, DataType sendtype,
                  int dest, int sendtag, void* recvbuf, int recvcount,
@@ -292,11 +385,9 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
   max_segcount = early_segcount;
   max_real_segsize = max_segcount * dtsize;
   inbuf[0] = (char*) malloc(max_real_segsize);
-  //ctx->RegisterRecvBuffer((void*) inbuf[0], max_real_segsize);
   if (inbuf[0] == NULL) return 1;
   if (comm_size > 2) {
     inbuf[1] = (char*) malloc(max_real_segsize);
-    //ctx->RegisterRecvBuffer((void*) inbuf[1], max_real_segsize);
     if (inbuf[1] == NULL) return 1;
   }
 
@@ -355,6 +446,7 @@ int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
     }
 #endif
 
+    //ctx->RegisterSendBuffer((void*) tmprecv, block_count * dtsize);
     ret = RdmaSend((void*) tmprecv, block_count, datatype, send_to, 0, ctx);
     //assert(ret == 0);
   }

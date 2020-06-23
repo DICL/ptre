@@ -5,14 +5,16 @@ namespace common {
 
 struct ibv_mr* MRCache::RegisterSendMR(struct ibv_pd* pd, void* buf,
                                        size_t length) {
-  struct ibv_mr* mr = ibv_reg_mr(pd, buf, length, 0);
+  struct ibv_mr* mr = ibv_reg_mr(pd, buf, length, IBV_ACCESS_REMOTE_READ);
   send_mr_table_[buf] = mr;
   return mr;
 }
 
 struct ibv_mr* MRCache::RegisterRecvMR(struct ibv_pd* pd, void* buf,
                                        size_t length) {
-  struct ibv_mr* mr = ibv_reg_mr(pd, buf, length, IBV_ACCESS_LOCAL_WRITE);
+  struct ibv_mr* mr = ibv_reg_mr(pd, buf, length,
+      IBV_ACCESS_LOCAL_WRITE
+      | IBV_ACCESS_REMOTE_WRITE);
   recv_mr_table_[buf] = mr;
   return mr;
 }

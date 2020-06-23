@@ -28,10 +28,9 @@ using namespace std;
 using namespace ptre::common;
 
 int main(int argc, char* argv[]) {
-  string hostfile = argv[4];
+  //string hostfile = argv[4];
   int comm_size, comm_rank;
-
-  ptre_init(comm_size, comm_rank, hostfile.c_str(), 0, 1);
+  //ptre_init(comm_size, comm_rank, hostfile.c_str(), 0, 1);
   ptre_init(atoi(argv[argc - 3]), atoi(argv[argc - 1]), argv[argc - 5], 0, 1);
   comm_rank = ptre_rank();
   comm_size = ptre_size();
@@ -49,8 +48,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const int warmup_iters = 5;
-  const int iters = 20;
+  const int warmup_iters = 0;
+  const int iters = 1;
   chrono::system_clock::time_point tps[iters][2];
   float* send_arr = (float*) malloc(size);
   float* recv_arr = (float*) malloc(size);
@@ -78,7 +77,6 @@ int main(int argc, char* argv[]) {
     tps[i][1] = chrono::system_clock::now();
   }
 
-  ptre_finalize(0);
 
   if (comm_rank == 0) {
     float reduced_expect = 0;
@@ -120,29 +118,53 @@ int main(int argc, char* argv[]) {
     long int us_sum;
     long int ms_sum;
     long int s_sum;
-    for (int i = iters / 4; i < 3 * iters / 4; i++) {
-      ns_sum += ns_arr[i];
-      us_sum += us_arr[i];
-      ms_sum += ms_arr[i];
-      s_sum += s_arr[i];
+    long int ns_mean;
+    long int us_mean;
+    long int ms_mean;
+    long int s_mean;
+    string mean_type;
+    if (iters % 4 == 0 && iters / 4 > 0) {
+      mean_type = "interquartile";
+      for (int i = iters / 4; i < 3 * iters / 4; i++) {
+        ns_sum += ns_arr[i];
+        us_sum += us_arr[i];
+        ms_sum += ms_arr[i];
+        s_sum += s_arr[i];
+      }
+      ns_mean = 2 * ns_sum / iters;
+      us_mean = 2 * us_sum / iters;
+      ms_mean = 2 * ms_sum / iters;
+      s_mean = 2 * s_sum / iters;
+    } else {
+      mean_type = "average";
+      for (int i = 0; i < iters; i++) {
+        ns_sum += ns_arr[i];
+        us_sum += us_arr[i];
+        ms_sum += ms_arr[i];
+        s_sum += s_arr[i];
+      }
+      ns_mean = ns_sum / iters;
+      us_mean = us_sum / iters;
+      ms_mean = ms_sum / iters;
+      s_mean = s_sum / iters;
     }
-    long int ns_mean = 2 * ns_sum / iters;
-    long int us_mean = 2 * us_sum / iters;
-    long int ms_mean = 2 * ms_sum / iters;
-    long int s_mean = 2 * s_sum / iters;
     cout << ns_mean << endl;
 
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder
         << "name" << "RdmaAllreduce"
         << "lib" << "ptre"
+        << "lib_info" << bsoncxx::builder::stream::open_document
+          << "commit" << "f401f86d04cac161a67ce9b7c9ed8e7b6cfcfbed"
+        << close_document
+        << "tag" << "cache_inbuf_mr+cache_tmprecv_mr"
         << "optimizer" << "-O3"
         << "parameters" << bsoncxx::builder::stream::open_document
           << "warmup_iters" << warmup_iters
           << "iters" << iters
           << "size" << int64_t(size)
           << "np" << comm_size
-          << "mean_type" << "interquartile"
+          << "mean_type" << mean_type
         << close_document
         << "measures" << bsoncxx::builder::stream::open_document
           << "ns" << bsoncxx::builder::stream::open_document
@@ -161,7 +183,7 @@ int main(int argc, char* argv[]) {
         << bsoncxx::builder::stream::finalize;
 
 #if 1
-    cout << bsoncxx::to_json(doc_value) << endl;
+    LOG(INFO) << bsoncxx::to_json(doc_value);
 #else
     mongocxx::instance instance{};
     mongocxx::client client(mongocxx::uri("mongodb://localhost:27018"));
@@ -173,6 +195,9 @@ int main(int argc, char* argv[]) {
         coll.insert_one(std::move(doc_value));
 #endif
   }
+
+  PtreBarrier();
+  ptre_finalize(0);
 
   return 0;
 }

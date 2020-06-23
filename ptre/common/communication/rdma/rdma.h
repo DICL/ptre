@@ -84,6 +84,11 @@ struct RemoteMR {
   uint32_t rkey;
 };
 
+struct RemoteAddr {
+  uint64_t remote_addr;
+  uint32_t rkey;
+};
+
 //struct RdmaTensorBuf {
 //  void* buf;
 //  size_t length;

@@ -3,8 +3,8 @@
 #include <fstream>
 
 #include "ptre/common/logging.h"
-#include "ptre/common/rdma/rdma_context.h"
-#include "ptre/common/rdma/rdma_mpi.h"
+
+#include <arpa/inet.h>
 
 namespace ptre {
 namespace common {
@@ -853,6 +853,9 @@ int ProcessCQRdmaRequest(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
   for (int i = 0; i < ne; i++) {
     RdmaRequest* req = reinterpret_cast<RdmaRequest*>(wcs[i].wr_id);
     if (wcs[i].status == IBV_WC_SUCCESS) {
+      if (wcs[i].opcode == IBV_WC_RECV_RDMA_WITH_IMM) {
+        req->set_imm_data(ntohl(wcs[i].imm_data));
+      }
       req->Done();
     } else {
       DVLOG(0) << "wc.status=" << wcs[i].status << ", opcode="

@@ -13,6 +13,13 @@ target_link_libraries(send_recv_test
   rdma_context
   ptre_global)
 
+add_executable(sendrecv_test sendrecv_test.cc)
+target_link_libraries(sendrecv_test
+  operations
+  mongocxx
+  bsoncxx
+  ibverbs)
+
 add_executable(allreduce_test allreduce_test.cc)
 target_link_libraries(allreduce_test
   operations
@@ -26,6 +33,11 @@ target_link_libraries(send_test
   mongocxx
   bsoncxx
   ibverbs)
+
+add_executable(write_with_imm_test write_with_imm_test.cc)
+target_link_libraries(write_with_imm_test
+  operations
+  )
 
 
 #add_executable(cas_test cas_test.cc)
