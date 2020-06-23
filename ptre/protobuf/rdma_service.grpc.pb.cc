@@ -11,7 +11,7 @@
 #include <grpcpp/impl/codegen/channel_interface.h>
 #include <grpcpp/impl/codegen/client_unary_call.h>
 #include <grpcpp/impl/codegen/client_callback.h>
-#include <grpcpp/impl/codegen/method_handler_impl.h>
+#include <grpcpp/impl/codegen/method_handler.h>
 #include <grpcpp/impl/codegen/rpc_service_method.h>
 #include <grpcpp/impl/codegen/server_callback.h>
 #include <grpcpp/impl/codegen/service_type.h>
@@ -59,19 +59,27 @@ Rdma::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
 }
 
 void Rdma::Stub::experimental_async::GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetLID_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetLID_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::GetLID(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetLIDResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetLID_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetLID_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetLID_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::GetLID(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetLID_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetLIDResponse>* Rdma::Stub::AsyncGetLIDRaw(::grpc::ClientContext* context, const ::ptre::GetLIDRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetLIDResponse>::Create(channel_.get(), cq, rpcmethod_GetLID_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetLIDResponse>::Create(channel_.get(), cq, rpcmethod_GetLID_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetLIDResponse>* Rdma::Stub::PrepareAsyncGetLIDRaw(::grpc::ClientContext* context, const ::ptre::GetLIDRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetLIDResponse>::Create(channel_.get(), cq, rpcmethod_GetLID_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetLIDResponse>::Create(channel_.get(), cq, rpcmethod_GetLID_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest& request, ::ptre::GetQPAttrResponse* response) {
@@ -79,19 +87,27 @@ void Rdma::Stub::experimental_async::GetLID(::grpc::ClientContext* context, cons
 }
 
 void Rdma::Stub::experimental_async::GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetQPAttr_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetQPAttr_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::GetQPAttr(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetQPAttrResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetQPAttr_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetQPAttr_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetQPAttr_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::GetQPAttr(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetQPAttr_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetQPAttrResponse>* Rdma::Stub::AsyncGetQPAttrRaw(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetQPAttrResponse>::Create(channel_.get(), cq, rpcmethod_GetQPAttr_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetQPAttrResponse>::Create(channel_.get(), cq, rpcmethod_GetQPAttr_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetQPAttrResponse>* Rdma::Stub::PrepareAsyncGetQPAttrRaw(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetQPAttrResponse>::Create(channel_.get(), cq, rpcmethod_GetQPAttr_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetQPAttrResponse>::Create(channel_.get(), cq, rpcmethod_GetQPAttr_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest& request, ::ptre::GetRemoteAddressResponse* response) {
@@ -99,19 +115,27 @@ void Rdma::Stub::experimental_async::GetQPAttr(::grpc::ClientContext* context, c
 }
 
 void Rdma::Stub::experimental_async::GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddress_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddress_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddress_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddress_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddress_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddress_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressResponse>* Rdma::Stub::AsyncGetRemoteAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddress_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddress_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressResponse>* Rdma::Stub::PrepareAsyncGetRemoteAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddress_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddress_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::ptre::GetRemoteParamAddressResponse* response) {
@@ -119,19 +143,27 @@ void Rdma::Stub::experimental_async::GetRemoteAddress(::grpc::ClientContext* con
 }
 
 void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteParamAddress_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteParamAddress_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteParamAddress_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteParamAddress_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetRemoteParamAddress_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetRemoteParamAddress_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteParamAddressResponse>* Rdma::Stub::AsyncGetRemoteParamAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteParamAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteParamAddress_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteParamAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteParamAddress_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteParamAddressResponse>* Rdma::Stub::PrepareAsyncGetRemoteParamAddressRaw(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteParamAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteParamAddress_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteParamAddressResponse>::Create(channel_.get(), cq, rpcmethod_GetRemoteParamAddress_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest& request, ::ptre::AttemptPushResponse* response) {
@@ -139,19 +171,27 @@ void Rdma::Stub::experimental_async::GetRemoteParamAddress(::grpc::ClientContext
 }
 
 void Rdma::Stub::experimental_async::AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPush_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPush_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::AttemptPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPush_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPush_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_AttemptPush_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::AttemptPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_AttemptPush_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::AttemptPushResponse>* Rdma::Stub::AsyncAttemptPushRaw(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPush_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPush_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::AttemptPushResponse>* Rdma::Stub::PrepareAsyncAttemptPushRaw(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPush_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPush_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest& request, ::ptre::AttemptPushVarResponse* response) {
@@ -159,19 +199,27 @@ void Rdma::Stub::experimental_async::AttemptPush(::grpc::ClientContext* context,
 }
 
 void Rdma::Stub::experimental_async::AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPushVar_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPushVar_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::AttemptPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushVarResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPushVar_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_AttemptPushVar_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_AttemptPushVar_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::AttemptPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_AttemptPushVar_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::AttemptPushVarResponse>* Rdma::Stub::AsyncAttemptPushVarRaw(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushVarResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPushVar_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushVarResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPushVar_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::AttemptPushVarResponse>* Rdma::Stub::PrepareAsyncAttemptPushVarRaw(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushVarResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPushVar_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::AttemptPushVarResponse>::Create(channel_.get(), cq, rpcmethod_AttemptPushVar_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest& request, ::ptre::CancelPushVarResponse* response) {
@@ -179,19 +227,27 @@ void Rdma::Stub::experimental_async::AttemptPushVar(::grpc::ClientContext* conte
 }
 
 void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_CancelPushVar_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::CancelPushVarResponse>* Rdma::Stub::AsyncCancelPushVarRaw(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CancelPushVarResponse>::Create(channel_.get(), cq, rpcmethod_CancelPushVar_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::CancelPushVarResponse>::Create(channel_.get(), cq, rpcmethod_CancelPushVar_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::CancelPushVarResponse>* Rdma::Stub::PrepareAsyncCancelPushVarRaw(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::CancelPushVarResponse>::Create(channel_.get(), cq, rpcmethod_CancelPushVar_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::CancelPushVarResponse>::Create(channel_.get(), cq, rpcmethod_CancelPushVar_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::ptre::NotifyPushDoneResponse* response) {
@@ -199,19 +255,27 @@ void Rdma::Stub::experimental_async::CancelPushVar(::grpc::ClientContext* contex
 }
 
 void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_NotifyPushDone_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::NotifyPushDoneResponse>* Rdma::Stub::AsyncNotifyPushDoneRaw(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::NotifyPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_NotifyPushDone_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::NotifyPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_NotifyPushDone_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::NotifyPushDoneResponse>* Rdma::Stub::PrepareAsyncNotifyPushDoneRaw(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::NotifyPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_NotifyPushDone_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::NotifyPushDoneResponse>::Create(channel_.get(), cq, rpcmethod_NotifyPushDone_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::ptre::BarrierResponse* response) {
@@ -219,19 +283,27 @@ void Rdma::Stub::experimental_async::NotifyPushDone(::grpc::ClientContext* conte
 }
 
 void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Barrier_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::BarrierResponse>* Rdma::Stub::AsyncBarrierRaw(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::BarrierResponse>* Rdma::Stub::PrepareAsyncBarrierRaw(::grpc::ClientContext* context, const ::ptre::BarrierRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::BarrierResponse>::Create(channel_.get(), cq, rpcmethod_Barrier_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest& request, ::ptre::RecvResponse* response) {
@@ -239,19 +311,27 @@ void Rdma::Stub::experimental_async::Barrier(::grpc::ClientContext* context, con
 }
 
 void Rdma::Stub::experimental_async::Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Recv_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Recv_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Recv_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_Recv_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Recv_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_Recv_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::RecvResponse>* Rdma::Stub::AsyncRecvRaw(::grpc::ClientContext* context, const ::ptre::RecvRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::RecvResponse>::Create(channel_.get(), cq, rpcmethod_Recv_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::RecvResponse>::Create(channel_.get(), cq, rpcmethod_Recv_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::RecvResponse>* Rdma::Stub::PrepareAsyncRecvRaw(::grpc::ClientContext* context, const ::ptre::RecvRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::RecvResponse>::Create(channel_.get(), cq, rpcmethod_Recv_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::RecvResponse>::Create(channel_.get(), cq, rpcmethod_Recv_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::ptre::GetRemoteAddressV2Response* response) {
@@ -259,19 +339,27 @@ void Rdma::Stub::experimental_async::Recv(::grpc::ClientContext* context, const 
 }
 
 void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetRemoteAddressV2_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>* Rdma::Stub::AsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetRemoteAddressV2Response>* Rdma::Stub::PrepareAsyncGetRemoteAddressV2Raw(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetRemoteAddressV2Response>::Create(channel_.get(), cq, rpcmethod_GetRemoteAddressV2_, context, request, false);
 }
 
 ::grpc::Status Rdma::Stub::GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::ptre::GetPermitResponse* response) {
@@ -279,19 +367,27 @@ void Rdma::Stub::experimental_async::GetRemoteAddressV2(::grpc::ClientContext* c
 }
 
 void Rdma::Stub::experimental_async::GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, std::move(f));
 }
 
 void Rdma::Stub::experimental_async::GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, std::move(f));
+}
+
+void Rdma::Stub::experimental_async::GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, reactor);
+}
+
+void Rdma::Stub::experimental_async::GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_GetPermit_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>* Rdma::Stub::AsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetPermitResponse>::Create(channel_.get(), cq, rpcmethod_GetPermit_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetPermitResponse>::Create(channel_.get(), cq, rpcmethod_GetPermit_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::GetPermitResponse>* Rdma::Stub::PrepareAsyncGetPermitRaw(::grpc::ClientContext* context, const ::ptre::GetPermitRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::GetPermitResponse>::Create(channel_.get(), cq, rpcmethod_GetPermit_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::GetPermitResponse>::Create(channel_.get(), cq, rpcmethod_GetPermit_, context, request, false);
 }
 
 Rdma::Service::Service() {

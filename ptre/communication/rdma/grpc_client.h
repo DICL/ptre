@@ -6,6 +6,7 @@
 #include <map>
 
 #include <grpcpp/grpcpp.h>
+#include <infiniband/verbs.h>
 
 #include "ptre/protobuf/rdma_service.grpc.pb.h"
 #include "tensorflow/core/platform/logging.h"
@@ -19,7 +20,7 @@ class GrpcClient {
   //GrpcClient(std::shared_ptr<::grpc::Channel> channel);
   GrpcClient(int src_rank, int dst_rank, const std::string& hostname);
   ~GrpcClient();
-  int GetLID(uint16_t* remote_lid);
+  int GetLID(union ibv_gid* remote_gid, uint16_t* remote_lid);
   int GetQPAttr(uint32_t* remote_qpn, uint32_t* remote_psn);
   int GetRemoteAddress(const BufType type, const std::string& name,
       uint64_t* out_remote_addr, uint32_t* out_rkey);

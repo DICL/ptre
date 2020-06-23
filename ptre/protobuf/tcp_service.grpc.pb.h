@@ -11,20 +11,29 @@
 #include <grpcpp/impl/codegen/async_stream.h>
 #include <grpcpp/impl/codegen/async_unary_call.h>
 #include <grpcpp/impl/codegen/client_callback.h>
-#include <grpcpp/impl/codegen/method_handler_impl.h>
+#include <grpcpp/impl/codegen/client_context.h>
+#include <grpcpp/impl/codegen/completion_queue.h>
+#include <grpcpp/impl/codegen/method_handler.h>
 #include <grpcpp/impl/codegen/proto_utils.h>
 #include <grpcpp/impl/codegen/rpc_method.h>
 #include <grpcpp/impl/codegen/server_callback.h>
+#include <grpcpp/impl/codegen/server_context.h>
 #include <grpcpp/impl/codegen/service_type.h>
 #include <grpcpp/impl/codegen/status.h>
 #include <grpcpp/impl/codegen/stub_options.h>
 #include <grpcpp/impl/codegen/sync_stream.h>
 
-namespace grpc {
+namespace grpc_impl {
 class CompletionQueue;
-class Channel;
 class ServerCompletionQueue;
 class ServerContext;
+}  // namespace grpc_impl
+
+namespace grpc {
+namespace experimental {
+template <typename RequestT, typename ResponseT>
+class MessageAllocator;
+}  // namespace experimental
 }  // namespace grpc
 
 namespace ptre {
@@ -49,6 +58,8 @@ class Tcp final {
       virtual ~experimental_async_interface() {}
       virtual void PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
     };
     virtual class experimental_async_interface* experimental_async() { return nullptr; }
   private:
@@ -70,6 +81,8 @@ class Tcp final {
      public:
       void PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) override;
       void PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) override;
+      void PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit experimental_async(Stub* stub): stub_(stub) { }
@@ -96,7 +109,7 @@ class Tcp final {
   template <class BaseClass>
   class WithAsyncMethod_PushTensor : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_PushTensor() {
       ::grpc::Service::MarkMethodAsync(0);
@@ -105,7 +118,7 @@ class Tcp final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) override {
+    ::grpc::Status PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -117,11 +130,11 @@ class Tcp final {
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_PushTensor : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_PushTensor() {
       ::grpc::Service::experimental().MarkMethodCallback(0,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::PushTensorRequest* request,
                  ::ptre::PushTensorResponse* response,
@@ -129,21 +142,27 @@ class Tcp final {
                    return this->PushTensor(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_PushTensor(
+        ::grpc::experimental::MessageAllocator< ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>*>(
+          ::grpc::Service::experimental().GetHandler(0))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_PushTensor() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) override {
+    ::grpc::Status PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   typedef ExperimentalWithCallbackMethod_PushTensor<Service > ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_PushTensor : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_PushTensor() {
       ::grpc::Service::MarkMethodGeneric(0);
@@ -152,7 +171,7 @@ class Tcp final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) override {
+    ::grpc::Status PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -160,7 +179,7 @@ class Tcp final {
   template <class BaseClass>
   class WithRawMethod_PushTensor : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_PushTensor() {
       ::grpc::Service::MarkMethodRaw(0);
@@ -169,7 +188,7 @@ class Tcp final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) override {
+    ::grpc::Status PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -180,11 +199,11 @@ class Tcp final {
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_PushTensor : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_PushTensor() {
       ::grpc::Service::experimental().MarkMethodRawCallback(0,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -196,16 +215,16 @@ class Tcp final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) override {
+    ::grpc::Status PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void PushTensor(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void PushTensor(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class WithStreamedUnaryMethod_PushTensor : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_PushTensor() {
       ::grpc::Service::MarkMethodStreamed(0,
@@ -215,7 +234,7 @@ class Tcp final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) override {
+    ::grpc::Status PushTensor(::grpc::ServerContext* /*context*/, const ::ptre::PushTensorRequest* /*request*/, ::ptre::PushTensorResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }

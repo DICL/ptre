@@ -41,8 +41,8 @@ class RdmaMgr {
 
   // Queue Pair Modification Functions
   void INITQP(int dst);
-  void RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,
-      uint32_t remote_psn);
+  void RTRQP(int dst, union ibv_gid remote_gid, uint16_t remote_lid,
+             uint32_t remote_qpn, uint32_t remote_psn = 0);
   void RTSQP(int dst, uint32_t my_psn);
   void RESETQP(int dst);
   void ConnectQP(int dst, uint32_t remote_qpn);
@@ -144,6 +144,7 @@ class RdmaMgr {
   int rank() { return ptre_rank_; }
   struct ibv_context* ctx();
   struct ibv_port_attr port_attr();
+  union ibv_gid gid() { return gid_; }
   struct ibv_pd* pd();
   struct ibv_qp* qp(int dst);
   struct ibv_cq* send_cq(int dst) { return send_cqs_[dst]; }
@@ -154,6 +155,8 @@ class RdmaMgr {
   int var_name_to_index(const string& var_name);
   void set_remote_lid(int dst, uint16_t lid);
   uint16_t remote_lid(int dst);
+  void set_remote_gid(int dst, const union ibv_gid& gid);
+  union ibv_gid remote_gid(int dst) { return remote_gids_[dst]; }
   PushVariable* push_variable(int idx);
   PushVariable* push_variable(const string& var_name);
   PullVariable* pull_variable(int idx);
@@ -169,12 +172,14 @@ class RdmaMgr {
   struct ibv_context* ctx_;
   struct ibv_pd* pd_;
   struct ibv_port_attr port_attr_;
+  union ibv_gid gid_;
   // RDMA Completion Queues
   std::vector<struct ibv_cq*> send_cqs_;
   std::vector<struct ibv_cq*> recv_cqs_;
   // RDMA Queue Pairs
   std::vector<struct ibv_qp*> qps_;
   // RDMA Remote LIDs
+  std::vector<union ibv_gid> remote_gids_;
   std::vector<uint16_t> remote_lids_;
   // RDMA Receive Work Request Array
   std::vector<struct ibv_recv_wr*> recv_wrs_;

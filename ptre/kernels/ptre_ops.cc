@@ -465,10 +465,12 @@ void ConcurrentAggregationThreadLoop() {
 }
 
 void load_grpc_hosts(const string& grpc_hosts_file) {
+  LOG(INFO) << "grpc_hosts_file: " << grpc_hosts_file;
   std::string in_line;
   std::ifstream in(grpc_hosts_file);
   while (std::getline(in, in_line)) {
     if (in_line[0] == '#') continue;
+    LOG(INFO) << in_line;
     ptre_global.grpc_hosts.emplace_back(in_line);
   }
   in.close();
@@ -500,17 +502,20 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     GrpcClient* client;
     ptre_global.grpc_client_cache->GetClient(i, &client);
     int ret = -1;
+    union ibv_gid remote_gid;
     uint16_t remote_lid;
     while (ret) {
-      ret = client->GetLID(&remote_lid);
+      ret = client->GetLID(&remote_gid, &remote_lid);
     }
     ptre_global.rdma_mgr->set_remote_lid(i, remote_lid);
+    ptre_global.rdma_mgr->set_remote_gid(i, remote_gid);
     ret = -1;
     uint32_t remote_qpn;
     uint32_t remote_psn;
     while (ret) {
       ret = client->GetQPAttr(&remote_qpn, &remote_psn);
     }
+    LOG(INFO) << "ConnectQP(" << i << ", " << remote_qpn << ")";
     ptre_global.rdma_mgr->ConnectQP(i, remote_qpn);
   }
   PtreBarrier();

@@ -11,20 +11,29 @@
 #include <grpcpp/impl/codegen/async_stream.h>
 #include <grpcpp/impl/codegen/async_unary_call.h>
 #include <grpcpp/impl/codegen/client_callback.h>
-#include <grpcpp/impl/codegen/method_handler_impl.h>
+#include <grpcpp/impl/codegen/client_context.h>
+#include <grpcpp/impl/codegen/completion_queue.h>
+#include <grpcpp/impl/codegen/method_handler.h>
 #include <grpcpp/impl/codegen/proto_utils.h>
 #include <grpcpp/impl/codegen/rpc_method.h>
 #include <grpcpp/impl/codegen/server_callback.h>
+#include <grpcpp/impl/codegen/server_context.h>
 #include <grpcpp/impl/codegen/service_type.h>
 #include <grpcpp/impl/codegen/status.h>
 #include <grpcpp/impl/codegen/stub_options.h>
 #include <grpcpp/impl/codegen/sync_stream.h>
 
-namespace grpc {
+namespace grpc_impl {
 class CompletionQueue;
-class Channel;
 class ServerCompletionQueue;
 class ServerContext;
+}  // namespace grpc_impl
+
+namespace grpc {
+namespace experimental {
+template <typename RequestT, typename ResponseT>
+class MessageAllocator;
+}  // namespace experimental
 }  // namespace grpc
 
 namespace ptre {
@@ -126,28 +135,52 @@ class Rdma final {
       virtual ~experimental_async_interface() {}
       virtual void GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetLID(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetLIDResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void GetLID(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetQPAttr(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetQPAttrResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void GetQPAttr(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void AttemptPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void AttemptPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void AttemptPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushVarResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void AttemptPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       virtual void GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      virtual void GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
     };
     virtual class experimental_async_interface* experimental_async() { return nullptr; }
   private:
@@ -268,28 +301,52 @@ class Rdma final {
      public:
       void GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, std::function<void(::grpc::Status)>) override;
       void GetLID(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetLIDResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetLID(::grpc::ClientContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void GetLID(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, std::function<void(::grpc::Status)>) override;
       void GetQPAttr(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetQPAttrResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetQPAttr(::grpc::ClientContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void GetQPAttr(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetRemoteAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void GetRemoteAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetRemoteParamAddress(::grpc::ClientContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void GetRemoteParamAddress(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, std::function<void(::grpc::Status)>) override;
       void AttemptPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushResponse* response, std::function<void(::grpc::Status)>) override;
+      void AttemptPush(::grpc::ClientContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void AttemptPush(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, std::function<void(::grpc::Status)>) override;
       void AttemptPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushVarResponse* response, std::function<void(::grpc::Status)>) override;
+      void AttemptPushVar(::grpc::ClientContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void AttemptPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)>) override;
       void CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, std::function<void(::grpc::Status)>) override;
+      void CancelPushVar(::grpc::ClientContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void CancelPushVar(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)>) override;
       void NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, std::function<void(::grpc::Status)>) override;
+      void NotifyPushDone(::grpc::ClientContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void NotifyPushDone(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)>) override;
       void Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, std::function<void(::grpc::Status)>) override;
+      void Barrier(::grpc::ClientContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void Barrier(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)>) override;
       void Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, std::function<void(::grpc::Status)>) override;
+      void Recv(::grpc::ClientContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void Recv(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::RecvResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) override;
       void GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, std::function<void(::grpc::Status)>) override;
+      void GetRemoteAddressV2(::grpc::ClientContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void GetRemoteAddressV2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       void GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) override;
       void GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetPermit(::grpc::ClientContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      void GetPermit(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit experimental_async(Stub* stub): stub_(stub) { }
@@ -360,7 +417,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_GetLID : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetLID() {
       ::grpc::Service::MarkMethodAsync(0);
@@ -369,7 +426,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response) override {
+    ::grpc::Status GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -380,7 +437,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_GetQPAttr : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetQPAttr() {
       ::grpc::Service::MarkMethodAsync(1);
@@ -389,7 +446,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response) override {
+    ::grpc::Status GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -400,7 +457,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_GetRemoteAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetRemoteAddress() {
       ::grpc::Service::MarkMethodAsync(2);
@@ -409,7 +466,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) override {
+    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -420,7 +477,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_GetRemoteParamAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetRemoteParamAddress() {
       ::grpc::Service::MarkMethodAsync(3);
@@ -429,7 +486,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -440,7 +497,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_AttemptPush : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_AttemptPush() {
       ::grpc::Service::MarkMethodAsync(4);
@@ -449,7 +506,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response) override {
+    ::grpc::Status AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -460,7 +517,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_AttemptPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_AttemptPushVar() {
       ::grpc::Service::MarkMethodAsync(5);
@@ -469,7 +526,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) override {
+    ::grpc::Status AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -480,7 +537,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_CancelPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_CancelPushVar() {
       ::grpc::Service::MarkMethodAsync(6);
@@ -489,7 +546,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) override {
+    ::grpc::Status CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -500,7 +557,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_NotifyPushDone : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_NotifyPushDone() {
       ::grpc::Service::MarkMethodAsync(7);
@@ -509,7 +566,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) override {
+    ::grpc::Status NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -520,7 +577,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_Barrier : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_Barrier() {
       ::grpc::Service::MarkMethodAsync(8);
@@ -529,7 +586,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) override {
+    ::grpc::Status Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -540,7 +597,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_Recv : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_Recv() {
       ::grpc::Service::MarkMethodAsync(9);
@@ -549,7 +606,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response) override {
+    ::grpc::Status Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -560,7 +617,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_GetRemoteAddressV2 : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetRemoteAddressV2() {
       ::grpc::Service::MarkMethodAsync(10);
@@ -569,7 +626,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -580,7 +637,7 @@ class Rdma final {
   template <class BaseClass>
   class WithAsyncMethod_GetPermit : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetPermit() {
       ::grpc::Service::MarkMethodAsync(11);
@@ -589,7 +646,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+    ::grpc::Status GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -601,11 +658,11 @@ class Rdma final {
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetLID : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_GetLID() {
       ::grpc::Service::experimental().MarkMethodCallback(0,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetLIDRequest, ::ptre::GetLIDResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetLIDRequest, ::ptre::GetLIDResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::GetLIDRequest* request,
                  ::ptre::GetLIDResponse* response,
@@ -613,24 +670,30 @@ class Rdma final {
                    return this->GetLID(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_GetLID(
+        ::grpc::experimental::MessageAllocator< ::ptre::GetLIDRequest, ::ptre::GetLIDResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetLIDRequest, ::ptre::GetLIDResponse>*>(
+          ::grpc::Service::experimental().GetHandler(0))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_GetLID() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response) override {
+    ::grpc::Status GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetQPAttr : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_GetQPAttr() {
       ::grpc::Service::experimental().MarkMethodCallback(1,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetQPAttrRequest, ::ptre::GetQPAttrResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetQPAttrRequest, ::ptre::GetQPAttrResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::GetQPAttrRequest* request,
                  ::ptre::GetQPAttrResponse* response,
@@ -638,24 +701,30 @@ class Rdma final {
                    return this->GetQPAttr(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_GetQPAttr(
+        ::grpc::experimental::MessageAllocator< ::ptre::GetQPAttrRequest, ::ptre::GetQPAttrResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetQPAttrRequest, ::ptre::GetQPAttrResponse>*>(
+          ::grpc::Service::experimental().GetHandler(1))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_GetQPAttr() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response) override {
+    ::grpc::Status GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetRemoteAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_GetRemoteAddress() {
       ::grpc::Service::experimental().MarkMethodCallback(2,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetRemoteAddressRequest, ::ptre::GetRemoteAddressResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetRemoteAddressRequest, ::ptre::GetRemoteAddressResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::GetRemoteAddressRequest* request,
                  ::ptre::GetRemoteAddressResponse* response,
@@ -663,24 +732,30 @@ class Rdma final {
                    return this->GetRemoteAddress(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_GetRemoteAddress(
+        ::grpc::experimental::MessageAllocator< ::ptre::GetRemoteAddressRequest, ::ptre::GetRemoteAddressResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetRemoteAddressRequest, ::ptre::GetRemoteAddressResponse>*>(
+          ::grpc::Service::experimental().GetHandler(2))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_GetRemoteAddress() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) override {
+    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetRemoteParamAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_GetRemoteParamAddress() {
       ::grpc::Service::experimental().MarkMethodCallback(3,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetRemoteParamAddressRequest, ::ptre::GetRemoteParamAddressResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetRemoteParamAddressRequest, ::ptre::GetRemoteParamAddressResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::GetRemoteParamAddressRequest* request,
                  ::ptre::GetRemoteParamAddressResponse* response,
@@ -688,24 +763,30 @@ class Rdma final {
                    return this->GetRemoteParamAddress(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_GetRemoteParamAddress(
+        ::grpc::experimental::MessageAllocator< ::ptre::GetRemoteParamAddressRequest, ::ptre::GetRemoteParamAddressResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetRemoteParamAddressRequest, ::ptre::GetRemoteParamAddressResponse>*>(
+          ::grpc::Service::experimental().GetHandler(3))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_GetRemoteParamAddress() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_AttemptPush : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_AttemptPush() {
       ::grpc::Service::experimental().MarkMethodCallback(4,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::AttemptPushRequest, ::ptre::AttemptPushResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::AttemptPushRequest, ::ptre::AttemptPushResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::AttemptPushRequest* request,
                  ::ptre::AttemptPushResponse* response,
@@ -713,24 +794,30 @@ class Rdma final {
                    return this->AttemptPush(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_AttemptPush(
+        ::grpc::experimental::MessageAllocator< ::ptre::AttemptPushRequest, ::ptre::AttemptPushResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::AttemptPushRequest, ::ptre::AttemptPushResponse>*>(
+          ::grpc::Service::experimental().GetHandler(4))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_AttemptPush() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response) override {
+    ::grpc::Status AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_AttemptPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_AttemptPushVar() {
       ::grpc::Service::experimental().MarkMethodCallback(5,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::AttemptPushVarRequest, ::ptre::AttemptPushVarResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::AttemptPushVarRequest, ::ptre::AttemptPushVarResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::AttemptPushVarRequest* request,
                  ::ptre::AttemptPushVarResponse* response,
@@ -738,24 +825,30 @@ class Rdma final {
                    return this->AttemptPushVar(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_AttemptPushVar(
+        ::grpc::experimental::MessageAllocator< ::ptre::AttemptPushVarRequest, ::ptre::AttemptPushVarResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::AttemptPushVarRequest, ::ptre::AttemptPushVarResponse>*>(
+          ::grpc::Service::experimental().GetHandler(5))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_AttemptPushVar() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) override {
+    ::grpc::Status AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_CancelPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_CancelPushVar() {
       ::grpc::Service::experimental().MarkMethodCallback(6,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::CancelPushVarRequest, ::ptre::CancelPushVarResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::CancelPushVarRequest, ::ptre::CancelPushVarResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::CancelPushVarRequest* request,
                  ::ptre::CancelPushVarResponse* response,
@@ -763,24 +856,30 @@ class Rdma final {
                    return this->CancelPushVar(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_CancelPushVar(
+        ::grpc::experimental::MessageAllocator< ::ptre::CancelPushVarRequest, ::ptre::CancelPushVarResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::CancelPushVarRequest, ::ptre::CancelPushVarResponse>*>(
+          ::grpc::Service::experimental().GetHandler(6))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_CancelPushVar() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) override {
+    ::grpc::Status CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_NotifyPushDone : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_NotifyPushDone() {
       ::grpc::Service::experimental().MarkMethodCallback(7,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::NotifyPushDoneRequest, ::ptre::NotifyPushDoneResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::NotifyPushDoneRequest, ::ptre::NotifyPushDoneResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::NotifyPushDoneRequest* request,
                  ::ptre::NotifyPushDoneResponse* response,
@@ -788,24 +887,30 @@ class Rdma final {
                    return this->NotifyPushDone(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_NotifyPushDone(
+        ::grpc::experimental::MessageAllocator< ::ptre::NotifyPushDoneRequest, ::ptre::NotifyPushDoneResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::NotifyPushDoneRequest, ::ptre::NotifyPushDoneResponse>*>(
+          ::grpc::Service::experimental().GetHandler(7))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_NotifyPushDone() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) override {
+    ::grpc::Status NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_Barrier : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_Barrier() {
       ::grpc::Service::experimental().MarkMethodCallback(8,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::BarrierRequest, ::ptre::BarrierResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::BarrierRequest, ::ptre::BarrierResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::BarrierRequest* request,
                  ::ptre::BarrierResponse* response,
@@ -813,24 +918,30 @@ class Rdma final {
                    return this->Barrier(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_Barrier(
+        ::grpc::experimental::MessageAllocator< ::ptre::BarrierRequest, ::ptre::BarrierResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::BarrierRequest, ::ptre::BarrierResponse>*>(
+          ::grpc::Service::experimental().GetHandler(8))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_Barrier() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) override {
+    ::grpc::Status Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_Recv : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_Recv() {
       ::grpc::Service::experimental().MarkMethodCallback(9,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::RecvRequest, ::ptre::RecvResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::RecvRequest, ::ptre::RecvResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::RecvRequest* request,
                  ::ptre::RecvResponse* response,
@@ -838,24 +949,30 @@ class Rdma final {
                    return this->Recv(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_Recv(
+        ::grpc::experimental::MessageAllocator< ::ptre::RecvRequest, ::ptre::RecvResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::RecvRequest, ::ptre::RecvResponse>*>(
+          ::grpc::Service::experimental().GetHandler(9))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_Recv() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response) override {
+    ::grpc::Status Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetRemoteAddressV2 : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_GetRemoteAddressV2() {
       ::grpc::Service::experimental().MarkMethodCallback(10,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::GetRemoteAddressV2Request* request,
                  ::ptre::GetRemoteAddressV2Response* response,
@@ -863,24 +980,30 @@ class Rdma final {
                    return this->GetRemoteAddressV2(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_GetRemoteAddressV2(
+        ::grpc::experimental::MessageAllocator< ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetRemoteAddressV2Request, ::ptre::GetRemoteAddressV2Response>*>(
+          ::grpc::Service::experimental().GetHandler(10))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_GetRemoteAddressV2() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetPermit : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithCallbackMethod_GetPermit() {
       ::grpc::Service::experimental().MarkMethodCallback(11,
-        new ::grpc::internal::CallbackUnaryHandler< ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::GetPermitRequest* request,
                  ::ptre::GetPermitResponse* response,
@@ -888,21 +1011,27 @@ class Rdma final {
                    return this->GetPermit(context, request, response, controller);
                  }));
     }
+    void SetMessageAllocatorFor_GetPermit(
+        ::grpc::experimental::MessageAllocator< ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>* allocator) {
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::ptre::GetPermitRequest, ::ptre::GetPermitResponse>*>(
+          ::grpc::Service::experimental().GetHandler(11))
+              ->SetMessageAllocator(allocator);
+    }
     ~ExperimentalWithCallbackMethod_GetPermit() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+    ::grpc::Status GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   typedef ExperimentalWithCallbackMethod_GetLID<ExperimentalWithCallbackMethod_GetQPAttr<ExperimentalWithCallbackMethod_GetRemoteAddress<ExperimentalWithCallbackMethod_GetRemoteParamAddress<ExperimentalWithCallbackMethod_AttemptPush<ExperimentalWithCallbackMethod_AttemptPushVar<ExperimentalWithCallbackMethod_CancelPushVar<ExperimentalWithCallbackMethod_NotifyPushDone<ExperimentalWithCallbackMethod_Barrier<ExperimentalWithCallbackMethod_Recv<ExperimentalWithCallbackMethod_GetRemoteAddressV2<ExperimentalWithCallbackMethod_GetPermit<Service > > > > > > > > > > > > ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetLID : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetLID() {
       ::grpc::Service::MarkMethodGeneric(0);
@@ -911,7 +1040,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response) override {
+    ::grpc::Status GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -919,7 +1048,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_GetQPAttr : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetQPAttr() {
       ::grpc::Service::MarkMethodGeneric(1);
@@ -928,7 +1057,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response) override {
+    ::grpc::Status GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -936,7 +1065,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_GetRemoteAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetRemoteAddress() {
       ::grpc::Service::MarkMethodGeneric(2);
@@ -945,7 +1074,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) override {
+    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -953,7 +1082,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_GetRemoteParamAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetRemoteParamAddress() {
       ::grpc::Service::MarkMethodGeneric(3);
@@ -962,7 +1091,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -970,7 +1099,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_AttemptPush : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_AttemptPush() {
       ::grpc::Service::MarkMethodGeneric(4);
@@ -979,7 +1108,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response) override {
+    ::grpc::Status AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -987,7 +1116,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_AttemptPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_AttemptPushVar() {
       ::grpc::Service::MarkMethodGeneric(5);
@@ -996,7 +1125,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) override {
+    ::grpc::Status AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1004,7 +1133,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_CancelPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_CancelPushVar() {
       ::grpc::Service::MarkMethodGeneric(6);
@@ -1013,7 +1142,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) override {
+    ::grpc::Status CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1021,7 +1150,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_NotifyPushDone : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_NotifyPushDone() {
       ::grpc::Service::MarkMethodGeneric(7);
@@ -1030,7 +1159,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) override {
+    ::grpc::Status NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1038,7 +1167,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_Barrier : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_Barrier() {
       ::grpc::Service::MarkMethodGeneric(8);
@@ -1047,7 +1176,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) override {
+    ::grpc::Status Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1055,7 +1184,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_Recv : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_Recv() {
       ::grpc::Service::MarkMethodGeneric(9);
@@ -1064,7 +1193,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response) override {
+    ::grpc::Status Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1072,7 +1201,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_GetRemoteAddressV2 : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetRemoteAddressV2() {
       ::grpc::Service::MarkMethodGeneric(10);
@@ -1081,7 +1210,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1089,7 +1218,7 @@ class Rdma final {
   template <class BaseClass>
   class WithGenericMethod_GetPermit : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetPermit() {
       ::grpc::Service::MarkMethodGeneric(11);
@@ -1098,7 +1227,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+    ::grpc::Status GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1106,7 +1235,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_GetLID : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetLID() {
       ::grpc::Service::MarkMethodRaw(0);
@@ -1115,7 +1244,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response) override {
+    ::grpc::Status GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1126,7 +1255,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_GetQPAttr : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetQPAttr() {
       ::grpc::Service::MarkMethodRaw(1);
@@ -1135,7 +1264,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response) override {
+    ::grpc::Status GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1146,7 +1275,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_GetRemoteAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetRemoteAddress() {
       ::grpc::Service::MarkMethodRaw(2);
@@ -1155,7 +1284,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) override {
+    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1166,7 +1295,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_GetRemoteParamAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetRemoteParamAddress() {
       ::grpc::Service::MarkMethodRaw(3);
@@ -1175,7 +1304,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1186,7 +1315,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_AttemptPush : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_AttemptPush() {
       ::grpc::Service::MarkMethodRaw(4);
@@ -1195,7 +1324,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response) override {
+    ::grpc::Status AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1206,7 +1335,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_AttemptPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_AttemptPushVar() {
       ::grpc::Service::MarkMethodRaw(5);
@@ -1215,7 +1344,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) override {
+    ::grpc::Status AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1226,7 +1355,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_CancelPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_CancelPushVar() {
       ::grpc::Service::MarkMethodRaw(6);
@@ -1235,7 +1364,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) override {
+    ::grpc::Status CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1246,7 +1375,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_NotifyPushDone : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_NotifyPushDone() {
       ::grpc::Service::MarkMethodRaw(7);
@@ -1255,7 +1384,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) override {
+    ::grpc::Status NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1266,7 +1395,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_Barrier : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_Barrier() {
       ::grpc::Service::MarkMethodRaw(8);
@@ -1275,7 +1404,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) override {
+    ::grpc::Status Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1286,7 +1415,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_Recv : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_Recv() {
       ::grpc::Service::MarkMethodRaw(9);
@@ -1295,7 +1424,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response) override {
+    ::grpc::Status Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1306,7 +1435,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_GetRemoteAddressV2 : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetRemoteAddressV2() {
       ::grpc::Service::MarkMethodRaw(10);
@@ -1315,7 +1444,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1326,7 +1455,7 @@ class Rdma final {
   template <class BaseClass>
   class WithRawMethod_GetPermit : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetPermit() {
       ::grpc::Service::MarkMethodRaw(11);
@@ -1335,7 +1464,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+    ::grpc::Status GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1346,11 +1475,11 @@ class Rdma final {
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_GetLID : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_GetLID() {
       ::grpc::Service::experimental().MarkMethodRawCallback(0,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1362,20 +1491,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response) override {
+    ::grpc::Status GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetLID(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetLID(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_GetQPAttr : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_GetQPAttr() {
       ::grpc::Service::experimental().MarkMethodRawCallback(1,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1387,20 +1516,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response) override {
+    ::grpc::Status GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetQPAttr(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetQPAttr(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_GetRemoteAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_GetRemoteAddress() {
       ::grpc::Service::experimental().MarkMethodRawCallback(2,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1412,20 +1541,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) override {
+    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetRemoteAddress(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_GetRemoteParamAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_GetRemoteParamAddress() {
       ::grpc::Service::experimental().MarkMethodRawCallback(3,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1437,20 +1566,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetRemoteParamAddress(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_AttemptPush : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_AttemptPush() {
       ::grpc::Service::experimental().MarkMethodRawCallback(4,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1462,20 +1591,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response) override {
+    ::grpc::Status AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void AttemptPush(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void AttemptPush(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_AttemptPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_AttemptPushVar() {
       ::grpc::Service::experimental().MarkMethodRawCallback(5,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1487,20 +1616,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) override {
+    ::grpc::Status AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void AttemptPushVar(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void AttemptPushVar(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_CancelPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_CancelPushVar() {
       ::grpc::Service::experimental().MarkMethodRawCallback(6,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1512,20 +1641,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) override {
+    ::grpc::Status CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void CancelPushVar(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void CancelPushVar(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_NotifyPushDone : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_NotifyPushDone() {
       ::grpc::Service::experimental().MarkMethodRawCallback(7,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1537,20 +1666,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) override {
+    ::grpc::Status NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void NotifyPushDone(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void NotifyPushDone(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_Barrier : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_Barrier() {
       ::grpc::Service::experimental().MarkMethodRawCallback(8,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1562,20 +1691,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) override {
+    ::grpc::Status Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void Barrier(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void Barrier(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_Recv : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_Recv() {
       ::grpc::Service::experimental().MarkMethodRawCallback(9,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1587,20 +1716,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response) override {
+    ::grpc::Status Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void Recv(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void Recv(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_GetRemoteAddressV2 : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_GetRemoteAddressV2() {
       ::grpc::Service::experimental().MarkMethodRawCallback(10,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1612,20 +1741,20 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetRemoteAddressV2(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_GetPermit : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     ExperimentalWithRawCallbackMethod_GetPermit() {
       ::grpc::Service::experimental().MarkMethodRawCallback(11,
-        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+        new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
                  ::grpc::ByteBuffer* response,
@@ -1637,16 +1766,16 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+    ::grpc::Status GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual void GetPermit(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+    virtual void GetPermit(::grpc::ServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class WithStreamedUnaryMethod_GetLID : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetLID() {
       ::grpc::Service::MarkMethodStreamed(0,
@@ -1656,7 +1785,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetLID(::grpc::ServerContext* context, const ::ptre::GetLIDRequest* request, ::ptre::GetLIDResponse* response) override {
+    ::grpc::Status GetLID(::grpc::ServerContext* /*context*/, const ::ptre::GetLIDRequest* /*request*/, ::ptre::GetLIDResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1666,7 +1795,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_GetQPAttr : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetQPAttr() {
       ::grpc::Service::MarkMethodStreamed(1,
@@ -1676,7 +1805,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetQPAttr(::grpc::ServerContext* context, const ::ptre::GetQPAttrRequest* request, ::ptre::GetQPAttrResponse* response) override {
+    ::grpc::Status GetQPAttr(::grpc::ServerContext* /*context*/, const ::ptre::GetQPAttrRequest* /*request*/, ::ptre::GetQPAttrResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1686,7 +1815,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_GetRemoteAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetRemoteAddress() {
       ::grpc::Service::MarkMethodStreamed(2,
@@ -1696,7 +1825,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressRequest* request, ::ptre::GetRemoteAddressResponse* response) override {
+    ::grpc::Status GetRemoteAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressRequest* /*request*/, ::ptre::GetRemoteAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1706,7 +1835,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_GetRemoteParamAddress : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetRemoteParamAddress() {
       ::grpc::Service::MarkMethodStreamed(3,
@@ -1716,7 +1845,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* context, const ::ptre::GetRemoteParamAddressRequest* request, ::ptre::GetRemoteParamAddressResponse* response) override {
+    ::grpc::Status GetRemoteParamAddress(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteParamAddressRequest* /*request*/, ::ptre::GetRemoteParamAddressResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1726,7 +1855,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_AttemptPush : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_AttemptPush() {
       ::grpc::Service::MarkMethodStreamed(4,
@@ -1736,7 +1865,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status AttemptPush(::grpc::ServerContext* context, const ::ptre::AttemptPushRequest* request, ::ptre::AttemptPushResponse* response) override {
+    ::grpc::Status AttemptPush(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushRequest* /*request*/, ::ptre::AttemptPushResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1746,7 +1875,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_AttemptPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_AttemptPushVar() {
       ::grpc::Service::MarkMethodStreamed(5,
@@ -1756,7 +1885,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status AttemptPushVar(::grpc::ServerContext* context, const ::ptre::AttemptPushVarRequest* request, ::ptre::AttemptPushVarResponse* response) override {
+    ::grpc::Status AttemptPushVar(::grpc::ServerContext* /*context*/, const ::ptre::AttemptPushVarRequest* /*request*/, ::ptre::AttemptPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1766,7 +1895,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_CancelPushVar : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_CancelPushVar() {
       ::grpc::Service::MarkMethodStreamed(6,
@@ -1776,7 +1905,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status CancelPushVar(::grpc::ServerContext* context, const ::ptre::CancelPushVarRequest* request, ::ptre::CancelPushVarResponse* response) override {
+    ::grpc::Status CancelPushVar(::grpc::ServerContext* /*context*/, const ::ptre::CancelPushVarRequest* /*request*/, ::ptre::CancelPushVarResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1786,7 +1915,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_NotifyPushDone : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_NotifyPushDone() {
       ::grpc::Service::MarkMethodStreamed(7,
@@ -1796,7 +1925,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status NotifyPushDone(::grpc::ServerContext* context, const ::ptre::NotifyPushDoneRequest* request, ::ptre::NotifyPushDoneResponse* response) override {
+    ::grpc::Status NotifyPushDone(::grpc::ServerContext* /*context*/, const ::ptre::NotifyPushDoneRequest* /*request*/, ::ptre::NotifyPushDoneResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1806,7 +1935,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_Barrier : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_Barrier() {
       ::grpc::Service::MarkMethodStreamed(8,
@@ -1816,7 +1945,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status Barrier(::grpc::ServerContext* context, const ::ptre::BarrierRequest* request, ::ptre::BarrierResponse* response) override {
+    ::grpc::Status Barrier(::grpc::ServerContext* /*context*/, const ::ptre::BarrierRequest* /*request*/, ::ptre::BarrierResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1826,7 +1955,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_Recv : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_Recv() {
       ::grpc::Service::MarkMethodStreamed(9,
@@ -1836,7 +1965,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status Recv(::grpc::ServerContext* context, const ::ptre::RecvRequest* request, ::ptre::RecvResponse* response) override {
+    ::grpc::Status Recv(::grpc::ServerContext* /*context*/, const ::ptre::RecvRequest* /*request*/, ::ptre::RecvResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1846,7 +1975,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_GetRemoteAddressV2 : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetRemoteAddressV2() {
       ::grpc::Service::MarkMethodStreamed(10,
@@ -1856,7 +1985,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* context, const ::ptre::GetRemoteAddressV2Request* request, ::ptre::GetRemoteAddressV2Response* response) override {
+    ::grpc::Status GetRemoteAddressV2(::grpc::ServerContext* /*context*/, const ::ptre::GetRemoteAddressV2Request* /*request*/, ::ptre::GetRemoteAddressV2Response* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1866,7 +1995,7 @@ class Rdma final {
   template <class BaseClass>
   class WithStreamedUnaryMethod_GetPermit : public BaseClass {
    private:
-    void BaseClassMustBeDerivedFromService(const Service *service) {}
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetPermit() {
       ::grpc::Service::MarkMethodStreamed(11,
@@ -1876,7 +2005,7 @@ class Rdma final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetPermit(::grpc::ServerContext* context, const ::ptre::GetPermitRequest* request, ::ptre::GetPermitResponse* response) override {
+    ::grpc::Status GetPermit(::grpc::ServerContext* /*context*/, const ::ptre::GetPermitRequest* /*request*/, ::ptre::GetPermitResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }

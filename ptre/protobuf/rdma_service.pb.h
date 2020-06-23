@@ -569,6 +569,18 @@ class GetLIDResponse :
 
   // accessors -------------------------------------------------------
 
+  // uint64 gid_h = 2;
+  void clear_gid_h();
+  static const int kGidHFieldNumber = 2;
+  ::PROTOBUF_NAMESPACE_ID::uint64 gid_h() const;
+  void set_gid_h(::PROTOBUF_NAMESPACE_ID::uint64 value);
+
+  // uint64 gid_l = 3;
+  void clear_gid_l();
+  static const int kGidLFieldNumber = 3;
+  ::PROTOBUF_NAMESPACE_ID::uint64 gid_l() const;
+  void set_gid_l(::PROTOBUF_NAMESPACE_ID::uint64 value);
+
   // int32 lid = 1;
   void clear_lid();
   static const int kLidFieldNumber = 1;
@@ -580,6 +592,8 @@ class GetLIDResponse :
   class HasBitSetters;
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 gid_h_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 gid_l_;
   ::PROTOBUF_NAMESPACE_ID::int32 lid_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_rdma_5fservice_2eproto;
@@ -3845,6 +3859,34 @@ inline void GetLIDResponse::set_lid(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
   lid_ = value;
   // @@protoc_insertion_point(field_set:ptre.GetLIDResponse.lid)
+}
+
+// uint64 gid_h = 2;
+inline void GetLIDResponse::clear_gid_h() {
+  gid_h_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 GetLIDResponse::gid_h() const {
+  // @@protoc_insertion_point(field_get:ptre.GetLIDResponse.gid_h)
+  return gid_h_;
+}
+inline void GetLIDResponse::set_gid_h(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  gid_h_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetLIDResponse.gid_h)
+}
+
+// uint64 gid_l = 3;
+inline void GetLIDResponse::clear_gid_l() {
+  gid_l_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 GetLIDResponse::gid_l() const {
+  // @@protoc_insertion_point(field_get:ptre.GetLIDResponse.gid_l)
+  return gid_l_;
+}
+inline void GetLIDResponse::set_gid_l(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  gid_l_ = value;
+  // @@protoc_insertion_point(field_set:ptre.GetLIDResponse.gid_l)
 }
 
 // -------------------------------------------------------------------

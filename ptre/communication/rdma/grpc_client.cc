@@ -37,12 +37,16 @@ GrpcClient::~GrpcClient() {
   stub_.reset();
 }
 
-int GrpcClient::GetLID(uint16_t* remote_lid) {
+int GrpcClient::GetLID(union ibv_gid* remote_gid, uint16_t* remote_lid) {
   GetLIDRequest req;
   GetLIDResponse res;
   ClientContext ctx;
   grpc::Status status = stub_->GetLID(&ctx, req, &res);
   if (status.ok()) {
+    uint64_t gid_h = res.gid_h();
+    uint64_t gid_l = res.gid_l();
+    memcpy((char*) remote_gid, (char*) &gid_h, 8);
+    memcpy(((char*) remote_gid) + 8, (char*) &gid_l, 8);
     *remote_lid = res.lid();
     return 0;
   } else {

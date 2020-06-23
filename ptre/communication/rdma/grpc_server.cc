@@ -1,6 +1,8 @@
 #include "ptre/communication/rdma/grpc_server.h"
 #include "tensorflow/core/platform/logging.h"
 
+#include <infiniband/verbs.h>
+
 #include <iostream>
 
 namespace ptre {
@@ -15,6 +17,12 @@ grpc::Status RdmaServiceImpl::GetLID(grpc::ServerContext* ctx,
                                 GetLIDResponse* res) {
   if (rdma_mgr_ != nullptr) {
     res->set_lid(rdma_mgr_->port_attr().lid);
+    union ibv_gid gid = rdma_mgr_->gid();
+    uint64_t gid_h, gid_l;
+    memcpy((char*) &gid_h, (char*) &gid, 8);
+    memcpy((char*) &gid_l, ((char*) &gid) + 8, 8);
+    res->set_gid_h(gid_h);
+    res->set_gid_l(gid_l);
     return grpc::Status::OK;
   } else {
     return grpc::Status::CANCELLED;

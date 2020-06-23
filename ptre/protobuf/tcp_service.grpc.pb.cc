@@ -11,7 +11,7 @@
 #include <grpcpp/impl/codegen/channel_interface.h>
 #include <grpcpp/impl/codegen/client_unary_call.h>
 #include <grpcpp/impl/codegen/client_callback.h>
-#include <grpcpp/impl/codegen/method_handler_impl.h>
+#include <grpcpp/impl/codegen/method_handler.h>
 #include <grpcpp/impl/codegen/rpc_service_method.h>
 #include <grpcpp/impl/codegen/server_callback.h>
 #include <grpcpp/impl/codegen/service_type.h>
@@ -37,19 +37,27 @@ Tcp::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
 }
 
 void Tcp::Stub::experimental_async::PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_PushTensor_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_PushTensor_, context, request, response, std::move(f));
 }
 
 void Tcp::Stub::experimental_async::PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)> f) {
-  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_PushTensor_, context, request, response, std::move(f));
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_PushTensor_, context, request, response, std::move(f));
+}
+
+void Tcp::Stub::experimental_async::PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_PushTensor_, context, request, response, reactor);
+}
+
+void Tcp::Stub::experimental_async::PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_PushTensor_, context, request, response, reactor);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::PushTensorResponse>* Tcp::Stub::AsyncPushTensorRaw(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::PushTensorResponse>::Create(channel_.get(), cq, rpcmethod_PushTensor_, context, request, true);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::PushTensorResponse>::Create(channel_.get(), cq, rpcmethod_PushTensor_, context, request, true);
 }
 
 ::grpc::ClientAsyncResponseReader< ::ptre::PushTensorResponse>* Tcp::Stub::PrepareAsyncPushTensorRaw(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::PushTensorResponse>::Create(channel_.get(), cq, rpcmethod_PushTensor_, context, request, false);
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::ptre::PushTensorResponse>::Create(channel_.get(), cq, rpcmethod_PushTensor_, context, request, false);
 }
 
 Tcp::Service::Service() {

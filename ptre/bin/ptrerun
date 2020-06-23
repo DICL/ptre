@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 from __future__ import print_function
 
 import argparse
@@ -53,12 +53,15 @@ for i in range(args.np):
 
 # SSH Clients
 def open_channel(rank, client, hostname, channels):
-  client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-  client.connect(hostname)
-  channel = client.get_transport().open_session()
-  channels[rank] = channel
-  print("Connected to", hostname, '(RANK=%d)' % rank)
-
+  try:
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+    client.connect(hostname)
+    channel = client.get_transport().open_session()
+    channels[rank] = channel
+    print("Connected to", hostname, '(RANK=%d)' % rank)
+  except e:
+    print("Exception", e)
+  
 try:
   ssh_clients = []
   channels = []

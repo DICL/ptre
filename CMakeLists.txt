@@ -4,12 +4,12 @@ project(ptre)
 
 include_directories(.
                     /home/wkim/.local/include
-                    /home/wkim/.local/lib/python2.7/site-packages/tensorflow_core/include
+                    /home/wkim/.local/lib/python3.6/site-packages/tensorflow_core/include
                     /usr/local/cuda/include
 )
 
 link_directories(/home/wkim/.local/lib
-                 /home/wkim/.local/lib/python2.7/site-packages/tensorflow_core
+                 /home/wkim/.local/lib/python3.6/site-packages/tensorflow_core
                  /usr/local/cuda/lib64
 )
 

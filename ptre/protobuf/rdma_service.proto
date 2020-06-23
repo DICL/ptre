@@ -49,6 +49,8 @@ message MemoryRegion {
 message GetLIDRequest { }
 message GetLIDResponse {
   int32 lid = 1;
+  uint64 gid_h = 2;
+  uint64 gid_l = 3;
 }
 
 // GetQPAttr

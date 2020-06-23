@@ -21,6 +21,7 @@ RdmaMgr::RdmaMgr(int ptre_size, int ptre_rank) {
   ctx_ = ibv_open_device(device_list_[0]);
   pd_ = ibv_alloc_pd(ctx_);
   ret = ibv_query_port(ctx_, IB_PORT, &port_attr_);
+  ret = ibv_query_gid(ctx_, IB_PORT, 0, &gid_);
 
   // Create Completion Queues and Queue Pairs
   for (int i = 0; i < ptre_size_; i++) {
@@ -54,6 +55,7 @@ RdmaMgr::RdmaMgr(int ptre_size, int ptre_rank) {
 
   // Init Remote Attributes Arrays
   remote_lids_.resize(ptre_size_);
+  remote_gids_.resize(ptre_size_);
 
   // Init Receive Work Request Array
   for (int i = 0; i < ptre_size_; i++) {
@@ -92,8 +94,8 @@ void RdmaMgr::INITQP(int dst) {
   }
 }
 
-void RdmaMgr::RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,
-    uint32_t remote_psn = 0) {
+void RdmaMgr::RTRQP(int dst, union ibv_gid remote_gid, uint16_t remote_lid,
+                    uint32_t remote_qpn, uint32_t remote_psn) {
   // INIT -> RTR
   int ret;
   struct ibv_qp_attr attr;
@@ -104,10 +106,16 @@ void RdmaMgr::RTRQP(int dst, uint16_t remote_lid, uint32_t remote_qpn,
   attr.rq_psn = remote_psn;
   attr.max_dest_rd_atomic = 1;
   attr.min_rnr_timer = 12;
+
+  attr.ah_attr.grh.dgid = remote_gid;
+
   attr.ah_attr.dlid = remote_lid;
   attr.ah_attr.sl = 0;
   attr.ah_attr.src_path_bits = 0;
   attr.ah_attr.port_num  = IB_PORT;
+
+  attr.ah_attr.is_global = 1;
+
   ret = ibv_modify_qp(qps_[dst], &attr,
         IBV_QP_STATE
       | IBV_QP_AV
@@ -160,7 +168,7 @@ void RdmaMgr::RESETQP(int dst) {
 }
 
 void RdmaMgr::ConnectQP(int dst, uint32_t remote_qpn) {
-  RTRQP(dst, remote_lids_[dst], remote_qpn);
+  RTRQP(dst, remote_gids_[dst], remote_lids_[dst], remote_qpn);
   RTSQP(dst);
 }
 
@@ -393,6 +401,10 @@ void RdmaMgr::set_remote_lid(int dst, uint16_t lid) {
 
 uint16_t RdmaMgr::remote_lid(int dst) {
   return remote_lids_[dst];
+}
+
+void RdmaMgr::set_remote_gid(int dst, const union ibv_gid& gid) {
+  remote_gids_[dst] = gid;
 }
 
 #if 0

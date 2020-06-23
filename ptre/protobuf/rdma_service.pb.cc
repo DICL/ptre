@@ -529,6 +529,8 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_rdma_5fservice_2eproto::offset
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::ptre::GetLIDResponse, lid_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetLIDResponse, gid_h_),
+  PROTOBUF_FIELD_OFFSET(::ptre::GetLIDResponse, gid_l_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::ptre::GetQPAttrRequest, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -694,30 +696,30 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 0, -1, sizeof(::ptre::MemoryRegion)},
   { 7, -1, sizeof(::ptre::GetLIDRequest)},
   { 12, -1, sizeof(::ptre::GetLIDResponse)},
-  { 18, -1, sizeof(::ptre::GetQPAttrRequest)},
-  { 24, -1, sizeof(::ptre::GetQPAttrResponse)},
-  { 31, -1, sizeof(::ptre::GetRemoteAddressRequest)},
-  { 38, -1, sizeof(::ptre::GetRemoteAddressResponse)},
-  { 45, -1, sizeof(::ptre::GetRemoteEnvRequest)},
-  { 51, -1, sizeof(::ptre::GetRemoteEnvResponse)},
-  { 61, -1, sizeof(::ptre::GetRemoteParamAddressRequest)},
-  { 67, -1, sizeof(::ptre::GetRemoteParamAddressResponse)},
-  { 74, -1, sizeof(::ptre::AttemptPushRequest)},
-  { 81, -1, sizeof(::ptre::AttemptPushResponse)},
-  { 87, -1, sizeof(::ptre::NotifyPushDoneRequest)},
-  { 94, -1, sizeof(::ptre::NotifyPushDoneResponse)},
-  { 99, -1, sizeof(::ptre::BarrierRequest)},
-  { 104, -1, sizeof(::ptre::BarrierResponse)},
-  { 110, -1, sizeof(::ptre::GetRemoteAddressV2Request)},
-  { 118, -1, sizeof(::ptre::GetRemoteAddressV2Response)},
-  { 127, -1, sizeof(::ptre::RecvRequest)},
-  { 135, -1, sizeof(::ptre::RecvResponse)},
-  { 141, -1, sizeof(::ptre::GetPermitRequest)},
-  { 147, -1, sizeof(::ptre::GetPermitResponse)},
-  { 153, -1, sizeof(::ptre::AttemptPushVarRequest)},
-  { 160, -1, sizeof(::ptre::AttemptPushVarResponse)},
-  { 166, -1, sizeof(::ptre::CancelPushVarRequest)},
-  { 173, -1, sizeof(::ptre::CancelPushVarResponse)},
+  { 20, -1, sizeof(::ptre::GetQPAttrRequest)},
+  { 26, -1, sizeof(::ptre::GetQPAttrResponse)},
+  { 33, -1, sizeof(::ptre::GetRemoteAddressRequest)},
+  { 40, -1, sizeof(::ptre::GetRemoteAddressResponse)},
+  { 47, -1, sizeof(::ptre::GetRemoteEnvRequest)},
+  { 53, -1, sizeof(::ptre::GetRemoteEnvResponse)},
+  { 63, -1, sizeof(::ptre::GetRemoteParamAddressRequest)},
+  { 69, -1, sizeof(::ptre::GetRemoteParamAddressResponse)},
+  { 76, -1, sizeof(::ptre::AttemptPushRequest)},
+  { 83, -1, sizeof(::ptre::AttemptPushResponse)},
+  { 89, -1, sizeof(::ptre::NotifyPushDoneRequest)},
+  { 96, -1, sizeof(::ptre::NotifyPushDoneResponse)},
+  { 101, -1, sizeof(::ptre::BarrierRequest)},
+  { 106, -1, sizeof(::ptre::BarrierResponse)},
+  { 112, -1, sizeof(::ptre::GetRemoteAddressV2Request)},
+  { 120, -1, sizeof(::ptre::GetRemoteAddressV2Response)},
+  { 129, -1, sizeof(::ptre::RecvRequest)},
+  { 137, -1, sizeof(::ptre::RecvResponse)},
+  { 143, -1, sizeof(::ptre::GetPermitRequest)},
+  { 149, -1, sizeof(::ptre::GetPermitResponse)},
+  { 155, -1, sizeof(::ptre::AttemptPushVarRequest)},
+  { 162, -1, sizeof(::ptre::AttemptPushVarResponse)},
+  { 168, -1, sizeof(::ptre::CancelPushVarRequest)},
+  { 175, -1, sizeof(::ptre::CancelPushVarResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -753,70 +755,71 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 const char descriptor_table_protodef_rdma_5fservice_2eproto[] =
   "\n\022rdma_service.proto\022\004ptre\"1\n\014MemoryRegi"
   "on\022\023\n\013remote_addr\030\001 \001(\004\022\014\n\004rkey\030\002 \001(\r\"\017\n"
-  "\rGetLIDRequest\"\035\n\016GetLIDResponse\022\013\n\003lid\030"
-  "\001 \001(\005\"$\n\020GetQPAttrRequest\022\020\n\010src_rank\030\001 "
-  "\001(\005\"-\n\021GetQPAttrResponse\022\013\n\003qpn\030\001 \001(\r\022\013\n"
-  "\003psn\030\002 \001(\r\"L\n\027GetRemoteAddressRequest\022\037\n"
-  "\010buf_type\030\001 \001(\0162\r.ptre.BufType\022\020\n\010var_na"
-  "me\030\002 \001(\t\"=\n\030GetRemoteAddressResponse\022\023\n\013"
-  "remote_addr\030\001 \001(\004\022\014\n\004rkey\030\002 \001(\r\"#\n\023GetRe"
-  "moteEnvRequest\022\014\n\004rank\030\001 \001(\005\"X\n\024GetRemot"
-  "eEnvResponse\022\014\n\004rank\030\001 \001(\005\022\013\n\003lid\030\002 \001(\005\022"
-  "\013\n\003qpn\030\003 \001(\005\022\013\n\003snp\030\004 \001(\004\022\013\n\003iid\030\005 \001(\004\","
-  "\n\034GetRemoteParamAddressRequest\022\014\n\004rank\030\001"
-  " \001(\005\"M\n\035GetRemoteParamAddressResponse\022\014\n"
-  "\004rank\030\001 \001(\005\022\036\n\002mr\030\003 \003(\0132\022.ptre.MemoryReg"
-  "ion\"1\n\022AttemptPushRequest\022\014\n\004rank\030\001 \001(\005\022"
-  "\r\n\005vstep\030\002 \001(\005\"(\n\023AttemptPushResponse\022\021\n"
-  "\tavailable\030\001 \001(\010\";\n\025NotifyPushDoneReques"
-  "t\022\020\n\010src_rank\030\001 \001(\005\022\020\n\010var_name\030\002 \001(\t\"\030\n"
-  "\026NotifyPushDoneResponse\"\020\n\016BarrierReques"
-  "t\"\"\n\017BarrierResponse\022\017\n\007entered\030\001 \001(\010\"T\n"
-  "\031GetRemoteAddressV2Request\022\014\n\004rank\030\001 \001(\005"
-  "\022\033\n\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030\003 "
-  "\001(\t\"u\n\032GetRemoteAddressV2Response\022\014\n\004ran"
-  "k\030\001 \001(\005\022\033\n\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n\004"
-  "name\030\003 \001(\t\022\036\n\002mr\030\004 \003(\0132\022.ptre.MemoryRegi"
-  "on\":\n\013RecvRequest\022\020\n\010dst_rank\030\001 \001(\005\022\013\n\003l"
-  "en\030\002 \001(\r\022\014\n\004name\030\003 \001(\t\"\033\n\014RecvResponse\022\013"
-  "\n\003buf\030\001 \001(\014\"$\n\020GetPermitRequest\022\020\n\010var_n"
-  "ame\030\001 \001(\t\"#\n\021GetPermitResponse\022\016\n\006permit"
-  "\030\001 \001(\005\";\n\025AttemptPushVarRequest\022\020\n\010var_n"
-  "ame\030\001 \001(\t\022\020\n\010src_rank\030\002 \001(\005\"(\n\026AttemptPu"
-  "shVarResponse\022\016\n\006result\030\001 \001(\010\":\n\024CancelP"
-  "ushVarRequest\022\020\n\010var_name\030\001 \001(\t\022\020\n\010src_r"
-  "ank\030\002 \001(\005\"\027\n\025CancelPushVarResponse*\357\002\n\007B"
-  "ufType\022\020\n\014BUF_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_REC"
-  "V_BUF\020\001\022\025\n\021BUF_TYPE_SEND_BUF\020\002\022\032\n\026BUF_TY"
-  "PE_AGG_BUF_STATE\020\003\022\024\n\020BUF_TYPE_AGG_BUF\020\004"
-  "\022\026\n\022BUF_TYPE_FLAG_RECV\020\005\022\026\n\022BUF_TYPE_FLA"
-  "G_SEND\020\006\022\034\n\030BUF_TYPE_BARRIER_COUNTER\020\007\022\034"
-  "\n\030BUF_TYPE_BARRIER_RELEASE\020\010\022\030\n\024BUF_TYPE"
-  "_PUSH_PERMIT\020\t\022\035\n\031BUF_TYPE_PUSH_PERMIT_R"
-  "EAD\020\n\022\025\n\021BUF_TYPE_PULL_KEY\020\013\022\032\n\026BUF_TYPE"
-  "_PULL_TENSOR_A\020\014\022\032\n\026BUF_TYPE_PULL_TENSOR"
-  "_B\020\r2\324\006\n\004Rdma\0223\n\006GetLID\022\023.ptre.GetLIDReq"
-  "uest\032\024.ptre.GetLIDResponse\022<\n\tGetQPAttr\022"
-  "\026.ptre.GetQPAttrRequest\032\027.ptre.GetQPAttr"
-  "Response\022Q\n\020GetRemoteAddress\022\035.ptre.GetR"
-  "emoteAddressRequest\032\036.ptre.GetRemoteAddr"
-  "essResponse\022`\n\025GetRemoteParamAddress\022\".p"
-  "tre.GetRemoteParamAddressRequest\032#.ptre."
-  "GetRemoteParamAddressResponse\022B\n\013Attempt"
-  "Push\022\030.ptre.AttemptPushRequest\032\031.ptre.At"
-  "temptPushResponse\022K\n\016AttemptPushVar\022\033.pt"
-  "re.AttemptPushVarRequest\032\034.ptre.AttemptP"
-  "ushVarResponse\022H\n\rCancelPushVar\022\032.ptre.C"
-  "ancelPushVarRequest\032\033.ptre.CancelPushVar"
-  "Response\022K\n\016NotifyPushDone\022\033.ptre.Notify"
-  "PushDoneRequest\032\034.ptre.NotifyPushDoneRes"
-  "ponse\0226\n\007Barrier\022\024.ptre.BarrierRequest\032\025"
-  ".ptre.BarrierResponse\022-\n\004Recv\022\021.ptre.Rec"
-  "vRequest\032\022.ptre.RecvResponse\022W\n\022GetRemot"
-  "eAddressV2\022\037.ptre.GetRemoteAddressV2Requ"
-  "est\032 .ptre.GetRemoteAddressV2Response\022<\n"
-  "\tGetPermit\022\026.ptre.GetPermitRequest\032\027.ptr"
-  "e.GetPermitResponseb\006proto3"
+  "\rGetLIDRequest\";\n\016GetLIDResponse\022\013\n\003lid\030"
+  "\001 \001(\005\022\r\n\005gid_h\030\002 \001(\004\022\r\n\005gid_l\030\003 \001(\004\"$\n\020G"
+  "etQPAttrRequest\022\020\n\010src_rank\030\001 \001(\005\"-\n\021Get"
+  "QPAttrResponse\022\013\n\003qpn\030\001 \001(\r\022\013\n\003psn\030\002 \001(\r"
+  "\"L\n\027GetRemoteAddressRequest\022\037\n\010buf_type\030"
+  "\001 \001(\0162\r.ptre.BufType\022\020\n\010var_name\030\002 \001(\t\"="
+  "\n\030GetRemoteAddressResponse\022\023\n\013remote_add"
+  "r\030\001 \001(\004\022\014\n\004rkey\030\002 \001(\r\"#\n\023GetRemoteEnvReq"
+  "uest\022\014\n\004rank\030\001 \001(\005\"X\n\024GetRemoteEnvRespon"
+  "se\022\014\n\004rank\030\001 \001(\005\022\013\n\003lid\030\002 \001(\005\022\013\n\003qpn\030\003 \001"
+  "(\005\022\013\n\003snp\030\004 \001(\004\022\013\n\003iid\030\005 \001(\004\",\n\034GetRemot"
+  "eParamAddressRequest\022\014\n\004rank\030\001 \001(\005\"M\n\035Ge"
+  "tRemoteParamAddressResponse\022\014\n\004rank\030\001 \001("
+  "\005\022\036\n\002mr\030\003 \003(\0132\022.ptre.MemoryRegion\"1\n\022Att"
+  "emptPushRequest\022\014\n\004rank\030\001 \001(\005\022\r\n\005vstep\030\002"
+  " \001(\005\"(\n\023AttemptPushResponse\022\021\n\tavailable"
+  "\030\001 \001(\010\";\n\025NotifyPushDoneRequest\022\020\n\010src_r"
+  "ank\030\001 \001(\005\022\020\n\010var_name\030\002 \001(\t\"\030\n\026NotifyPus"
+  "hDoneResponse\"\020\n\016BarrierRequest\"\"\n\017Barri"
+  "erResponse\022\017\n\007entered\030\001 \001(\010\"T\n\031GetRemote"
+  "AddressV2Request\022\014\n\004rank\030\001 \001(\005\022\033\n\004type\030\002"
+  " \001(\0162\r.ptre.BufType\022\014\n\004name\030\003 \001(\t\"u\n\032Get"
+  "RemoteAddressV2Response\022\014\n\004rank\030\001 \001(\005\022\033\n"
+  "\004type\030\002 \001(\0162\r.ptre.BufType\022\014\n\004name\030\003 \001(\t"
+  "\022\036\n\002mr\030\004 \003(\0132\022.ptre.MemoryRegion\":\n\013Recv"
+  "Request\022\020\n\010dst_rank\030\001 \001(\005\022\013\n\003len\030\002 \001(\r\022\014"
+  "\n\004name\030\003 \001(\t\"\033\n\014RecvResponse\022\013\n\003buf\030\001 \001("
+  "\014\"$\n\020GetPermitRequest\022\020\n\010var_name\030\001 \001(\t\""
+  "#\n\021GetPermitResponse\022\016\n\006permit\030\001 \001(\005\";\n\025"
+  "AttemptPushVarRequest\022\020\n\010var_name\030\001 \001(\t\022"
+  "\020\n\010src_rank\030\002 \001(\005\"(\n\026AttemptPushVarRespo"
+  "nse\022\016\n\006result\030\001 \001(\010\":\n\024CancelPushVarRequ"
+  "est\022\020\n\010var_name\030\001 \001(\t\022\020\n\010src_rank\030\002 \001(\005\""
+  "\027\n\025CancelPushVarResponse*\357\002\n\007BufType\022\020\n\014"
+  "BUF_TYPE_RAW\020\000\022\025\n\021BUF_TYPE_RECV_BUF\020\001\022\025\n"
+  "\021BUF_TYPE_SEND_BUF\020\002\022\032\n\026BUF_TYPE_AGG_BUF"
+  "_STATE\020\003\022\024\n\020BUF_TYPE_AGG_BUF\020\004\022\026\n\022BUF_TY"
+  "PE_FLAG_RECV\020\005\022\026\n\022BUF_TYPE_FLAG_SEND\020\006\022\034"
+  "\n\030BUF_TYPE_BARRIER_COUNTER\020\007\022\034\n\030BUF_TYPE"
+  "_BARRIER_RELEASE\020\010\022\030\n\024BUF_TYPE_PUSH_PERM"
+  "IT\020\t\022\035\n\031BUF_TYPE_PUSH_PERMIT_READ\020\n\022\025\n\021B"
+  "UF_TYPE_PULL_KEY\020\013\022\032\n\026BUF_TYPE_PULL_TENS"
+  "OR_A\020\014\022\032\n\026BUF_TYPE_PULL_TENSOR_B\020\r2\324\006\n\004R"
+  "dma\0223\n\006GetLID\022\023.ptre.GetLIDRequest\032\024.ptr"
+  "e.GetLIDResponse\022<\n\tGetQPAttr\022\026.ptre.Get"
+  "QPAttrRequest\032\027.ptre.GetQPAttrResponse\022Q"
+  "\n\020GetRemoteAddress\022\035.ptre.GetRemoteAddre"
+  "ssRequest\032\036.ptre.GetRemoteAddressRespons"
+  "e\022`\n\025GetRemoteParamAddress\022\".ptre.GetRem"
+  "oteParamAddressRequest\032#.ptre.GetRemoteP"
+  "aramAddressResponse\022B\n\013AttemptPush\022\030.ptr"
+  "e.AttemptPushRequest\032\031.ptre.AttemptPushR"
+  "esponse\022K\n\016AttemptPushVar\022\033.ptre.Attempt"
+  "PushVarRequest\032\034.ptre.AttemptPushVarResp"
+  "onse\022H\n\rCancelPushVar\022\032.ptre.CancelPushV"
+  "arRequest\032\033.ptre.CancelPushVarResponse\022K"
+  "\n\016NotifyPushDone\022\033.ptre.NotifyPushDoneRe"
+  "quest\032\034.ptre.NotifyPushDoneResponse\0226\n\007B"
+  "arrier\022\024.ptre.BarrierRequest\032\025.ptre.Barr"
+  "ierResponse\022-\n\004Recv\022\021.ptre.RecvRequest\032\022"
+  ".ptre.RecvResponse\022W\n\022GetRemoteAddressV2"
+  "\022\037.ptre.GetRemoteAddressV2Request\032 .ptre"
+  ".GetRemoteAddressV2Response\022<\n\tGetPermit"
+  "\022\026.ptre.GetPermitRequest\032\027.ptre.GetPermi"
+  "tResponseb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rdma_5fservice_2eproto_deps[1] = {
 };
@@ -852,7 +855,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_rdm
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_rdma_5fservice_2eproto_once;
 static bool descriptor_table_rdma_5fservice_2eproto_initialized = false;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_rdma_5fservice_2eproto = {
-  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 2627,
+  &descriptor_table_rdma_5fservice_2eproto_initialized, descriptor_table_protodef_rdma_5fservice_2eproto, "rdma_service.proto", 2657,
   &descriptor_table_rdma_5fservice_2eproto_once, descriptor_table_rdma_5fservice_2eproto_sccs, descriptor_table_rdma_5fservice_2eproto_deps, 27, 0,
   schemas, file_default_instances, TableStruct_rdma_5fservice_2eproto::offsets,
   file_level_metadata_rdma_5fservice_2eproto, 27, file_level_enum_descriptors_rdma_5fservice_2eproto, file_level_service_descriptors_rdma_5fservice_2eproto,
@@ -1409,6 +1412,8 @@ class GetLIDResponse::HasBitSetters {
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int GetLIDResponse::kLidFieldNumber;
+const int GetLIDResponse::kGidHFieldNumber;
+const int GetLIDResponse::kGidLFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 GetLIDResponse::GetLIDResponse()
@@ -1420,12 +1425,16 @@ GetLIDResponse::GetLIDResponse(const GetLIDResponse& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       _internal_metadata_(nullptr) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  lid_ = from.lid_;
+  ::memcpy(&gid_h_, &from.gid_h_,
+    static_cast<size_t>(reinterpret_cast<char*>(&lid_) -
+    reinterpret_cast<char*>(&gid_h_)) + sizeof(lid_));
   // @@protoc_insertion_point(copy_constructor:ptre.GetLIDResponse)
 }
 
 void GetLIDResponse::SharedCtor() {
-  lid_ = 0;
+  ::memset(&gid_h_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&lid_) -
+      reinterpret_cast<char*>(&gid_h_)) + sizeof(lid_));
 }
 
 GetLIDResponse::~GetLIDResponse() {
@@ -1451,7 +1460,9 @@ void GetLIDResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  lid_ = 0;
+  ::memset(&gid_h_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&lid_) -
+      reinterpret_cast<char*>(&gid_h_)) + sizeof(lid_));
   _internal_metadata_.Clear();
 }
 
@@ -1467,6 +1478,20 @@ const char* GetLIDResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
           lid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 gid_h = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+          gid_h_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 gid_l = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+          gid_l_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -1513,6 +1538,32 @@ bool GetLIDResponse::MergePartialFromCodedStream(
         break;
       }
 
+      // uint64 gid_h = 2;
+      case 2: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (16 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::uint64, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64>(
+                 input, &gid_h_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // uint64 gid_l = 3;
+      case 3: {
+        if (static_cast< ::PROTOBUF_NAMESPACE_ID::uint8>(tag) == (24 & 0xFF)) {
+
+          DO_((::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::ReadPrimitive<
+                   ::PROTOBUF_NAMESPACE_ID::uint64, ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_UINT64>(
+                 input, &gid_l_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0) {
@@ -1545,6 +1596,16 @@ void GetLIDResponse::SerializeWithCachedSizes(
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32(1, this->lid(), output);
   }
 
+  // uint64 gid_h = 2;
+  if (this->gid_h() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64(2, this->gid_h(), output);
+  }
+
+  // uint64 gid_l = 3;
+  if (this->gid_l() != 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64(3, this->gid_l(), output);
+  }
+
   if (_internal_metadata_.have_unknown_fields()) {
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::SerializeUnknownFields(
         _internal_metadata_.unknown_fields(), output);
@@ -1561,6 +1622,16 @@ void GetLIDResponse::SerializeWithCachedSizes(
   // int32 lid = 1;
   if (this->lid() != 0) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->lid(), target);
+  }
+
+  // uint64 gid_h = 2;
+  if (this->gid_h() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(2, this->gid_h(), target);
+  }
+
+  // uint64 gid_l = 3;
+  if (this->gid_l() != 0) {
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(3, this->gid_l(), target);
   }
 
   if (_internal_metadata_.have_unknown_fields()) {
@@ -1583,6 +1654,20 @@ size_t GetLIDResponse::ByteSizeLong() const {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
+
+  // uint64 gid_h = 2;
+  if (this->gid_h() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->gid_h());
+  }
+
+  // uint64 gid_l = 3;
+  if (this->gid_l() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->gid_l());
+  }
 
   // int32 lid = 1;
   if (this->lid() != 0) {
@@ -1618,6 +1703,12 @@ void GetLIDResponse::MergeFrom(const GetLIDResponse& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
+  if (from.gid_h() != 0) {
+    set_gid_h(from.gid_h());
+  }
+  if (from.gid_l() != 0) {
+    set_gid_l(from.gid_l());
+  }
   if (from.lid() != 0) {
     set_lid(from.lid());
   }
@@ -1648,6 +1739,8 @@ void GetLIDResponse::Swap(GetLIDResponse* other) {
 void GetLIDResponse::InternalSwap(GetLIDResponse* other) {
   using std::swap;
   _internal_metadata_.Swap(&other->_internal_metadata_);
+  swap(gid_h_, other->gid_h_);
+  swap(gid_l_, other->gid_l_);
   swap(lid_, other->lid_);
 }
 
