@@ -89,5 +89,27 @@ struct ibv_mr* RdmaContext::recv_mr(const void* buf) {
   return mr_cache_.recv_mr(buf);
 }
 
+void RdmaContext::allreduce_set_intermediate_buf(const void* ptr, char* inbuf) {
+  inbuf_table_[ptr] = inbuf;
+}
+
+char* RdmaContext::allreduce_intermediate_buf(const void* ptr) {
+  auto search = inbuf_table_.find(ptr);
+  if (search == inbuf_table_.end()) return NULL;
+  return search->second;
+}
+
+void RdmaContext::set_remote_addr(int type, const void* ptr,
+                                  const RemoteAddr& ra) {
+  remote_addr_table_[type][ptr] = ra;
+}
+
+int RdmaContext::get_remote_addr(int type, const void* ptr, RemoteAddr* out) {
+  auto search = remote_addr_table_[type].find(ptr);
+  if (search == remote_addr_table_[type].end()) return 1;
+  *out = search->second;
+  return 0;
+}
+
 }  // namespace common
 }  // namespace ptre

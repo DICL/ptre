@@ -8,6 +8,10 @@
 namespace ptre {
 namespace common {
 
+int RdmaInitAllreduceV2(const void* sendbuf, const void* recvbuf,
+                        const void* inbuf, int count, DataType datatype,
+                        RdmaContext* ctx);
+
 int RdmaAllreduceV2(const void* sendbuf, void* recvbuf, int count,
                   DataType datatype, ReduceOp op, RdmaContext* ctx);
 

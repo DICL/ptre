@@ -29,6 +29,10 @@ class MRCache {
 
 class RdmaContext {
  public:
+  enum RemoteAddrType {
+    REMOTE_ADDR_ALLREDUCE_INTERMEDIATE_BUF,
+    REMOTE_ADDR_ALLREDUCE_RECV_BUF
+  };
   RdmaContext(RdmaMgr* rdma_mgr, struct ibv_mr* send_mr = NULL,
               struct ibv_mr* recv_mr = NULL);
   struct ibv_pd* pd() { return pd_; }
@@ -41,6 +45,11 @@ class RdmaContext {
   void DeregisterRecvBuffer(void* recvbuf);
   struct ibv_mr* send_mr(const void* buf);
   struct ibv_mr* recv_mr(const void* buf);
+  void allreduce_set_intermediate_buf(const void* ptr, char* inbuf);
+  char* allreduce_intermediate_buf(const void* ptr);
+  void set_remote_addr(int type, const void* ptr,
+                       const RemoteAddr& ra);
+  int get_remote_addr(int type, const void* ptr, RemoteAddr* out);
 
  protected:
   int comm_rank_;
@@ -48,6 +57,8 @@ class RdmaContext {
   struct ibv_pd* pd_;
   std::map<int, RdmaChannel*> channel_table_;
   MRCache mr_cache_;
+  std::map<const void*, char*> inbuf_table_;
+  std::map<int, std::map<const void*, RemoteAddr>> remote_addr_table_;
 };
 
 }  // namespace common
