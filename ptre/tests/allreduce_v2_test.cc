@@ -47,8 +47,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const int warmup_iters = 0;
-  const int iters = 1;
+  const int warmup_iters = 5;
+  const int iters = 20;
   chrono::system_clock::time_point tps[iters][2];
   float* send_arr = (float*) malloc(size);
   float* recv_arr = (float*) malloc(size);
@@ -57,6 +57,10 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i < count; i++) {
     send_arr[i] = 0.1 * (comm_rank + 1);
   }
+
+  void* inbuf = malloc(size);
+  RdmaInitAllreduceV2((void*) send_arr, (void*) recv_arr, inbuf, count,
+      DataType::DT_FLOAT, &ctx);
 
   // Warmup
   for (int i = 0; i < warmup_iters; i++) {
