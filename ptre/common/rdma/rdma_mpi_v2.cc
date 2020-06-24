@@ -163,7 +163,8 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
   // Computation Loop
   curr = comm_rank;
   RET_OK(RdmaIwriteWithImm((void*) tmprecvs[curr], curr, remote_inbufs[curr],
-        block_counts[curr], datatype, send_to, 0, ctx, &reqs[0][curr]));
+        block_counts[curr], datatype, send_to, 0, ctx, &reqs[0][curr],
+        recv_mr));
   for (int k = 0; k < comm_size - 2; k++) {
     RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_STRING, recv_from, 0,
           ctx, NULL));
@@ -174,7 +175,8 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
       seg_recv[idx] += seg_inbuf[idx];
     }
     RET_OK(RdmaIwriteWithImm((void*) tmprecvs[curr], curr, remote_inbufs[curr],
-          block_counts[curr], datatype, send_to, 0, ctx, &reqs[0][curr]));
+          block_counts[curr], datatype, send_to, 0, ctx, &reqs[0][curr],
+          recv_mr));
   }
   RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_STRING, recv_from, 0,
         ctx, NULL));
@@ -189,7 +191,8 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
   curr = (comm_rank + 1) % comm_size;
   for (int k = 0; k < comm_size - 1; k++) {
     RET_OK(RdmaIwriteWithImm((void*) tmprecvs[curr], curr, remote_recvs[curr],
-          block_counts[curr], datatype, send_to, 0, ctx, &reqs[1][curr]));
+          block_counts[curr], datatype, send_to, 0, ctx, &reqs[1][curr],
+          recv_mr));
     RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_STRING, recv_from, 0,
           ctx, NULL));
   }

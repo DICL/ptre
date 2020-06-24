@@ -118,18 +118,22 @@ int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
 
 int RdmaIwriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
                      int count, DataType dtype, int dst, int tag,
-                     RdmaContext* ctx, RdmaRequest* request) {
+                     RdmaContext* ctx, RdmaRequest* request,
+                     struct ibv_mr* send_mr) {
   int ret;
   size_t length = count * DataType_Size(dtype);
 
-  struct ibv_mr* mr = ctx->send_mr(buf);
+  struct ibv_mr* mr = send_mr;
   if (mr == NULL) {
-    mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length, 0);
+    mr = ctx->send_mr(buf);
     if (mr == NULL) {
-      LOG(ERROR) << "Failed to register MR";
-      return 1;
+      mr = ibv_reg_mr(ctx->pd(), const_cast<void*>(buf), length, 0);
+      if (mr == NULL) {
+        LOG(ERROR) << "Failed to register MR";
+        return 1;
+      }
+      request->set_mr(mr);
     }
-    request->set_mr(mr);
   }
 
   struct ibv_sge sge;

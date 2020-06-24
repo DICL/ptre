@@ -47,20 +47,20 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const int warmup_iters = 5;
-  const int iters = 20;
+  const int warmup_iters = 0;
+  const int iters = 1;
   chrono::system_clock::time_point tps[iters][2];
   float* send_arr = (float*) malloc(size);
   float* recv_arr = (float*) malloc(size);
   int count = size / sizeof(float);
 
-  for (int i = 0; i < count; i++) {
-    send_arr[i] = 0.1 * (comm_rank + 1);
-  }
-
   void* inbuf = malloc(size);
   RdmaInitAllreduceV2((void*) send_arr, (void*) recv_arr, inbuf, count,
       DataType::DT_FLOAT, &ctx);
+
+  for (int i = 0; i < count; i++) {
+    send_arr[i] = 0.1 * (comm_rank + 1);
+  }
 
   // Warmup
   for (int i = 0; i < warmup_iters; i++) {
@@ -160,8 +160,9 @@ int main(int argc, char* argv[]) {
         << "name" << "RdmaAllreduceV2"
         << "lib" << "ptre"
         << "lib_info" << bsoncxx::builder::stream::open_document
-          << "commit" << "f401f86d04cac161a67ce9b7c9ed8e7b6cfcfbed"
+          << "commit" << "43f5fd7a70e3dbd1f4bc5fd2636e74cdf90b63f0"
         << close_document
+        << "tag" << "remote_addr_caching+send_mr_caching"
         << "optimizer" << "-O3"
         << "parameters" << bsoncxx::builder::stream::open_document
           << "warmup_iters" << warmup_iters
@@ -186,7 +187,7 @@ int main(int argc, char* argv[]) {
         << close_document
         << bsoncxx::builder::stream::finalize;
 
-#if 1
+#if 0
     LOG(INFO) << bsoncxx::to_json(doc_value);
 #else
     mongocxx::instance instance{};

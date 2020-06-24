@@ -26,7 +26,8 @@ int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
 
 int RdmaIwriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
                      int count, DataType dtype, int dst, int tag,
-                     RdmaContext* ctx, RdmaRequest* request);
+                     RdmaContext* ctx, RdmaRequest* request,
+                     struct ibv_mr* send_mr = NULL);
 
 int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
                      int count, DataType dtype, int dst, int tag,
