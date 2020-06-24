@@ -69,8 +69,8 @@ void RdmaContext::RegisterSendBuffer(void* sendbuf, size_t length) {
   mr_cache_.RegisterSendMR(pd_, sendbuf, length);
 }
 
-void RdmaContext::RegisterRecvBuffer(void* recvbuf, size_t length) {
-  mr_cache_.RegisterRecvMR(pd_, recvbuf, length);
+struct ibv_mr* RdmaContext::RegisterRecvBuffer(void* recvbuf, size_t length) {
+  return mr_cache_.RegisterRecvMR(pd_, recvbuf, length);
 }
 
 void RdmaContext::DeregisterSendBuffer(void* sendbuf) {

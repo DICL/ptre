@@ -116,11 +116,10 @@ int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
   return 0;
 }
 
-int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
+int RdmaIwriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
                      int count, DataType dtype, int dst, int tag,
-                     RdmaContext* ctx) {
+                     RdmaContext* ctx, RdmaRequest* request) {
   int ret;
-  RdmaRequest request;
   size_t length = count * DataType_Size(dtype);
 
   struct ibv_mr* mr = ctx->send_mr(buf);
@@ -130,7 +129,7 @@ int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
       LOG(ERROR) << "Failed to register MR";
       return 1;
     }
-    request.set_mr(mr);
+    request->set_mr(mr);
   }
 
   struct ibv_sge sge;
@@ -140,7 +139,7 @@ int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
   sge.lkey = mr->lkey;
   struct ibv_send_wr wr;
   memset(&wr, 0, sizeof(wr));
-  wr.wr_id = (uint64_t) &request;
+  wr.wr_id = (uint64_t) request;
   wr.sg_list = &sge;
   wr.num_sge = 1;
   wr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
@@ -155,8 +154,24 @@ int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
     LOG(ERROR) << "Failed PostSend";
     return 1;
   }
+  return 0;
+}
 
-  ret = RdmaWait(&request, NULL);
+int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
+                     int count, DataType dtype, int dst, int tag,
+                     RdmaContext* ctx) {
+  int ret;
+  RdmaRequest req;
+  ret = RdmaIwriteWithImm(buf, imm_data, ra, count, dtype, dst, tag, ctx, &req);
+  if (ret) {
+    LOG(ERROR) << "RdmaIwriteWithImm returned " << ret;
+    return 1;
+  }
+  ret = RdmaWait(&req, NULL);
+  if (ret) {
+    LOG(ERROR) << "RdmaWait returned " << ret;
+    return 1;
+  }
   return 0;
 }
 

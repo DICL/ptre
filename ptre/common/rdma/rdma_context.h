@@ -36,7 +36,7 @@ class RdmaContext {
   int comm_size() { return comm_size_; }
   RdmaChannel* get_channel(int comm_rank);
   void RegisterSendBuffer(void* sendbuf, size_t length);
-  void RegisterRecvBuffer(void* recvbuf, size_t length);
+  struct ibv_mr* RegisterRecvBuffer(void* recvbuf, size_t length);
   void DeregisterSendBuffer(void* sendbuf);
   void DeregisterRecvBuffer(void* recvbuf);
   struct ibv_mr* send_mr(const void* buf);

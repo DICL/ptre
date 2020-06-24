@@ -28,6 +28,7 @@ target_link_libraries(operations
   ptre_global
   rdma_context
   rdma_mpi
+  rdma_mpi_v2
   rdma_request)
 
 add_executable(operations_test operations_test.cc)

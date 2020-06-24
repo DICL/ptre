@@ -39,6 +39,13 @@ target_link_libraries(write_with_imm_test
   operations
   )
 
+add_executable(allreduce_v2_test allreduce_v2_test.cc)
+target_link_libraries(allreduce_v2_test
+  operations
+  mongocxx
+  bsoncxx
+  ibverbs)
+
 
 #add_executable(cas_test cas_test.cc)
 #target_link_libraries(cas_test

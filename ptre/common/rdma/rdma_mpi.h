@@ -24,6 +24,10 @@ int RdmaIrecv(void* buf, int count, DataType datatype, int source, int tag,
 int RdmaRecv(void* buf, int count, DataType datatype, int source, int tag,
              RdmaContext* ctx, Status* status);
 
+int RdmaIwriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
+                     int count, DataType dtype, int dst, int tag,
+                     RdmaContext* ctx, RdmaRequest* request);
+
 int RdmaWriteWithImm(const void* buf, uint32_t imm_data, RemoteAddr ra,
                      int count, DataType dtype, int dst, int tag,
                      RdmaContext* ctx);

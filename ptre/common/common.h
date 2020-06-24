@@ -9,6 +9,16 @@
 // Device ID used for CPU.
 #define CPU_DEVICE_ID (-1)
 
+#define RET_OK(X)                           \
+  {                                         \
+    int r = X;                              \
+    if (r) {                                \
+      LOG(ERROR) << #X << " returned " << r \
+          << " @ " << __PRETTY_FUNCTION__;  \
+      return 1;                             \
+    }                                       \
+  }
+
 namespace ptre {
 namespace common {
 

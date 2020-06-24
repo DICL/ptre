@@ -13,3 +13,9 @@ target_link_libraries(rdma_mpi
   message
   rdma_request)
 #target_compile_options(rdma_mpi BEFORE PRIVATE "-O3")
+
+add_library(rdma_mpi_v2 SHARED rdma_mpi_v2.cc)
+target_link_libraries(rdma_mpi_v2
+  rdma_mpi
+  message
+  rdma_request)
