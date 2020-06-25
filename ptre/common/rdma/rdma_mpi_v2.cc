@@ -117,17 +117,17 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
     tmpinbufs[i] = inbuf + block_offset * dtsize;
   }
 
+  recv_mr = ctx->recv_mr(recvbuf);
+  if (recv_mr == NULL) {
+    // Register MR
+    recv_mr = ibv_reg_mr(ctx->pd(), recvbuf, count * dtsize,
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+  }
   // Remote Address
   RemoteAddr recv_ra;
   ret = ctx->get_remote_addr(
       RdmaContext::REMOTE_ADDR_ALLREDUCE_RECV_BUF, (void*) recvbuf, &recv_ra);
   if (ret) {
-    recv_mr = ctx->recv_mr(recvbuf);
-    if (recv_mr == NULL) {
-      // Register MR
-      recv_mr = ibv_reg_mr(ctx->pd(), recvbuf, count * dtsize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-    }
     RemoteAddr my = { (uint64_t) recv_mr->addr, recv_mr->rkey };
     // Exchange address and rkey
     RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_STRING,
@@ -138,17 +138,17 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
     remote_recvs[i].remote_addr = recv_ra.remote_addr + byte_offsets[i];
     remote_recvs[i].rkey = recv_ra.rkey;
   }
+  inbuf_mr = ctx->recv_mr((void*) inbuf);
+  if (inbuf_mr == NULL) {
+    // Register MR
+    inbuf_mr = ibv_reg_mr(ctx->pd(), (void*) inbuf, count * dtsize,
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+  }
   RemoteAddr inbuf_ra;
   ret = ctx->get_remote_addr(
       RdmaContext::REMOTE_ADDR_ALLREDUCE_INTERMEDIATE_BUF, (void*) recvbuf,
       &inbuf_ra);
   if (ret) {
-    inbuf_mr = ctx->recv_mr((void*) inbuf);
-    if (inbuf_mr == NULL) {
-      // Register MR
-      inbuf_mr = ibv_reg_mr(ctx->pd(), (void*) inbuf, count * dtsize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-    }
     RemoteAddr my = { (uint64_t) inbuf_mr->addr, inbuf_mr->rkey };
     // Exchange address and rkey
     RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_STRING,

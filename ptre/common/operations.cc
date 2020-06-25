@@ -121,6 +121,7 @@ void PtreRecv(int src_rank, char* buf, size_t len, const string& name) {
   int ret = -1;
   while (ret) {
     ret = grpc_client->Recv(buf, len, name);
+    if (ret) exit(1);
   }
 }
 

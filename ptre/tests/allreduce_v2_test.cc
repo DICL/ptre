@@ -80,6 +80,7 @@ int main(int argc, char* argv[]) {
     tps[i][1] = chrono::system_clock::now();
   }
 
+  //RdmaFinalizeAllreduceV2((void*)
 
   if (comm_rank == 0) {
     float reduced_expect = 0;
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
         << "name" << "RdmaAllreduceV2"
         << "lib" << "ptre"
         << "lib_info" << bsoncxx::builder::stream::open_document
-          << "commit" << "43f5fd7a70e3dbd1f4bc5fd2636e74cdf90b63f0"
+          << "commit" << "f6173ce4a5afee8526f81f452ed488261fbb0143"
         << close_document
         << "tag" << "remote_addr_caching+send_mr_caching"
         << "optimizer" << "-O3"
@@ -187,7 +188,7 @@ int main(int argc, char* argv[]) {
         << close_document
         << bsoncxx::builder::stream::finalize;
 
-#if 0
+#if 1
     LOG(INFO) << bsoncxx::to_json(doc_value);
 #else
     mongocxx::instance instance{};
