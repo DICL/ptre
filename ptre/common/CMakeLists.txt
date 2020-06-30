@@ -7,6 +7,7 @@ add_library(common SHARED common.cc)
 add_library(message SHARED message.cc)
 target_link_libraries(message
   common
+  messages_proto
   )
 
 add_library(ptre_global SHARED ptre_global.cc)

@@ -15,6 +15,7 @@
 #include "ptre/common/communication/rdma/rdma_mgr.h"
 #include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/message.h"
+#include "ptre/common/rdma/rdma_context.h"
 
 namespace ptre {
 namespace common {
@@ -28,10 +29,13 @@ struct PtreGlobal {
 
   ConsensusManager* cm = nullptr;
   RdmaMgr* rdma_mgr = nullptr;
+  RdmaContext* rdma_ctx = nullptr;
   std::mutex mu;
 
   std::queue<Request> message_queue;
-  std::unique_ptr<MessageTable> message_table;
+  //std::unique_ptr<MessageTable> message_table;
+  MessageTable message_table;
+  std::thread background_thread;
 
   std::vector<std::thread> polling_threads;
 

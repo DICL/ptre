@@ -10,6 +10,11 @@ RdmaRequest::RdmaRequest() {
   status_ = -1;
 }
 
+void RdmaRequest::Clear() {
+  mr_ = NULL;
+  status_ = -1;
+}
+
 int RdmaRequest::Join() {
 #ifdef RDMA_REQUEST_BUSY_WAIT
   while (status_ < 0) continue;

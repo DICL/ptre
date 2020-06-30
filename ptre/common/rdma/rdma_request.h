@@ -11,6 +11,7 @@ namespace common {
 class RdmaRequest {
  public:
   RdmaRequest();
+  void Clear();
   int Join();
   void Done();
   void DoneFailure();

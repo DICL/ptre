@@ -20,7 +20,14 @@ PtreGlobal::PtreGlobal() {
 
 PtreGlobal::~PtreGlobal() {
   shutdown = true;
-  grpc_server->Shutdown();
+
+  if (background_thread.joinable()) {
+    background_thread.join();
+  }
+
+  if (grpc_server != nullptr) {
+    grpc_server->Shutdown();
+  }
 
   if (polling_threads.size() > 0) {
     DVLOG(0) << "Join Polling Threads(num_threads="<< polling_threads.size()

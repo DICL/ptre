@@ -140,15 +140,22 @@ class PtreAllreduceOp : public AsyncOpKernel {
     ptre::common::ReduceOp reduce_op =
         static_cast<ptre::common::ReduceOp>(reduce_op_);
     Tensor* output;
+#if 1
     OP_REQUIRES_OK_ASYNC(
         ctx, ctx->allocate_output(0, tensor.shape(), &output), done);
+#else 
+    OP_REQUIRES_OK(ctx, ctx->allocate_output(0, tensor.shape(), &output));
+#endif
+LOG(INFO) << std::endl << __FUNCTION__ << "\n***tensor=" << (uint64_t) tensor.tensor_data().data() << ", output=" << (uint64_t) output->tensor_data().data() << ", name=" << node_name;
     Status enqueue_result = EnqueueTensorAllreduce(
         ctx, &tensor, output, node_name,
         [ctx, done](const Status& status) {
           ctx->SetStatus(status);
           done();
         }, reduce_op);
+LOG(INFO) << "1111";
     OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
+LOG(INFO) << "2222";
   }
 
  private:

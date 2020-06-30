@@ -32,12 +32,12 @@ int main(int argc, char* argv[]) {
     ra.remote_addr = (uint64_t) mr->addr;
     ra.rkey = mr->rkey;
     cout << "Send remote_addr=" << ra.remote_addr << ", rkey=" << ra.rkey << endl;
-    RdmaSend((void*) &ra, sizeof(RemoteAddr), DataType::DT_STRING, 1, 0, &ctx);
+    RdmaSend((void*) &ra, sizeof(RemoteAddr), DataType::DT_BOOL, 1, 0, &ctx);
 
     PtreBarrier();
 
     uint32_t imm_data;
-    ret = RdmaRecvWithImm(NULL, &imm_data, 0, DataType::DT_STRING, 1, 0,
+    ret = RdmaRecvWithImm(NULL, &imm_data, 0, DataType::DT_BOOL, 1, 0,
         &ctx, NULL);
     cout << "Recv arr[0]=" << arr[0]
       << ", arr[kCount - 1]=" << arr[kCount - 1]
@@ -48,7 +48,7 @@ cout << "00\n";
     ctx->RegisterSendBuffer((void*) arr, kSize);
 cout << "01\n";
 #endif
-    RdmaRecv((void*) &ra, sizeof(RemoteAddr), DataType::DT_STRING, 0, 0, &ctx,
+    RdmaRecv((void*) &ra, sizeof(RemoteAddr), DataType::DT_BOOL, 0, 0, &ctx,
         NULL);
     cout << "Recv remote_addr=" << ra.remote_addr << ", rkey=" << ra.rkey << endl;
 

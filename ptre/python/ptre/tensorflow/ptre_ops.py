@@ -29,7 +29,6 @@ def init_rdma_grpc_service():
   PTRE_CDLL.ptre_init_rdma_grpc_service()
 
 def finalize(wait_sec=0):
-  barrier(1)
   PTRE_CDLL.ptre_finalize(wait_sec)
 
 def size():
@@ -46,6 +45,10 @@ def unset_push():
 
 def is_new_incoming():
   return PTRE_CDLL.ptre_is_new_incoming()
+
+def allreduce(tensor):
+  name = 'PtreAllreduce_%s' % _normalize_name(tensor.name)
+  return PTRE_LIB.ptre_allreduce(tensor, name=name, reduce_op=0)
 
 def resource_remote_variable(resource, var_name):
   return PTRE_LIB.ptre_resource_remote_variable(resource, 'float32',

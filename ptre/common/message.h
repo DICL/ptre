@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "ptre/protobuf/messages.pb.h"
+
 #include "tensorflow/core/framework/types.pb.h"
 
 #define COMM_IN_PLACE ((void*) 1)
@@ -31,12 +33,9 @@ enum DataType {
 
 std::size_t DataType_Size(DataType value);
 
+/*
 class Request {
  public:
-  enum RequestType {
-    ALLREDUCE = 0
-  };
-
   void set_request_rank(int comm_rank);
 
   void set_request_type(RequestType val);
@@ -58,12 +57,17 @@ class Request {
   string tensor_name_;
 };
 
+class RequestList {
+ public:
+  const std::vector<Request>& requests() { return requests_; }
+
+ private:
+  std::vector<Request> requests_;
+};
+*/
+
 class Response {
  public:
-  enum ResponseType {
-    ALLREDUCE = 0
-  };
-
   void set_response_type(ResponseType value);
 
   ResponseType response_type() const { return response_type_; }
@@ -83,11 +87,33 @@ class Response {
   // Empty if the type is DONE or SHUTDOWN.
   const std::vector<string>& tensor_names() const { return tensor_names_; }
 
+  bool FromProto(ResponseProto&& proto);
+
+  void AsProto(ResponseProto* proto);
+
  private:
   ResponseType response_type_;
   DataType tensor_type_;
   std::vector<string> tensor_names_;
+  std::vector<int> devices_;
+  std::vector<size_t> tensor_sizes_;
 };
+
+class ResponseList {
+ public:
+
+  void add_response(Response&& response);
+
+  bool FromProto(ResponseListProto&& proto);
+
+  void AsProto(ResponseListProto* proto);
+
+  const std::vector<Response>& responses() { return responses_; }
+
+ private:
+  std::vector<Response> responses_;
+};
+
 
 
 }  // namespace common

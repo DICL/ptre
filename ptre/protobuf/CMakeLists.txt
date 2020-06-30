@@ -17,3 +17,7 @@ target_link_libraries(tcp_service_proto
 add_library          (tcp_service_grpc_proto  SHARED tcp_service.grpc.pb.cc)
 target_link_libraries(tcp_service_grpc_proto
                         tcp_service_proto)
+
+add_library(messages_proto SHARED messages.pb.cc)
+target_link_libraries(messages_proto
+  protobuf)

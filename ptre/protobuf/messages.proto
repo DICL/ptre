@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package ptre.common;
+
+enum RequestType {
+  REQUEST_TYPE_ALLREDUCE = 0;
+}
+
+message Request {
+  int32 request_rank = 1;
+  string tensor_name = 2;
+  // DT_FLOAT = 1;
+  // DT_STRING = 7;
+  int32 tensor_type = 3;
+}
+
+message RequestList {
+  repeated Request requests = 1;
+}
+
+enum ResponseType {
+  RESPONSE_TYPE_ALLREDUCE = 0;
+}
+
+message ResponseProto {
+  ResponseType response_type = 1;
+  repeated string tensor_names = 2;
+  int32 tensor_type = 3;
+  repeated int32 devices = 4;
+  repeated int64 tensor_sizes = 5;
+}
+
+message ResponseListProto {
+  repeated ResponseProto responses = 1;
+}

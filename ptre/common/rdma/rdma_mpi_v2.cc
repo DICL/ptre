@@ -20,16 +20,16 @@ int RdmaInitAllreduceV2(const void* sendbuf, const void* recvbuf,
   struct ibv_mr* mr = ctx->RegisterRecvBuffer((void*) inbuf, count * dtsize);
   RemoteAddr my = { (uint64_t) mr->addr, mr->rkey };
   RemoteAddr ra;
-  RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_STRING,
-        recv_from, 0, (void*) &ra, sizeof(RemoteAddr), DataType::DT_STRING,
+  RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_BOOL,
+        recv_from, 0, (void*) &ra, sizeof(RemoteAddr), DataType::DT_BOOL,
         send_to, 0, ctx, NULL));
   ctx->set_remote_addr(RdmaContext::REMOTE_ADDR_ALLREDUCE_INTERMEDIATE_BUF,
       (void*) recvbuf, ra);
 
   mr = ctx->RegisterRecvBuffer((void*) recvbuf, count * dtsize);
   my = { (uint64_t) mr->addr, mr->rkey };
-  RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_STRING,
-        recv_from, 0, (void*) &ra, sizeof(RemoteAddr), DataType::DT_STRING,
+  RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_BOOL,
+        recv_from, 0, (void*) &ra, sizeof(RemoteAddr), DataType::DT_BOOL,
         send_to, 0, ctx, NULL));
   ctx->set_remote_addr(RdmaContext::REMOTE_ADDR_ALLREDUCE_RECV_BUF,
       (void*) recvbuf, ra);
@@ -130,9 +130,9 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
   if (ret) {
     RemoteAddr my = { (uint64_t) recv_mr->addr, recv_mr->rkey };
     // Exchange address and rkey
-    RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_STRING,
+    RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_BOOL,
           recv_from, 0, (void*) &recv_ra, sizeof(RemoteAddr),
-          DataType::DT_STRING, send_to, 0, ctx, NULL));
+          DataType::DT_BOOL, send_to, 0, ctx, NULL));
   }
   for (int i = 0; i < comm_size; i++) {
     remote_recvs[i].remote_addr = recv_ra.remote_addr + byte_offsets[i];
@@ -151,9 +151,9 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
   if (ret) {
     RemoteAddr my = { (uint64_t) inbuf_mr->addr, inbuf_mr->rkey };
     // Exchange address and rkey
-    RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_STRING,
+    RET_OK(RdmaSendrecv((void*) &my, sizeof(RemoteAddr), DataType::DT_BOOL,
           recv_from, 0, (void*) &inbuf_ra, sizeof(RemoteAddr),
-          DataType::DT_STRING, send_to, 0, ctx, NULL));
+          DataType::DT_BOOL, send_to, 0, ctx, NULL));
   }
   for (int i = 0; i < comm_size; i++) {
     remote_inbufs[i].remote_addr = inbuf_ra.remote_addr + byte_offsets[i];
@@ -166,7 +166,7 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
         block_counts[curr], datatype, send_to, 0, ctx, &reqs[0][curr],
         recv_mr));
   for (int k = 0; k < comm_size - 2; k++) {
-    RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_STRING, recv_from, 0,
+    RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_BOOL, recv_from, 0,
           ctx, NULL));
     // TODO: Apply DataType other than float
     float* seg_recv = (float*) tmprecvs[curr];
@@ -178,7 +178,7 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
           block_counts[curr], datatype, send_to, 0, ctx, &reqs[0][curr],
           recv_mr));
   }
-  RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_STRING, recv_from, 0,
+  RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_BOOL, recv_from, 0,
         ctx, NULL));
   // TODO: Apply DataType other than float
   float* seg_recv = (float*) tmprecvs[curr];
@@ -193,7 +193,7 @@ int RdmaAllreduceRingV2(const void* sendbuf, void* recvbuf, int count,
     RET_OK(RdmaIwriteWithImm((void*) tmprecvs[curr], curr, remote_recvs[curr],
           block_counts[curr], datatype, send_to, 0, ctx, &reqs[1][curr],
           recv_mr));
-    RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_STRING, recv_from, 0,
+    RET_OK(RdmaRecvWithImm(NULL, &curr, 0, DataType::DT_BOOL, recv_from, 0,
           ctx, NULL));
   }
 
