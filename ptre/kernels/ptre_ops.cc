@@ -1069,6 +1069,7 @@ REGISTER_KERNELS(GPU, double);
 #undef REGISTER_CPU_KERNELS
 #undef REGISTER_KERNELS
 
+// TODO: Use AsyncOpKernel
 REGISTER_OP("ResourceUpdatePullVariable")
   .Input("var: resource")
   .Attr("T: numbertype")
@@ -1079,6 +1080,7 @@ class UpdatePullVariableOp : public OpKernel {
   explicit UpdatePullVariableOp(OpKernelConstruction* ctx) : OpKernel(ctx) {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
   }
+  // TODO: Use ComputeAsync
   void Compute(OpKernelContext* ctx) {
     auto pvar = ptre_global.rdma_mgr->pull_variable(var_name_);
     if (!pvar) return;
@@ -1091,6 +1093,7 @@ class UpdatePullVariableOp : public OpKernel {
     typename TTypes<T>::Flat next_flat(next_buf, var.flat<T>().size());
     const Device& d = ctx->template eigen_device<Device>();
     pvar->SetNextKey(ptre_global.local_step + 1);
+    // TODO: Make this asynchronous
     functor::CopyTensorToSendBuf<Device, T>()(d, var.flat<T>(), next_flat);
 
     pvar->Switch();
