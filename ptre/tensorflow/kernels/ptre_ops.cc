@@ -118,6 +118,29 @@ REGISTER_KERNEL_BUILDER(Name("Broadcast").Device(DEVICE_CPU), BroadcastOp);
 
 // --------------------------------------------------------------------------
 
+namespace functor {
+
+template <typename Device, typename T>
+struct Foo {
+  void operator()(const Device& d);
+};
+
+template <typename T>
+struct Foo<CPUDevice, T> {
+  void operator()(const CPUDevice& d) {
+    //LOG(INFO) << d.DebugString();
+  }
+};
+
+template <typename T>
+struct Foo<GPUDevice, T> {
+  void operator()(const GPUDevice& d) {
+    //LOG(INFO) << d.DebugString();
+  }
+};
+
+}  // namespace functor
+
 REGISTER_OP("PtreAllreduce")
   .Input("tensor: T")
   .Output("sum: T")
@@ -127,6 +150,7 @@ REGISTER_OP("PtreAllreduce")
     c->set_output(0, c->input(0));
     return Status::OK();
   });
+template <typename Device, typename T>
 class PtreAllreduceOp : public AsyncOpKernel {
  public:
   explicit PtreAllreduceOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) {
@@ -136,6 +160,10 @@ class PtreAllreduceOp : public AsyncOpKernel {
   void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
     auto node_name = name();
     //auto device = GetDeviceID(ctx);
+    auto d = ctx->device();
+LOG(INFO) << "Device=" << d->name() << ", Name=" << node_name;
+    //string device_name;
+    //functor::Foo<Device, T>(d);
     auto tensor = ctx->input(0);
     ptre::common::ReduceOp reduce_op =
         static_cast<ptre::common::ReduceOp>(reduce_op_);
@@ -143,7 +171,7 @@ class PtreAllreduceOp : public AsyncOpKernel {
 #if 1
     OP_REQUIRES_OK_ASYNC(
         ctx, ctx->allocate_output(0, tensor.shape(), &output), done);
-#else 
+#else
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, tensor.shape(), &output));
 #endif
 LOG(INFO) << std::endl << __FUNCTION__ << "\n***tensor=" << (uint64_t) tensor.tensor_data().data() << ", output=" << (uint64_t) output->tensor_data().data() << ", name=" << node_name;
@@ -162,10 +190,10 @@ LOG(INFO) << "2222";
   int reduce_op_;
 };
 REGISTER_KERNEL_BUILDER(Name("PtreAllreduce").Device(DEVICE_CPU),
-                        PtreAllreduceOp);
+                        PtreAllreduceOp<CPUDevice, float>);
 #if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 REGISTER_KERNEL_BUILDER(Name("PtreAllreduce").Device(DEVICE_GPU),
-                        PtreAllreduceOp);
+                        PtreAllreduceOp<GPUDevice, float>);
 #endif
 
 // --------------------------------------------------------------------------
