@@ -21,7 +21,8 @@ namespace ptre {
 namespace common {
 
 using std::string;
-using MessageTable = std::unordered_map<string, std::vector<Request>>;
+using MessageTable =
+    std::unordered_map<string, std::unordered_map<int, Request>>;
 
 struct PtreGlobal {
   PtreGlobal();

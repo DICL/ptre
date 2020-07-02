@@ -46,9 +46,14 @@ def unset_push():
 def is_new_incoming():
   return PTRE_CDLL.ptre_is_new_incoming()
 
-def allreduce(tensor):
-  name = 'PtreAllreduce_%s' % _normalize_name(tensor.name)
-  return PTRE_LIB.ptre_allreduce(tensor, name=name, reduce_op=0)
+def allreduce(tensor, reduce_op=0):
+  #name = 'PtreAllreduce_%s' % _normalize_name(tensor.name)
+  name = _normalize_name(tensor.name)
+  tensor_sum = PTRE_LIB.ptre_allreduce(tensor, name=name, reduce_op=0)
+  if reduce_op == 0:
+    return tensor_sum / size()
+  else:
+    return tensor_sum
 
 def resource_remote_variable(resource, var_name):
   return PTRE_LIB.ptre_resource_remote_variable(resource, 'float32',
