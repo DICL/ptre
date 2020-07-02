@@ -48,7 +48,7 @@ struct TensorTableEntry {
   // Event indicating that data is ready.
   //std::shared_ptr<ReadyEvent> ready_event;
   // GPU to do reduction on, or CPU_DEVICE_ID in case of CPU.
-  //int device = CPU_DEVICE_ID;
+  int device = CPU_DEVICE_ID;
   // A callback to call with the status.
   StatusCallback callback;
 };

@@ -20,10 +20,7 @@ def run():
   print(grad.device)
 
   with tf.device('/device:cpu:0'):
-    new_grad_cpu = ptre.allreduce(grad)
-
-  #with tf.device('/device:gpu:0'):
-  new_grad = tf.Variable(new_grad_cpu, name="new_grad")
+    new_grad = ptre.allreduce(grad)
 
   print(new_grad)
   #print(new_grad.name)

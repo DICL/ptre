@@ -16,7 +16,6 @@ from ptre.tensorflow import resource_push_tensor
 from ptre.tensorflow import resource_update_pull_variable
 #from ptre.tensorflow import create_pull_job
 from ptre.tensorflow.keras import callbacks
-from ptre.tensorflow.keras.optimizers.allreduce_optimizer import PtreAllreduceOptimizer
 
 from tensorflow.python.distribute import reduce_util as ds_reduce_util
 from tensorflow.python.eager import context
@@ -384,8 +383,5 @@ def ModelaverageOptimizer(optimizer, name=None, apply_after_reduce=True,
                           mode="pull"):
   return create_modelaverage_optimizer(optimizer, name, apply_after_reduce,
       mode)
-
-def AllreduceOptimizer(optimizer, name=None):
-  return PtreAllreduceOptimizer(optimizer, name)
 #
 #def modelaverage(tensor):

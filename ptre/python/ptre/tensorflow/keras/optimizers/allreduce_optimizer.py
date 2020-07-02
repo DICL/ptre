@@ -7,8 +7,6 @@ from ptre.tensorflow import resource_remote_variable
 from ptre.tensorflow import resource_publish_variable
 
 from tensorflow.python.keras.optimizer_v2 import optimizer_v2
-from tensorflow.python.framework import ops
-import tensorflow as tf
 
 def create_distributed_optimizer(optimizer, name):
   class _AllreduceOptimizer(optimizer_v2.OptimizerV2):
@@ -18,21 +16,25 @@ def create_distributed_optimizer(optimizer, name):
       self._name = name
       super(self.__class__, self).__init__(**config)
 
-    def get_gradients(self, loss, params):
-      gradients = super(self.__class__, self).get_gradients(loss, params)
-      return self._allreduce(gradients)
+    def _allreduce(self, grad):
 
-    def _allreduce(self, gradients):
-      avg_grads = []
-      with tf.name_scope(self._name + "_Allreduce"):
-        for grad in gradients:
-          with ops.device('/device:cpu:0'):
-            #grad_cpu = tf.convert_to_tensor(grad)
-            avg_cpu = allreduce(grad)
-          avg_grads.append(avg_cpu)
-          #print(type(avg_cpu))
-          #avg_grads.append(tf.constant(avg_cpu))
-      return avg_grads
+    def apply_gradients(self, grads_and_vars, name=None):
+      gradients, variables = list(zip(*grads_and_vars))
+      #new_grads =
+      rvars, num_aggs = _remote_variables(variables)
+      locals_and_remotes = zip(variables, rvars, num_aggs)
+      avg_vars = _model_average(locals_and_remotes)
+      new_grads_and_vars = zip(gradients, avg_vars)
+      apply_ops = (super(self.__class__, self)
+                    .apply_gradients(new_grads_and_vars, name))
+      publish_ops = []
+      apply_and_vars = zip(apply_ops, avg_vars)
+      for apply_op, var in apply_and_vars:
+        with ops.control_dependencies([apply_op]):
+          publish_ops.append(_publish(var))
+      return publish_ops
+      
+
   # create_distributed_optimizer
   cls = type(optimizer.__class__.__name__, (optimizer.__class__,),
              dict(_AllreduceOptimizer.__dict__))
