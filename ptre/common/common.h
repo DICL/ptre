@@ -3,6 +3,8 @@
 
 #include <memory>
 
+#include "ptre/common/logging.h"
+
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 

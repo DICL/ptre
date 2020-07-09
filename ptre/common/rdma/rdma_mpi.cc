@@ -58,15 +58,18 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
              RdmaContext* ctx) {
   int ret;
   RdmaRequest request;
+DVLOG(0) << __FUNCTION__ << ": 1000 buf=" << (char*) buf << ", count=" << count << ", dt=" << int(datatype) << ", dest=" << dest << ", req=" << (uint64_t) &request;
   ret = RdmaIsend(buf, count, datatype, dest, tag, ctx, &request);
   if (ret) {
     LOG(ERROR) << "RdmaIsend returned " << ret << " @ " << __PRETTY_FUNCTION__;
   }
 
+DVLOG(0) << __FUNCTION__ << ": 2000 RdmaWait req=" << (uint64_t) &request;
   ret = RdmaWait(&request, NULL);
   if (ret) {
     LOG(ERROR) << "RdmaWait returned " << ret << " @ " << __PRETTY_FUNCTION__;
   }
+DVLOG(0) << __FUNCTION__ << ": 3000 DONE";
 
   return 0;
 }
@@ -373,7 +376,7 @@ int RdmaAllreduceNonOverlapping(const void* sendbuf, void* recvbuf, int count,
 
 int RdmaAllreduceRing(const void* sendbuf, void* recvbuf, int count,
                       DataType datatype, ReduceOp op, RdmaContext* ctx) {
-LOG(INFO) << __FUNCTION__ << "1000";
+//LOG(INFO) << __FUNCTION__ << "1000";
   int ret, line, comm_rank, comm_size, k, recv_from, send_to, block_count, inbi;
   int early_segcount, late_segcount, split_rank, max_segcount;
   char *tmpsend = NULL, *tmprecv = NULL;
@@ -387,7 +390,7 @@ LOG(INFO) << __FUNCTION__ << "1000";
   comm_rank = ctx->comm_rank();
   dtsize = DataType_Size(datatype);
 
-LOG(INFO) << __FUNCTION__ << "2000";
+//LOG(INFO) << __FUNCTION__ << "2000";
   // Special case for comm_size == 1
   if (comm_size == 1) {
     DVLOG(0) << "Special case for comm_size == 1";
@@ -397,14 +400,14 @@ LOG(INFO) << __FUNCTION__ << "2000";
     return 0;
   }
 
-LOG(INFO) << __FUNCTION__ << "3000";
+//LOG(INFO) << __FUNCTION__ << "3000";
   // Special case for count less than comm_size - use simple allreduce
   if (count < comm_size) {
     return RdmaAllreduceNonOverlapping(sendbuf, recvbuf, count, datatype, op,
         ctx);
   }
 
-LOG(INFO) << __FUNCTION__ << "4000";
+//LOG(INFO) << __FUNCTION__ << "4000";
   // Compute Block Count
   early_segcount = late_segcount = count / comm_size;
   split_rank = count % comm_size;
@@ -413,21 +416,21 @@ LOG(INFO) << __FUNCTION__ << "4000";
   }
   max_segcount = early_segcount;
   max_real_segsize = max_segcount * dtsize;
-LOG(INFO) << __FUNCTION__ << "4100";
+//LOG(INFO) << __FUNCTION__ << "4100";
   inbuf[0] = (char*) malloc(max_real_segsize);
   if (inbuf[0] == NULL) return 1;
   if (comm_size > 2) {
-LOG(INFO) << __FUNCTION__ << "4200";
+//LOG(INFO) << __FUNCTION__ << "4200";
     inbuf[1] = (char*) malloc(max_real_segsize);
     if (inbuf[1] == NULL) return 1;
   }
 
-LOG(INFO) << std::endl << __FUNCTION__ << "\n***sendbuf=" << (uint64_t) sendbuf << ", recvbuf=" << (uint64_t) recvbuf << ", count=" << count << ", dtsize=" << DataType_Size(datatype);
+//LOG(INFO) << std::endl << __FUNCTION__ << "\n***sendbuf=" << (uint64_t) sendbuf << ", recvbuf=" << (uint64_t) recvbuf << ", count=" << count << ", dtsize=" << DataType_Size(datatype);
   if (sendbuf != COMM_IN_PLACE) {
     memcpy(recvbuf, sendbuf, count * DataType_Size(datatype));
   }
 
-LOG(INFO) << __FUNCTION__ << "5000";
+//LOG(INFO) << __FUNCTION__ << "5000";
   // Computation Loop
   send_to = (comm_rank + 1) % comm_size;
   recv_from = (comm_rank + comm_size - 1) % comm_size;
@@ -448,7 +451,7 @@ LOG(INFO) << __FUNCTION__ << "5000";
   ret = RdmaSend((void*) tmpsend, block_count, datatype, send_to, 0, ctx);
   //assert(ret == 0);
 
-LOG(INFO) << __FUNCTION__ << "6000";
+//LOG(INFO) << __FUNCTION__ << "6000";
   for (k = 2; k < comm_size; k++) {
     const int prevblock = (comm_rank + comm_size - k + 1) % comm_size;
 
@@ -507,7 +510,7 @@ LOG(INFO) << __FUNCTION__ << "6000";
   }
 #endif
 
-LOG(INFO) << __FUNCTION__ << "7000";
+//LOG(INFO) << __FUNCTION__ << "7000";
   // Distribution Loop
   send_to = (comm_rank + 1) % comm_size;
   recv_from = (comm_rank + comm_size - 1) % comm_size;

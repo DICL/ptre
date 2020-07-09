@@ -19,12 +19,16 @@ PtreGlobal::PtreGlobal() {
 }
 
 PtreGlobal::~PtreGlobal() {
+  //shutdown.store(true);
   shutdown = true;
 
+  //LOG(INFO) << "Joining Background Thread";
   if (background_thread.joinable()) {
+    //background_thread.detach();
     background_thread.join();
   }
 
+  DVLOG(0) << "Shuttingdown Grpc Server";
   if (grpc_server != nullptr) {
     grpc_server->Shutdown();
   }

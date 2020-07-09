@@ -161,7 +161,7 @@ class PtreAllreduceOp : public AsyncOpKernel {
     auto node_name = name();
     //auto device = GetDeviceID(ctx);
     auto d = ctx->device();
-LOG(INFO) << "Device=" << d->name() << ", Name=" << node_name;
+//LOG(INFO) << "Device=" << d->name() << ", Name=" << node_name;
     //string device_name;
     //functor::Foo<Device, T>(d);
     auto tensor = ctx->input(0);
@@ -174,16 +174,15 @@ LOG(INFO) << "Device=" << d->name() << ", Name=" << node_name;
 #else
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, tensor.shape(), &output));
 #endif
-LOG(INFO) << std::endl << __FUNCTION__ << "\n***tensor=" << (uint64_t) tensor.tensor_data().data() << ", output=" << (uint64_t) output->tensor_data().data() << ", name=" << node_name;
+//LOG(INFO) << __FUNCTION__ << "\n***tensor=" << (uint64_t) tensor.tensor_data().data() << ", output=" << (uint64_t) output->tensor_data().data() << ", name=" << node_name << ", num_elements=" << tensor.NumElements();
     Status enqueue_result = EnqueueTensorAllreduce(
         ctx, &tensor, output, node_name,
         [ctx, done](const Status& status) {
+//LOG(INFO) << __FUNCTION__ << ": ctx=" << (uint64_t) ctx << ", num_elem=" << ctx->input(0).NumElements();
           ctx->SetStatus(status);
           done();
         }, reduce_op);
-LOG(INFO) << "1111";
     OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
-LOG(INFO) << "2222";
   }
 
  private:

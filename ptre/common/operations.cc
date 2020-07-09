@@ -647,6 +647,7 @@ void ptre_print_counter_summary() {
 
 namespace {
 
+#if 0
 bool IncrementTensorCount(std::unique_ptr<MessageTable>& message_table,
                           Request msg, int comm_size) {
   auto name = msg.tensor_name();
@@ -661,6 +662,7 @@ bool IncrementTensorCount(std::unique_ptr<MessageTable>& message_table,
   int count = table_iter->second.size();
   return count == comm_size;
 }
+#endif
 
 }
 
@@ -744,6 +746,7 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
 
   TensorTableEntry entry;
   entry.tensor_name = node_name;
+//LOG(INFO) << __FUNCTION__ << ": ctx=" << (uint64_t) ctx;
   entry.context = ctx;
   entry.tensor = tensor;
   entry.output = output;
@@ -753,7 +756,7 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
   std::lock_guard<std::mutex> guard(ptre_global.mu);
   ptre_global.tensor_table.emplace(entry.tensor_name, entry);
   ptre_global.message_queue.push(message);
-//LOG(INFO) << std::endl << __FUNCTION__ << "\n***tensor=" << (uint64_t) entry.tensor->tensor_data().data() << ", output=" << (uint64_t) entry.output->tensor_data().data() << ", name=" << node_name;
+DVLOG(0) << __FUNCTION__ << "\n***tensor=" << (uint64_t) entry.tensor->tensor_data().data() << ", output=" << (uint64_t) entry.output->tensor_data().data() << ", name=" << node_name;
 
   return Status::OK();
 }
@@ -761,57 +764,8 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
 bool RunLoopOnce(PtreGlobal& state);
 
 void BackgroundThreadLoop(PtreGlobal& state) {
-#if 0
-  int rank = ptre_rank();
-  int size = ptre_size();
-
-  bool is_coordinator = rank == 0;
-  if (is_coordinator) {
-    ptre_global.message_table =
-        std::unique_ptr<MessageTable>(new MessageTable());
-  }
-
-  bool should_shut_down = false;
-  do {
-    std::queue<Request> message_queue;
-    {
-      std::lock_guard<std::mutex> guard(ptre_global.mu);
-      while (!ptre_global.message_queue.empty()) {
-        Request message = ptre_global.message_queue.front();
-        ptre_global.message_queue.pop();
-        message_queue.push(message);
-      }
-    }
-
-    std::vector<string> ready_to_reduce;
-    while (!message_queue.empty()) {
-      Request message = message_queue.front();
-      message_queue.pop();
-
-      if (is_coordinator) {
-        bool reduce =
-            IncrementTensorCount(ptre_global.message_table, message, size);
-        if (reduce) {
-          ready_to_reduce.push_back(message.tensor_name());
-        }
-      } else {
-        string encoded_message;
-        message.SerializeToString(&encoded_message);
-        MPI_Send(encoded_message.c_str(), encoded_message.length() + 1,
-                 MPI_BYTE, RANK_ZERO, TAG_NOTIFY, MPI_COMM_WORLD);
-      }
-    }
-
-    if (is_coordinator) {
-      int completed_ranks = 1;
-
-    }
-
-  } while (should_shut_down);
-#else
   while (RunLoopOnce(state)) continue;
-#endif
-LOG(INFO) << __FUNCTION__ << "END END END";
+DVLOG(0) << __FUNCTION__ << "END END END";
 }
 
 void ComputeResponseList(ResponseList& response_list);
@@ -819,14 +773,49 @@ void PerformOperation(Response response, PtreGlobal& state);
 
 bool RunLoopOnce(PtreGlobal& state) {
 
+//LOG(INFO) << "1111";
   ResponseList response_list;
   ComputeResponseList(response_list);
+//LOG(INFO) << "2222";
 
   for (auto& response : response_list.responses()) {
     PerformOperation(response, state);
   }
+//LOG(INFO) << "3333";
+  //bool ret = !ptre_global.shutdown;
+//LOG(INFO) << "ret=" << ret;
 
   return !ptre_global.shutdown;
+  //return ret;
+}
+
+void PrintDebugMessageTable() {
+  std::stringstream ss;
+  ss << __FUNCTION__;
+  auto& table = ptre_global.message_table;
+  for (auto& iter1 : table) {
+    ss << std::endl;
+    auto& tensor_name = iter1.first;
+    auto& row = iter1.second;
+    ss << tensor_name << ":";
+    for (auto& iter2 : row) {
+      ss << " " << iter2.first;
+    }
+  }
+  LOG(INFO) << ss.str();
+}
+
+void PrintDebugResponseList(ResponseList& response_list) {
+  std::stringstream ss;
+  ss << __FUNCTION__;
+  for (auto& res : response_list.responses()) {
+    ss << std::endl;
+    ss << "type: " << res.tensor_type();
+    for (auto& name: res.tensor_names()) {
+      ss << "\n" << name;
+    }
+  }
+  DVLOG(0) << ss.str();
 }
 
 void ComputeResponseList(ResponseList& response_list) {
@@ -834,12 +823,18 @@ void ComputeResponseList(ResponseList& response_list) {
   {
     std::lock_guard<std::mutex> guard(ptre_global.mu);
     while (!ptre_global.message_queue.empty()) {
-LOG(INFO) << __FUNCTION__ << "0000";
       auto&& req = ptre_global.message_queue.front();
+DVLOG(0) << "FROM MESSAGE QUEUE: " << req.tensor_name();
       requests.push_back(std::move(req));
       ptre_global.message_queue.pop();
     }
   }
+bool has_requests = requests.size() > 0;
+if (has_requests) {
+DVLOG(0) << __FUNCTION__ << ": requests.size()=" << requests.size();
+}
+
+  // TODO: Use RDMA Write/Read for this coordination.
   // TODO: Use local rank to perform sub-group Allreduce
   bool is_coordinator = ptre_rank() == 0;
   int my_rank = ptre_rank();
@@ -848,188 +843,251 @@ LOG(INFO) << __FUNCTION__ << "0000";
   // TODO: BUG FIX!
   //  There are cases where there are no additional requests from message queue
   //  but we still need to receive remote requests.
-  if (is_coordinator) {
-    std::vector<string> ready_tensor_names;
-    auto& table = ptre_global.message_table;
-    for (auto& req : requests) {
-      string& name = req.tensor_name();
-      if (table.find(name) == table.end()) {
-        table.emplace(name, std::move(std::unordered_map<int, Request>()));
-      }
-      table[name].emplace(my_rank, std::move(req));
-      if (table[name].size() == comm_size) {
-        table.erase(name);
-        ready_tensor_names.push_back(std::move(name));
-      }
+  auto& req_table = ptre_global.message_table;
+  for (auto& req : requests) {
+    auto& name = req.tensor_name();
+    if (req_table.find(name) == req_table.end()) {
+      req_table.emplace(name, std::move(std::unordered_map<int, Request>()));
     }
+    //req_table[name].push_back(std::move(req));
+    req_table[name].emplace(my_rank, req);
+  }
 
-      for (auto&& req : req_list.requests()) {
-        auto& rcv_name = req.tensor_name();
-        if (table.find(rcv_name) == table.end()) {
-          table.emplace(rcv_name, std::move(std::vector<Request>()));
-        }
-        table[rcv_name].push_back(std::move(req));
-        if (table[rcv_name].size() == ptre_size()) {
-          ready_tensor_names.push_back(rcv_name);
-          table[rcv_name].clear();
-        }
-      }
-      
-
-  if (requests.size() == 0) return;
-LOG(INFO) << __FUNCTION__ << ": requests.size()=" << requests.size();
+// 1 === 1 === 1 === 1 === 1 === 1 === 1 === 1 === 1 === 1 === 1 === 1 === 1 ===
 
   RequestList my_req_list;
-  for (auto&& req : requests) {
+  for (auto& req : requests) {
     Request* added = my_req_list.add_requests();
     *added = std::move(req);
   }
-  if (ptre_rank() == 0) {
+  if (is_coordinator) {
+
+// <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2 <<= 2
     // Gather Requests
     int serialized_lengths[ptre_size()];
-    RdmaRequest reqs[ptre_size()];
+    std::map<int, RdmaRequest> rdma_reqs;
     for (int i = 0; i < ptre_size(); i++) {
       if (i == 0) continue;
-      RdmaIrecv((void*) &serialized_lengths[i], 1, DataType::DT_INT32, i, 0,
-          ptre_global.rdma_ctx, &reqs[i]);
+      bool do_recv = false;
+      for (auto& iter : req_table) {
+        auto& table = iter.second;
+        if (table.find(i) == table.end()) {
+          do_recv = true;
+          break;
+        }
+      }
+      if (do_recv || true) {
+        //PrintDebugMessageTable();
+        rdma_reqs[i];
+        //rdma_reqs.emplace(i, RdmaRequest());
+        RdmaIrecv((void*) &serialized_lengths[i], 1, DataType::DT_INT32, i, 0,
+            ptre_global.rdma_ctx, &rdma_reqs[i]);
+      }
     }
-    std::vector<string> recvbufs;
-    recvbufs.emplace_back();
-    for (int i = 0; i < ptre_size(); i++) {
-      if (i == 0) continue;
-      RdmaWait(&reqs[i], NULL);
-      recvbufs.emplace_back(serialized_lengths[i], 0);
-      reqs[i].Clear();
-      RdmaIrecv((void*) recvbufs.back().c_str(), serialized_lengths[i],
-          DataType::DT_BOOL, i, 0, ptre_global.rdma_ctx, &reqs[i]);
+    std::map<int, string> recvbufs;
+    //std::vector<string> recvbufs;
+    //recvbufs.emplace_back();
+    //for (int i = 0; i < ptre_size(); i++) {
+    for (auto& iter : rdma_reqs) {
+      auto& i = iter.first;
+DVLOG(0) << __FUNCTION__ << ": 1000 Receive Length of messages";
+      RdmaWait(&iter.second, NULL);
+DVLOG(0) << __FUNCTION__ << ": 1001 serialized_lengths[" << i << "]=" << serialized_lengths[i];
+      recvbufs.emplace(iter.first, std::move(string(serialized_lengths[i], 0)));
+      //recvbufs.emplace_back(serialized_lengths[i], 0);
+      iter.second.Clear();
+      RdmaIrecv((void*) recvbufs[iter.first].c_str(), serialized_lengths[i],
+          DataType::DT_BOOL, i, 0, ptre_global.rdma_ctx, &iter.second);
     }
-    std::vector<RequestList> req_lists;
-    req_lists.push_back(std::move(my_req_list));
-    for (int i = 0; i < ptre_size(); i++) {
-      if (i == 0) continue;
-      RdmaWait(&reqs[i], NULL);
-LOG(INFO) << __FUNCTION__ << ": from " << i << "\n***recv_str=" << recvbufs[i];
-      req_lists.emplace_back();
-      req_lists.back().ParseFromString(recvbufs[i]);
+    //}
+    //std::vector<RequestList> req_lists;
+    //req_lists.push_back(std::move(my_req_list));
+    std::map<int, RequestList> req_lists;
+    req_lists.emplace(my_rank, std::move(my_req_list));
+    //for (int i = 0; i < ptre_size(); i++) {
+    for (auto& iter : rdma_reqs) {
+      auto& i = iter.first;
+DVLOG(0) << __FUNCTION__ << ": 2000 Receive Message";
+      RdmaWait(&rdma_reqs[iter.first], NULL);
+      RequestList req_list;
+DVLOG(0) << __FUNCTION__ << ": 2001 recvbufs[" << i << "]=" << recvbufs[i];
+      req_list.ParseFromString(recvbufs[i]);
+      req_lists.emplace(iter.first, std::move(req_list));
+      //req_lists.emplace_back();
+      //req_lists.back().ParseFromString(recvbufs[i]);
     }
+    // }
 
-LOG(INFO) << __FUNCTION__ << "6666";
     // Compute Responses
     // 1 Response 1 Allreduce
-    std::vector<string> ready_tensor_names;
-    //for (int i = 0; i <
     auto&& table = ptre_global.message_table;
-    for (auto&& req_list : req_lists) {
-      for (auto&& req : req_list.requests()) {
+    for (auto& iter : req_lists) {
+      auto& rcv_rank = iter.first;
+      auto& req_list = iter.second;
+      for (auto& req : req_list.requests()) {
         auto& rcv_name = req.tensor_name();
         if (table.find(rcv_name) == table.end()) {
-          table.emplace(rcv_name, std::move(std::vector<Request>()));
+          //table.emplace(rcv_name, std::move(std::vector<Request>()));
+          table.emplace(rcv_name,
+              std::move(std::unordered_map<int, Request>()));
         }
-        table[rcv_name].push_back(std::move(req));
-        if (table[rcv_name].size() == ptre_size()) {
-          ready_tensor_names.push_back(rcv_name);
-          table[rcv_name].clear();
+        //table[rcv_name].push_back(std::move(req));
+        table[rcv_name].emplace(rcv_rank, std::move(req));
+      }
+    }
+    if (rdma_reqs.size() > 0) {
+      //PrintDebugMessageTable();
+    }
+
+    std::vector<string> ready_tensor_names;
+    auto table_it = table.begin();
+    while (table_it != table.end()) {
+//LOG(INFO) << __FUNCTION__ << ": tensor = " << table_it->first;
+      auto& row = table_it->second;
+      if (row.size() == comm_size) {
+//LOG(INFO) << __FUNCTION__ << ": ready_tensor = " << table_it->first;
+        //ready_tensor_names.push_back(std::move(table_it->first));
+        ready_tensor_names.push_back(table_it->first);
+        //table_it = table.erase(table_it);
+        table_it++;
+      } else {
+        table_it++;
+      }
+    }
+    // TODO: Implement Tensor Fusion
+    for (auto&& name : ready_tensor_names) {
+      auto search = table.find(name);
+      Response res;
+      res.set_response_type(RESPONSE_TYPE_ALLREDUCE);
+      //res.set_tensor_type(DataType(table[name][0].tensor_type()));
+      res.set_tensor_type(DataType(search->second[0].tensor_type()));
+      res.add_tensor_name(std::move(name));
+      response_list.add_response(std::move(res));
+      table.erase(search);
+    }
+if (response_list.responses().size() > 0) PrintDebugResponseList(response_list);
+// 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>> 3 =>>
+    if (response_list.responses().size() > 0 || true) {
+//LOG(INFO) << __FUNCTION__ << ": response_list.responses().size()=" << response_list.responses().size();
+      // Send Final Tensors
+      ResponseListProto proto;
+      response_list.AsProto(&proto);
+      string sendbuf;
+      proto.SerializeToString(&sendbuf);
+//LOG(INFO) << __FUNCTION__ << std::endl << sendbuf;
+      int serialized_length = sendbuf.length();
+//LOG(INFO) << __FUNCTION__ << ": 3000";
+      RdmaBcast((void*) &serialized_length, 1, DataType::DT_INT32, 0,
+          ptre_global.rdma_ctx);
+//LOG(INFO) << __FUNCTION__ << ": 4000";
+      RdmaBcast((void*) sendbuf.c_str(), serialized_length, DataType::DT_BOOL, 0,
+          ptre_global.rdma_ctx);
+    }
+  } else {
+    // *** Other ranks
+    if (req_table.size() > 0 || true) {
+      if (my_req_list.requests_size() > 0 || true) {
+//LOG(INFO) << __FUNCTION__ << ": my_req_list.requests_size()=" << my_req_list.requests_size();
+    // 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>> 2 =>>
+        string send_str(std::move(my_req_list.SerializeAsString()));
+        int serialized_length = send_str.length();
+DVLOG(0) << __FUNCTION__ << ": 5000 Send Length of message = " << serialized_length;
+        RdmaSend((void*) &serialized_length, 1, DataType::DT_INT32, 0, 0,
+            ptre_global.rdma_ctx);
+DVLOG(0) << __FUNCTION__ << ": 6000 Send Message = " << send_str;
+        RdmaSend((void*) send_str.c_str(), serialized_length, DataType::DT_BOOL, 0,
+            0, ptre_global.rdma_ctx);
+      }
+
+  // <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3 <<= 3
+      // Receive Response
+//LOG(INFO) << __FUNCTION__ << ": 7000";
+      int serialized_length;
+      RdmaRecv((void*) &serialized_length, 1, DataType::DT_INT32, 0, 0,
+          ptre_global.rdma_ctx, NULL);
+      string recvbuf(serialized_length, 0);
+//LOG(INFO) << __FUNCTION__ << ": 8000";
+      RdmaRecv((void*) recvbuf.c_str(), serialized_length, DataType::DT_BOOL, 0,
+          0, ptre_global.rdma_ctx, NULL);
+      ResponseListProto proto;
+      proto.ParseFromString(recvbuf);
+      response_list.FromProto(std::move(proto));
+
+      for (auto& res : response_list.responses()) {
+        for (auto& name : res.tensor_names()) {
+          req_table.erase(name);
         }
       }
     }
-LOG(INFO) << __FUNCTION__ << "6677";
-    // TODO: Implement Tensor Fusion
-    for (auto&& name : ready_tensor_names) {
-      Response res;
-      res.set_response_type(RESPONSE_TYPE_ALLREDUCE);
-      res.set_tensor_type(DataType(table[name][0].tensor_type()));
-      res.add_tensor_name(std::move(name));
-      response_list.add_response(std::move(res));
-    }
-LOG(INFO) << __FUNCTION__ << "7777";
-    // Send Final Tensors
-    ResponseListProto proto;
-    response_list.AsProto(&proto);
-    string sendbuf;
-    proto.SerializeToString(&sendbuf);
-    int serialized_length = sendbuf.length();
-    RdmaBcast((void*) &serialized_length, 1, DataType::DT_INT32, 0,
-        ptre_global.rdma_ctx);
-LOG(INFO) << __FUNCTION__ << ": bcast, send_str=" << sendbuf;
-    RdmaBcast((void*) sendbuf.c_str(), serialized_length, DataType::DT_BOOL, 0,
-        ptre_global.rdma_ctx);
-LOG(INFO) << __FUNCTION__ << "8888";
-  } else {
-LOG(INFO) << __FUNCTION__ << "9000";
-    string send_str(std::move(my_req_list.SerializeAsString()));
-LOG(INFO) << __FUNCTION__ << ": to " << 0 << ", send_str=" << send_str;
-    int serialized_length = send_str.length();
-
-LOG(INFO) << __FUNCTION__ << "9110";
-    RdmaSend((void*) &serialized_length, 1, DataType::DT_INT32, 0, 0,
-        ptre_global.rdma_ctx);
-LOG(INFO) << __FUNCTION__ << "9120";
-    RdmaSend((void*) send_str.c_str(), serialized_length, DataType::DT_BOOL, 0,
-        0, ptre_global.rdma_ctx);
-
-LOG(INFO) << __FUNCTION__ << "aaaa";
-    // Receive Response
-    RdmaRecv((void*) &serialized_length, 1, DataType::DT_INT32, 0, 0,
-        ptre_global.rdma_ctx, NULL);
-    string recvbuf(serialized_length, 0);
-    RdmaRecv((void*) recvbuf.c_str(), serialized_length, DataType::DT_BOOL, 0,
-        0, ptre_global.rdma_ctx, NULL);
-LOG(INFO) << __FUNCTION__ << ": from " << 0 << ", recv_str=" << recvbuf;
-
-LOG(INFO) << __FUNCTION__ << "bbbb";
-    ResponseListProto proto;
-    proto.ParseFromString(recvbuf);
-    response_list.FromProto(std::move(proto));
   }
-LOG(INFO) << __FUNCTION__ << "ENDENDENDEND";
+
+//if (has_requests) LOG(INFO) << __FUNCTION__ << "ENDENDENDEND";
+}
+
+void PrintDebugTensorTable() {
+  std::stringstream ss;
+  auto& table = ptre_global.tensor_table;
+  ss << __FUNCTION__;
+  for (auto& iter1 : table) {
+    ss << std::endl;
+    auto& tensor_name = iter1.first;
+    ss << tensor_name << ", tensor->NumElements()=" << iter1.second.tensor->NumElements();
+  }
+  DVLOG(0) << ss.str();
 }
 
 void PerformOperation(Response response, PtreGlobal& state) {
-LOG(INFO) << __FUNCTION__ << "1000";
+//LOG(INFO) << __FUNCTION__ << "1000";
   //if (response.tensor_names().size() == 0) return;
 
   std::vector<TensorTableEntry> entries;
   entries.reserve(response.tensor_names().size());
   {
     std::lock_guard<std::mutex> guard(ptre_global.mu);
+if (response.tensor_names().size() > 0) PrintDebugTensorTable();
     for (auto&& name : response.tensor_names()) {
       auto search = ptre_global.tensor_table.find(name);
       assert(search != ptre_global.tensor_table.end());
+//LOG(INFO) << __FUNCTION__ << ": tensor_name=" << search->second.tensor_name << ", tensor->NumElements()=" << search->second.tensor->NumElements();
       entries.push_back(std::move(search->second));
       ptre_global.tensor_table.erase(search);
     }
+DVLOG(0) << "ENTRIES:";
+//for (auto& entry : entries) LOG(INFO) << entry.tensor_name << ", tensor->NumElements()=" << entry.tensor->NumElements();
+for (auto& entry : entries) DVLOG(0) << entry.tensor_name << ", ctx->input(0).NumElements()=" << entry.context->input(0).NumElements();
   }
-LOG(INFO) << __FUNCTION__ << "2000";
+//LOG(INFO) << __FUNCTION__ << "2000";
 
   void* recvbuf;
   int num_elements = 0;
   if (entries.size() > 1) {
-LOG(INFO) << __FUNCTION__ << "3000";
+//LOG(INFO) << __FUNCTION__ << "3000";
     size_t total_size = 0;
     for (auto&& entry : entries) {
-      total_size += entry.tensor->AllocatedBytes();
-      num_elements += entry.tensor->NumElements();
+      auto tensor = entry.context->input(0);
+      total_size += tensor.AllocatedBytes();
+      num_elements += tensor.NumElements();
     }
-LOG(INFO) << __FUNCTION__ << "4000";
+//LOG(INFO) << __FUNCTION__ << "4000";
     recvbuf = malloc(total_size);
     size_t offset = 0;
     for (auto&& entry : entries) {
-      memcpy((void*) ((char*) recvbuf + offset),
-          entry.tensor->tensor_data().data(),
-          entry.tensor->AllocatedBytes());
-      offset += entry.tensor->AllocatedBytes();
+      auto tensor = entry.context->input(0);
+      memcpy((void*) ((char*) recvbuf + offset), tensor.tensor_data().data(),
+          tensor.AllocatedBytes());
+      offset += tensor.AllocatedBytes();
     }
   } else {
-LOG(INFO) << __FUNCTION__ << "5000";
+//LOG(INFO) << __FUNCTION__ << "5000: response has one tensor";
     recvbuf = (void*) entries[0].output->tensor_data().data();
-    num_elements = entries[0].tensor->NumElements();
-LOG(INFO) << __FUNCTION__ << "5100 recvbuf=" << (uint64_t) recvbuf << ", num_elements=" << num_elements;
+    num_elements = entries[0].context->input(0).NumElements();
+//LOG(INFO) << __FUNCTION__ << "5100 recvbuf=" << (uint64_t) recvbuf << ", num_elements=" << num_elements;
   }
   const void* sendbuf = (entries.size() > 1
-      || entries[0].tensor->tensor_data().data()
+      || entries[0].context->input(0).tensor_data().data()
       == entries[0].output->tensor_data().data())
-      ? COMM_IN_PLACE : entries[0].tensor->tensor_data().data();
-LOG(INFO) << __FUNCTION__ << "6000";
+      ? COMM_IN_PLACE : entries[0].context->input(0).tensor_data().data();
+//LOG(INFO) << __FUNCTION__ << "6000 sendbuf=" << (uint64_t) sendbuf;
 
   // TODO: Use OperationManager after generalizing operations.
 #if 0
@@ -1041,21 +1099,20 @@ LOG(INFO) << __FUNCTION__ << "6000";
   }
 #else
   RdmaContext ctx(ptre_global.rdma_mgr);
-LOG(INFO) << std::endl << __FUNCTION__ << "\n***sendbuf=" << (uint64_t) sendbuf << ", recvbuf=" << (uint64_t) recvbuf << ", dtype()=" << entries[0].tensor->dtype();
+//LOG(INFO) << __FUNCTION__ << "\n***sendbuf=" << (uint64_t) sendbuf << ", recvbuf=" << (uint64_t) recvbuf << ", dtype()=" << entries[0].context->input(0).dtype();
   int ret = RdmaAllreduce(sendbuf, recvbuf, num_elements,
-      entries[0].tensor->dtype(), ReduceOp::REDUCE_SUM, &ctx);
+      entries[0].context->input(0).dtype(), ReduceOp::REDUCE_SUM, &ctx);
   assert(ret == 0);
-LOG(INFO) << __FUNCTION__ << "7777";
+//LOG(INFO) << __FUNCTION__ << "7777";
 #endif
 
   if (entries.size() > 1) free(recvbuf);
-LOG(INFO) << __FUNCTION__ << "8888";
 
   for (auto&& entry : entries) {
-LOG(INFO) << std::endl << __FUNCTION__ << "\n===***DONE:" << entry.tensor_name;
+//LOG(INFO) << __FUNCTION__ << "\n===***DONE:" << entry.tensor_name;
     entry.callback(Status::OK());
   }
-LOG(INFO) << __FUNCTION__ << "9000";
+
 }
 
 Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count) {
@@ -1067,7 +1124,9 @@ Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count) {
 
 // RDMA Operations
 int ProcessCQRdmaRequest(int dst, struct ibv_cq* cq, struct ibv_wc* wcs) {
+std::this_thread::sleep_for(std::chrono::seconds(1));
   int ne = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
+DVLOG(0) << __FUNCTION__ << ": ne=" << ne;
   assert(ne >= 0);
   std::vector<RdmaRequest*> bad_reqs;
   for (int i = 0; i < ne; i++) {
