@@ -58,18 +58,18 @@ int RdmaSend(const void* buf, int count, DataType datatype, int dest, int tag,
              RdmaContext* ctx) {
   int ret;
   RdmaRequest request;
-DVLOG(0) << __FUNCTION__ << ": 1000 buf=" << (char*) buf << ", count=" << count << ", dt=" << int(datatype) << ", dest=" << dest << ", req=" << (uint64_t) &request;
+//DVLOG(0) << __FUNCTION__ << ": 1000 buf=" << (char*) buf << ", count=" << count << ", dt=" << int(datatype) << ", dest=" << dest << ", req=" << (uint64_t) &request;
   ret = RdmaIsend(buf, count, datatype, dest, tag, ctx, &request);
   if (ret) {
     LOG(ERROR) << "RdmaIsend returned " << ret << " @ " << __PRETTY_FUNCTION__;
   }
 
-DVLOG(0) << __FUNCTION__ << ": 2000 RdmaWait req=" << (uint64_t) &request;
+//DVLOG(0) << __FUNCTION__ << ": 2000 RdmaWait req=" << (uint64_t) &request;
   ret = RdmaWait(&request, NULL);
   if (ret) {
     LOG(ERROR) << "RdmaWait returned " << ret << " @ " << __PRETTY_FUNCTION__;
   }
-DVLOG(0) << __FUNCTION__ << ": 3000 DONE";
+//DVLOG(0) << __FUNCTION__ << ": 3000 DONE";
 
   return 0;
 }

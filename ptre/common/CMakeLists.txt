@@ -1,3 +1,5 @@
+set(CMAKE_BUILD_TYPE Debug)
+
 add_subdirectory(cm)
 add_subdirectory(communication)
 add_subdirectory(rdma)
