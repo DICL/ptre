@@ -1,15 +1,26 @@
 #include "ptre/common/communication/tcp/tcp_service_impl.h"
 
 namespace ptre {
+namespace common {
 
 TcpServiceImpl::TcpServiceImpl(ConsensusManager* cm)
     : Tcp::Service(), cm_(cm) {}
+
+grpc::Status TcpServiceImpl::PullTensor(grpc::ServerContext* context,
+                                        const PullTensorRequest* request,
+					PullTensorResponse* response) {
+  int rank = request->src_rank();
+  response->set_tensor_name("hi");
+  //response->set_buf();
+  response->set_status(0);
+  return grpc::Status::OK;
+}
 
 grpc::Status TcpServiceImpl::PushTensor(grpc::ServerContext* context,
                                         const PushTensorRequest* request,
                                         PushTensorResponse* response) {
   int rank = request->src_rank();
-  string tensor_name = request->name();
+  string tensor_name = request->tensor_name();
   string buf = request->buf();
   Tensor recv_tensor = cm_->global_consensus(tensor_name);
   std::copy(buf.begin(), buf.end(),
@@ -23,5 +34,5 @@ grpc::Status TcpServiceImpl::PushTensor(grpc::ServerContext* context,
   response->set_status(0);
   return grpc::Status::OK;
 }
-
+}
 }

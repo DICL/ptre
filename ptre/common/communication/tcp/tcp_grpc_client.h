@@ -19,7 +19,8 @@ using tensorflow::Tensor;
 class TcpGrpcClient {
  public:
   TcpGrpcClient(int src_rank, int dst_rank, const string& hostname);
-  int PushTensor(const string& name, const Tensor& tensor);
+  int PullTensor(const string& tensor_name);
+  int PushTensor(const string& tensor_name, const Tensor& tensor);
 
  private:
   int src_rank_;

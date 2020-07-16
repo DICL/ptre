@@ -19,6 +19,7 @@
 namespace ptre {
 
 static const char* Tcp_method_names[] = {
+  "/ptre.Tcp/PullTensor",
   "/ptre.Tcp/PushTensor",
 };
 
@@ -29,8 +30,29 @@ std::unique_ptr< Tcp::Stub> Tcp::NewStub(const std::shared_ptr< ::grpc::ChannelI
 }
 
 Tcp::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
-  : channel_(channel), rpcmethod_PushTensor_(Tcp_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  : channel_(channel), rpcmethod_PullTensor_(Tcp_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_PushTensor_(Tcp_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
+
+::grpc::Status Tcp::Stub::PullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::ptre::PullTensorResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_PullTensor_, context, request, response);
+}
+
+void Tcp::Stub::experimental_async::PullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_PullTensor_, context, request, response, std::move(f));
+}
+
+void Tcp::Stub::experimental_async::PullTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PullTensorResponse* response, std::function<void(::grpc::Status)> f) {
+  return ::grpc::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_PullTensor_, context, request, response, std::move(f));
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>* Tcp::Stub::AsyncPullTensorRaw(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::PullTensorResponse>::Create(channel_.get(), cq, rpcmethod_PullTensor_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>* Tcp::Stub::PrepareAsyncPullTensorRaw(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderFactory< ::ptre::PullTensorResponse>::Create(channel_.get(), cq, rpcmethod_PullTensor_, context, request, false);
+}
 
 ::grpc::Status Tcp::Stub::PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::ptre::PushTensorResponse* response) {
   return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_PushTensor_, context, request, response);
@@ -56,11 +78,23 @@ Tcp::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Tcp_method_names[0],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Tcp::Service, ::ptre::PullTensorRequest, ::ptre::PullTensorResponse>(
+          std::mem_fn(&Tcp::Service::PullTensor), this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Tcp_method_names[1],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Tcp::Service, ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>(
           std::mem_fn(&Tcp::Service::PushTensor), this)));
 }
 
 Tcp::Service::~Service() {
+}
+
+::grpc::Status Tcp::Service::PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
 ::grpc::Status Tcp::Service::PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response) {

@@ -3,13 +3,25 @@ syntax = "proto3";
 package ptre;
 
 service Tcp {
-  rpc PushTensor(PushTensorRequest)
-    returns (PushTensorResponse);
+  rpc PullTensor (PullTensorRequest) returns (PullTensorResponse) {}
+  rpc PushTensor(PushTensorRequest) returns (PushTensorResponse) {}
+}
+
+message PullTensorRequest{
+  int32 src_rank = 1;
+  string tensor_name = 2;
+}
+
+message PullTensorResponse{
+  int32 dst_rank = 1;
+  string tensor_name = 2;
+  bytes buf = 3;
+  int32 status = 4;
 }
 
 message PushTensorRequest {
   int32 src_rank = 1;
-  string name = 2;  // tensor name
+  string tensor_name = 2;
   bytes buf = 3;
 }
 

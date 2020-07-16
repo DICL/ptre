@@ -37,6 +37,13 @@ class Tcp final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
+    virtual ::grpc::Status PullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::ptre::PullTensorResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PullTensorResponse>> AsyncPullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PullTensorResponse>>(AsyncPullTensorRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PullTensorResponse>> PrepareAsyncPullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PullTensorResponse>>(PrepareAsyncPullTensorRaw(context, request, cq));
+    }
     virtual ::grpc::Status PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::ptre::PushTensorResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PushTensorResponse>> AsyncPushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PushTensorResponse>>(AsyncPushTensorRaw(context, request, cq));
@@ -47,17 +54,28 @@ class Tcp final {
     class experimental_async_interface {
      public:
       virtual ~experimental_async_interface() {}
+      virtual void PullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void PullTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PullTensorResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) = 0;
     };
     virtual class experimental_async_interface* experimental_async() { return nullptr; }
   private:
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PullTensorResponse>* AsyncPullTensorRaw(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PullTensorResponse>* PrepareAsyncPullTensorRaw(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PushTensorResponse>* AsyncPushTensorRaw(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::ptre::PushTensorResponse>* PrepareAsyncPushTensorRaw(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
     Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel);
+    ::grpc::Status PullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::ptre::PullTensorResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>> AsyncPullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>>(AsyncPullTensorRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>> PrepareAsyncPullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>>(PrepareAsyncPullTensorRaw(context, request, cq));
+    }
     ::grpc::Status PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::ptre::PushTensorResponse* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::PushTensorResponse>> AsyncPushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::ptre::PushTensorResponse>>(AsyncPushTensorRaw(context, request, cq));
@@ -68,6 +86,8 @@ class Tcp final {
     class experimental_async final :
       public StubInterface::experimental_async_interface {
      public:
+      void PullTensor(::grpc::ClientContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response, std::function<void(::grpc::Status)>) override;
+      void PullTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PullTensorResponse* response, std::function<void(::grpc::Status)>) override;
       void PushTensor(::grpc::ClientContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) override;
       void PushTensor(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::ptre::PushTensorResponse* response, std::function<void(::grpc::Status)>) override;
      private:
@@ -81,8 +101,11 @@ class Tcp final {
    private:
     std::shared_ptr< ::grpc::ChannelInterface> channel_;
     class experimental_async async_stub_{this};
+    ::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>* AsyncPullTensorRaw(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::ptre::PullTensorResponse>* PrepareAsyncPullTensorRaw(::grpc::ClientContext* context, const ::ptre::PullTensorRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::ptre::PushTensorResponse>* AsyncPushTensorRaw(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::ptre::PushTensorResponse>* PrepareAsyncPushTensorRaw(::grpc::ClientContext* context, const ::ptre::PushTensorRequest& request, ::grpc::CompletionQueue* cq) override;
+    const ::grpc::internal::RpcMethod rpcmethod_PullTensor_;
     const ::grpc::internal::RpcMethod rpcmethod_PushTensor_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
@@ -91,7 +114,28 @@ class Tcp final {
    public:
     Service();
     virtual ~Service();
+    virtual ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response);
     virtual ::grpc::Status PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response);
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_PullTensor : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithAsyncMethod_PullTensor() {
+      ::grpc::Service::MarkMethodAsync(0);
+    }
+    ~WithAsyncMethod_PullTensor() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestPullTensor(::grpc::ServerContext* context, ::ptre::PullTensorRequest* request, ::grpc::ServerAsyncResponseWriter< ::ptre::PullTensorResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+    }
   };
   template <class BaseClass>
   class WithAsyncMethod_PushTensor : public BaseClass {
@@ -99,7 +143,7 @@ class Tcp final {
     void BaseClassMustBeDerivedFromService(const Service *service) {}
    public:
     WithAsyncMethod_PushTensor() {
-      ::grpc::Service::MarkMethodAsync(0);
+      ::grpc::Service::MarkMethodAsync(1);
     }
     ~WithAsyncMethod_PushTensor() override {
       BaseClassMustBeDerivedFromService(this);
@@ -110,17 +154,42 @@ class Tcp final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestPushTensor(::grpc::ServerContext* context, ::ptre::PushTensorRequest* request, ::grpc::ServerAsyncResponseWriter< ::ptre::PushTensorResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_PushTensor<Service > AsyncService;
+  typedef WithAsyncMethod_PullTensor<WithAsyncMethod_PushTensor<Service > > AsyncService;
+  template <class BaseClass>
+  class ExperimentalWithCallbackMethod_PullTensor : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    ExperimentalWithCallbackMethod_PullTensor() {
+      ::grpc::Service::experimental().MarkMethodCallback(0,
+        new ::grpc::internal::CallbackUnaryHandler< ::ptre::PullTensorRequest, ::ptre::PullTensorResponse>(
+          [this](::grpc::ServerContext* context,
+                 const ::ptre::PullTensorRequest* request,
+                 ::ptre::PullTensorResponse* response,
+                 ::grpc::experimental::ServerCallbackRpcController* controller) {
+                   return this->PullTensor(context, request, response, controller);
+                 }));
+    }
+    ~ExperimentalWithCallbackMethod_PullTensor() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual void PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
+  };
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_PushTensor : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service *service) {}
    public:
     ExperimentalWithCallbackMethod_PushTensor() {
-      ::grpc::Service::experimental().MarkMethodCallback(0,
+      ::grpc::Service::experimental().MarkMethodCallback(1,
         new ::grpc::internal::CallbackUnaryHandler< ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>(
           [this](::grpc::ServerContext* context,
                  const ::ptre::PushTensorRequest* request,
@@ -139,14 +208,31 @@ class Tcp final {
     }
     virtual void PushTensor(::grpc::ServerContext* context, const ::ptre::PushTensorRequest* request, ::ptre::PushTensorResponse* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
-  typedef ExperimentalWithCallbackMethod_PushTensor<Service > ExperimentalCallbackService;
+  typedef ExperimentalWithCallbackMethod_PullTensor<ExperimentalWithCallbackMethod_PushTensor<Service > > ExperimentalCallbackService;
+  template <class BaseClass>
+  class WithGenericMethod_PullTensor : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithGenericMethod_PullTensor() {
+      ::grpc::Service::MarkMethodGeneric(0);
+    }
+    ~WithGenericMethod_PullTensor() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
   template <class BaseClass>
   class WithGenericMethod_PushTensor : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service *service) {}
    public:
     WithGenericMethod_PushTensor() {
-      ::grpc::Service::MarkMethodGeneric(0);
+      ::grpc::Service::MarkMethodGeneric(1);
     }
     ~WithGenericMethod_PushTensor() override {
       BaseClassMustBeDerivedFromService(this);
@@ -158,12 +244,32 @@ class Tcp final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_PullTensor : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithRawMethod_PullTensor() {
+      ::grpc::Service::MarkMethodRaw(0);
+    }
+    ~WithRawMethod_PullTensor() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestPullTensor(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawMethod_PushTensor : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service *service) {}
    public:
     WithRawMethod_PushTensor() {
-      ::grpc::Service::MarkMethodRaw(0);
+      ::grpc::Service::MarkMethodRaw(1);
     }
     ~WithRawMethod_PushTensor() override {
       BaseClassMustBeDerivedFromService(this);
@@ -174,8 +280,33 @@ class Tcp final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestPushTensor(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
+  };
+  template <class BaseClass>
+  class ExperimentalWithRawCallbackMethod_PullTensor : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    ExperimentalWithRawCallbackMethod_PullTensor() {
+      ::grpc::Service::experimental().MarkMethodRawCallback(0,
+        new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+          [this](::grpc::ServerContext* context,
+                 const ::grpc::ByteBuffer* request,
+                 ::grpc::ByteBuffer* response,
+                 ::grpc::experimental::ServerCallbackRpcController* controller) {
+                   this->PullTensor(context, request, response, controller);
+                 }));
+    }
+    ~ExperimentalWithRawCallbackMethod_PullTensor() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual void PullTensor(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
   class ExperimentalWithRawCallbackMethod_PushTensor : public BaseClass {
@@ -183,7 +314,7 @@ class Tcp final {
     void BaseClassMustBeDerivedFromService(const Service *service) {}
    public:
     ExperimentalWithRawCallbackMethod_PushTensor() {
-      ::grpc::Service::experimental().MarkMethodRawCallback(0,
+      ::grpc::Service::experimental().MarkMethodRawCallback(1,
         new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
           [this](::grpc::ServerContext* context,
                  const ::grpc::ByteBuffer* request,
@@ -203,12 +334,32 @@ class Tcp final {
     virtual void PushTensor(::grpc::ServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response, ::grpc::experimental::ServerCallbackRpcController* controller) { controller->Finish(::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "")); }
   };
   template <class BaseClass>
+  class WithStreamedUnaryMethod_PullTensor : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service *service) {}
+   public:
+    WithStreamedUnaryMethod_PullTensor() {
+      ::grpc::Service::MarkMethodStreamed(0,
+        new ::grpc::internal::StreamedUnaryHandler< ::ptre::PullTensorRequest, ::ptre::PullTensorResponse>(std::bind(&WithStreamedUnaryMethod_PullTensor<BaseClass>::StreamedPullTensor, this, std::placeholders::_1, std::placeholders::_2)));
+    }
+    ~WithStreamedUnaryMethod_PullTensor() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status PullTensor(::grpc::ServerContext* context, const ::ptre::PullTensorRequest* request, ::ptre::PullTensorResponse* response) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedPullTensor(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::ptre::PullTensorRequest,::ptre::PullTensorResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_PushTensor : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service *service) {}
    public:
     WithStreamedUnaryMethod_PushTensor() {
-      ::grpc::Service::MarkMethodStreamed(0,
+      ::grpc::Service::MarkMethodStreamed(1,
         new ::grpc::internal::StreamedUnaryHandler< ::ptre::PushTensorRequest, ::ptre::PushTensorResponse>(std::bind(&WithStreamedUnaryMethod_PushTensor<BaseClass>::StreamedPushTensor, this, std::placeholders::_1, std::placeholders::_2)));
     }
     ~WithStreamedUnaryMethod_PushTensor() override {
@@ -222,9 +373,9 @@ class Tcp final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedPushTensor(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::ptre::PushTensorRequest,::ptre::PushTensorResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_PushTensor<Service > StreamedUnaryService;
+  typedef WithStreamedUnaryMethod_PullTensor<WithStreamedUnaryMethod_PushTensor<Service > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_PushTensor<Service > StreamedService;
+  typedef WithStreamedUnaryMethod_PullTensor<WithStreamedUnaryMethod_PushTensor<Service > > StreamedService;
 };
 
 }  // namespace ptre

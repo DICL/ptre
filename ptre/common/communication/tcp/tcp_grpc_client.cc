@@ -12,10 +12,25 @@ TcpGrpcClient::TcpGrpcClient(int src_rank, int dst_rank, const string& hostname)
   stub_ = Tcp::NewStub(channel);
 }
 
-int TcpGrpcClient::PushTensor(const string& name, const Tensor& tensor) {
+int TcpGrpcClient::PullTensor(const string& tensor_name) {
+  PullTensorRequest request;
+  request.set_src_rank(src_rank_);
+  request.set_tensor_name(tensor_name);
+
+  PullTensorResponse response;
+  ClientContext context;
+  grpc::Status status = stub_->PullTensor(&context, request, &response);
+  if (status.ok()) return 0;
+  else {
+    std::cout << status.error_code() << ": " << status.error_message() << std::endl;
+    return -1;
+  }
+}
+
+int TcpGrpcClient::PushTensor(const string& tensor_name, const Tensor& tensor) {
   PushTensorRequest request;
   request.set_src_rank(src_rank_);
-  request.set_name(name);
+  request.set_tensor_name(tensor_name);
   size_t buffer_size = (size_t) tensor.TotalBytes();
   request.set_buf(tensor.tensor_data().data(), buffer_size);  // COPY
 
