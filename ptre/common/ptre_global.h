@@ -69,8 +69,13 @@ struct PtreGlobal {
   Eigen::ThreadPool* agg_eigen_pool;
   Eigen::ThreadPool* reduce_eigen_pool;
 
-  int rank;
   int size;
+  int rank;
+  int local_size;
+  int local_rank;
+  PtreWorker this_worker;
+  std::vector<PtreWorker> workers;
+  std::vector<PtreNode> nodes;
   std::vector<std::string> grpc_hosts;
   std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
 

@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "ptre/common/logging.h"
+#include "ptre/common/utils/host_file_parser.h"
 
 #include <arpa/inet.h>
 
@@ -15,14 +16,22 @@ PtreGlobal ptre_global;
 
 }  // namespace
 
+// Parse host information
+//  A host file is structured as:
+//
+//   hostname_0:port_0_0,port_0_1, ...
+//   hostname_1:port_1_0, ...
+//   ...
+//   hostname_n:port_n_0, ...
 void load_grpc_hosts(const string& grpc_hosts_file) {
-  std::string in_line;
-  std::ifstream in(grpc_hosts_file);
-  while (std::getline(in, in_line)) {
-    if (in_line[0] == '#') continue;
-    ptre_global.grpc_hosts.emplace_back(in_line);
+  HostFileParser p(grpc_hosts_file);
+  p.Parse(ptre_global.size);
+  ptre_global.nodes = p.nodes();
+  ptre_global.workers = p.workers();
+  for (auto& worker : ptre_global.workers) {
+    ptre_global.grpc_hosts.push_back(worker.grpc_host);
   }
-  in.close();
+  ptre_global.this_worker = ptre_global.workers[ptre_global.rank];
 }
 
 void PrintDebugMessageTable() {
@@ -124,7 +133,8 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
 void RunGrpcServer() {
   auto&& service = ptre_global.grpc_service;
   service.SetBarrierVariable(&ptre_global.barrier_variable);
-  std::string server_address("0.0.0.0:50051");
+  string server_address = "0.0.0.0:"
+      + std::to_string(ptre_global.this_worker.port);
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);

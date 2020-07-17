@@ -42,3 +42,4 @@ set(CMAKE_BUILD_TYPE MinSizeRel)
 #set(CMAKE_CXX_FLAGS_RELEASE "-O0 -pthread")
 
 add_subdirectory(ptre)
+add_subdirectory(test)

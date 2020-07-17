@@ -1,0 +1,3 @@
+add_executable(host_file_parser_test host_file_parser_test.cc)
+target_link_libraries(host_file_parser_test
+  host_file_parser)

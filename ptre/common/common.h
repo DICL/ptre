@@ -2,6 +2,7 @@
 #define PTRE_COMMON_COMMON_H_
 
 #include <memory>
+#include <string>
 
 #include "ptre/common/logging.h"
 
@@ -23,6 +24,8 @@
 
 namespace ptre {
 namespace common {
+
+using std::string;
 
 using OpContext = tensorflow::OpKernelContext;
 using Status = tensorflow::Status;
@@ -53,6 +56,20 @@ struct TensorTableEntry {
   //int device = CPU_DEVICE_ID;
   // A callback to call with the status.
   StatusCallback callback;
+};
+
+struct PtreNode {
+  string hostname;
+  int local_size;
+  std::vector<int> grpc_ports;
+};
+
+struct PtreWorker {
+  int rank;
+  int local_rank;
+  string grpc_host;
+  int port;
+  PtreNode host;
 };
 
 }  // namespace common
