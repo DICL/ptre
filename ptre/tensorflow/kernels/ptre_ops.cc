@@ -55,6 +55,40 @@ using GPUDevice = Eigen::GpuDevice;
 using ::tensorflow::shape_inference::InferenceContext;
 using ::tensorflow::shape_inference::ShapeHandle;
 
+
+// --------------------------------------------------------------------------
+// Common functors
+
+namespace functor {
+
+template <typename T>
+struct MemcpyToHost<CPUDevice, T> {
+  void operator()(const CPUDevice& d,
+                  typename TTypes<T>::Flat src,
+                  typename TTypes<T>::Flat dst) {
+    auto bytes = sizeof(T) * src.size();
+    memcpy(dst.data(), src.data(), bytes);
+  }
+};
+
+#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+// Forward declarations of the functor specializations for GPU.
+#define DECLARE_GPU_SPEC(T)                             \
+  template <>                                           \
+  void MemcpyToHost<GPUDevice, T>::operator()(   \
+      const GPUDevice& d, typename TTypes<T>::Flat src, \
+      typename TTypes<T>::Flat dst);                    \
+  extern template struct MemcpyToHost<GPUDevice, T>;
+DECLARE_GPU_SPEC(Eigen::half);
+DECLARE_GPU_SPEC(float);
+DECLARE_GPU_SPEC(double);
+#undef DECLARE_GPU_SPEC
+#endif  // GOOGLE_CUDA
+
+}  // namespace functor
+
+// --------------------------------------------------------------------------
+
 static ShapeHandle ShapeOrHandleShape(InferenceContext* c, int input) {
   auto* handle_data = c->input_handle_shapes_and_types(input);
   if (handle_data != nullptr && !handle_data->empty() &&
@@ -158,6 +192,59 @@ REGISTER_KERNEL_BUILDER(Name("PtreModelaverage")
                             .TypeConstraint<float>("T"),
                         PtreModelaverageOp<CPUDevice, float>);
 
+// --------------------------------------------------------------------------
+
+REGISTER_OP("PtrePublish")
+  .Input("var: T")
+  .Attr("T: numbertype")
+  .SetShapeFn([](InferenceContext* c) {
+      ShapeHandle s = ShapeOrHandleShape(c, 0);
+      if (c->num_outputs() > 0) {
+        c->set_output(0, s);
+      }
+      return Status::OK();
+  });
+template <typename Device, typename T>
+class PtrePublishOp : public AsyncOpKernel {
+ public:
+  explicit PtrePublishOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) { }
+  void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
+    auto var = ctx->input(0);
+    const Device& d = ctx->template eigen_device<Device>();
+    Tensor* ready_tensor = GetReadyTensor(name());
+    functor::MemcpyToHost<Device, T>()(d, var.flat<T>(),
+                                       ready_tensor->flat<T>());
+    done();
+    // TODO: Will this async memcpy be effective?
+    //Status enqueue_result = EnqueueTensorMemcpyToHost(...
+    //    [ctx, done](const Status& status) {
+    //      ctx->SetStatus(status);
+    //      done();
+    //    });
+    //OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
+  }
+};
+#define REGISTER_KERNELS(D, T)                         \
+  REGISTER_KERNEL_BUILDER(Name("PtrePublish") \
+                              .Device(DEVICE_##D)      \
+                              .TypeConstraint<T>("T"), \
+                          PtrePublishOp<D##Device, T>);
+
+#define REGISTER_CPU_KERNELS(T) REGISTER_KERNELS(CPU, T);
+TF_CALL_half(REGISTER_CPU_KERNELS);
+TF_CALL_bfloat16(REGISTER_CPU_KERNELS);
+TF_CALL_float(REGISTER_CPU_KERNELS);
+TF_CALL_double(REGISTER_CPU_KERNELS);
+#undef REGISTER_CPU_KERNELS
+
+#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+REGISTER_KERNELS(GPU, Eigen::half);
+REGISTER_KERNELS(GPU, float);
+REGISTER_KERNELS(GPU, double);
+#endif  // GOOGLE_CUDA
+
+#undef REGISTER_KERNELS
+  
 // --------------------------------------------------------------------------
 
 namespace functor {

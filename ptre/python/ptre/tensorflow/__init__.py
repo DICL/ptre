@@ -33,6 +33,8 @@ from ptre.tensorflow.ptre_ops import set_push
 from ptre.tensorflow.ptre_ops import size
 from ptre.tensorflow.ptre_ops import synchronization_barrier
 from ptre.tensorflow.ptre_ops import unset_push
+from ptre.tensorflow.ptre_ops import modelaverage
+from ptre.tensorflow.ptre_ops import publish
 
 from ptre.tensorflow.util import _make_subgraph
 

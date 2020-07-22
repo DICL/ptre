@@ -4,9 +4,29 @@
 #include "tensorflow/core/framework/register_types.h"
 #include "ptre/tensorflow/kernels/ptre_ops.h"
 
+namespace ptre {
 namespace tensorflow {
 
 typedef Eigen::GpuDevice GPUDevice;
+
+// --------------------------------------------------------------------------
+// Common functors
+
+namespace functor {
+
+template <typename T>
+struct MemcpyToHost<GPUDevice, T> {
+  void operator()(const GPUDevice& d,
+                  typename TTypes<T>::Flat src,
+                  typename TTypes<T>::Flat dst) {
+    auto bytes = sizeof(T) * src.size();
+    d.memcpyDeviceToHost(dst.data(), src.data(), bytes);
+  }
+};
+
+}  // namespace functor
+
+// --------------------------------------------------------------------------
 
 namespace functor {
 template <typename T>
@@ -148,6 +168,10 @@ struct CopyRemoteToVar<GPUDevice, T> {
 
 }  // namespace functor
 
+template struct functor::MemcpyToHost<GPUDevice, Eigen::half>;
+template struct functor::MemcpyToHost<GPUDevice, float>;
+template struct functor::MemcpyToHost<GPUDevice, double>;
+
 template struct functor::Modelaverage<GPUDevice, Eigen::half>;
 template struct functor::Modelaverage<GPUDevice, float>;
 template struct functor::Modelaverage<GPUDevice, double>;
@@ -165,5 +189,6 @@ template struct functor::CopyRemoteToVar<GPUDevice, float>;
 template struct functor::CopyRemoteToVar<GPUDevice, double>;
 
 }  // namespace tensorflow
+}  // namespace ptre
 
 #endif  // GOOGLE_CUDA

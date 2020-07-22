@@ -82,6 +82,12 @@ void ptre_print_counter_summary();
 
 }
 
+// --------------------------------------------------------------------------
+
+Tensor* GetReadyTensor(const string& name);
+
+// --------------------------------------------------------------------------
+
 Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
                                 Tensor* output, Tensor* num_agg,
                                 StatusCallback callback);

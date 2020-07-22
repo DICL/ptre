@@ -14,9 +14,7 @@ namespace ptre {
 namespace common {
 
 using std::string;
-namespace {
-using tensorflow::Tensor;
-}  // namespace
+using ::tensorflow::Tensor;
 
 class TcpGrpcClient {
  public:

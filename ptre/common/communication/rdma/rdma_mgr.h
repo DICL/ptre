@@ -22,12 +22,10 @@
 namespace ptre {
 namespace common {
 
-namespace {
 using std::string;
 using std::cout;
 using std::endl;
-using tensorflow::Tensor;
-}  // namespace
+using ::tensorflow::Tensor;
 
 /// RdmaMgr
 ///

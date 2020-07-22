@@ -713,6 +713,14 @@ void ptre_print_counter_summary() {
 
 }
 
+// --------------------------------------------------------------------------
+
+Tensor* GetReadyTensor(const string& name) {
+  return ptre_global.cm->ready_tensor(name);
+}
+
+// --------------------------------------------------------------------------
+
 namespace {
 
 #if 0
@@ -821,6 +829,8 @@ Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
   std::lock_guard<std::mutex> guard(ptre_global.mu_modelaverage);
   ptre_global.tensor_table_modelaverage.emplace(node_name, std::move(entry));
   ptre_global.message_queue_modelaverage.push(std::move(message));
+
+  return Status::OK();
 }
 
 Status EnqueueTensorPull(RemoteVariable* rvar) {
@@ -829,6 +839,8 @@ Status EnqueueTensorPull(RemoteVariable* rvar) {
 
   std::lock_guard<std::mutex> guard(ptre_global.mu_pull);
   ptre_global.message_queue_pull.push(std::move(message));
+
+  return Status::OK();
 }
 
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
@@ -916,8 +928,10 @@ bool RunLoopOncePull() {
     TcpGrpcClient* client;
     ptre_global.tcp_grpc_client_cache->GetClient(dst, &client);
     RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
+    // TODO: Pull up-to-date tensor
     client->PullTensor(name, *rvar->tensor());
     // TODO: Mark this RemoteVariable as it was successfully pulled.
+    // TODO: Average here or in Modelaverage
   }
 
   return !ptre_global.shutdown;

@@ -1,7 +1,6 @@
 #ifndef PTRE_TENSORFLOW_KERNELS_PTRE_OPS_H_
 #define PTRE_TENSORFLOW_KERNELS_PTRE_OPS_H_
 
-#include "ptre/common/operations.h"
 
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/tensor_types.h"
@@ -13,6 +12,22 @@ namespace tensorflow {
 
 template <typename T>
 using TTypes = ::tensorflow::TTypes<T>;
+
+// --------------------------------------------------------------------------
+// Common functors
+
+namespace functor {
+
+template <typename Device, typename T>
+struct MemcpyToHost {
+  void operator()(const Device& d,
+                  typename TTypes<T>::Flat src,
+                  typename TTypes<T>::Flat dst);
+};
+
+}  // namespace functor
+
+// --------------------------------------------------------------------------
 
 namespace functor {
 
