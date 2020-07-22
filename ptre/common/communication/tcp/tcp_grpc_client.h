@@ -11,6 +11,8 @@
 #include "tensorflow/core/framework/tensor.h"
 
 namespace ptre {
+namespace common {
+
 using std::string;
 namespace {
 using tensorflow::Tensor;
@@ -19,7 +21,7 @@ using tensorflow::Tensor;
 class TcpGrpcClient {
  public:
   TcpGrpcClient(int src_rank, int dst_rank, const string& hostname);
-  int PullTensor(const string& tensor_name);
+  int PullTensor(const string& tensor_name, Tensor& out);
   int PushTensor(const string& tensor_name, const Tensor& tensor);
 
  private:
@@ -29,6 +31,7 @@ class TcpGrpcClient {
   std::unique_ptr<Tcp::Stub> stub_;
 };
 
+}  // namespace common
 }  // namespace ptre
 
 

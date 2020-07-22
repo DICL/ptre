@@ -13,7 +13,7 @@ using std::string;
 
 class TcpServiceImpl final : public Tcp::Service {
  public:
-  TcpServiceImpl(ConsensusManager* cm);
+  void SetConsensusManager(ConsensusManager* cm);
   grpc::Status PullTensor(grpc::ServerContext* context,
                           const PullTensorRequest* request,
 			  PullTensorResponse* response) override;
@@ -22,7 +22,7 @@ class TcpServiceImpl final : public Tcp::Service {
                           PushTensorResponse* response) override;
 
  private:
-  ConsensusManager* cm_;
+  ConsensusManager* cm_ = nullptr;
 };
 
 }  // namespace common

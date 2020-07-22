@@ -36,6 +36,10 @@ enum ReduceOp {
   REDUCE_SUM = 0
 };
 
+enum ModelaverageOp {
+  MODELAVERAGE_DEFAULT = 0
+};
+
 struct TensorTableEntry {
   // Name of the tensor.
   std::string tensor_name;
@@ -43,11 +47,11 @@ struct TensorTableEntry {
  // std::shared_ptr<OpContext> context;
   OpContext* context;
   // Input tensor.
-  //std::shared_ptr<Tensor> tensor;
-  Tensor* tensor;
+  std::shared_ptr<Tensor> tensor;
+  //Tensor tensor;
   // Pre-allocated output tensor.
-  //std::shared_ptr<Tensor> output;
-  Tensor* output;
+  std::shared_ptr<Tensor> output;
+  //Tensor output;
   // Root rank for broadcast operation.
   int root_rank = 0;
   // Event indicating that data is ready.

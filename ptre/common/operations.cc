@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/logging.h"
 #include "ptre/common/utils/host_file_parser.h"
 
@@ -63,7 +64,30 @@ void PrintDebugResponseList(ResponseList& response_list) {
   DVLOG(0) << ss.str();
 }
 
+void RunGrpcServer() {
+  // Rdma Service
+  auto&& service = ptre_global.grpc_service;
+  service.SetBarrierVariable(&ptre_global.barrier_variable);
+  string server_address = "0.0.0.0:"
+      + std::to_string(ptre_global.this_worker.port);
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
+
+  // Tcp Service
+  builder.RegisterService(&ptre_global.tcp_grpc_service);
+
+  //builder.SetMaxMessageSize(1 * 1024 * 1024 * 1024);
+  ptre_global.grpc_server = builder.BuildAndStart();
+  //std::cout << "Grpc server listening on " << server_address << std::endl;
+  ptre_global.grpc_server->Wait();
+}
+
 void BackgroundThreadLoop(PtreGlobal& state);
+
+void BackgroundThreadLoopModelaverage();
+
+void BackgroundThreadLoopPull();
 
 void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.size = size;
@@ -79,6 +103,9 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   }
   ptre_global.grpc_client_cache =
     std::make_shared<GrpcClientCache<GrpcClient>>(rank, ptre_global.grpc_hosts);
+  ptre_global.tcp_grpc_client_cache =
+    std::make_shared<GrpcClientCache<TcpGrpcClient>>(rank,
+                                                     ptre_global.grpc_hosts);
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
   LOG(INFO) << "Started Grpc Service";
 
@@ -123,25 +150,20 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
 
   ptre_global.rdma_ctx = new RdmaContext(ptre_global.rdma_mgr);
 
+  // Background thread for Allreduce requests
   ptre_global.background_thread = std::thread(
       BackgroundThreadLoop, std::ref(ptre_global));
-  LOG(INFO) << "Launched Request Processing Thread";
+
+  // Background thread for Modelaverage requests
+  ptre_global.background_thread_modelaverage = std::thread(
+      BackgroundThreadLoopModelaverage);
+
+  // Background thread for Pull requests
+  ptre_global.background_thread_pull = std::thread(
+      BackgroundThreadLoopPull);
+  LOG(INFO) << "Launched Request Processing Threads";
 
   DVLOG(0) << "[1/2] Done InitComm";
-}
-
-void RunGrpcServer() {
-  auto&& service = ptre_global.grpc_service;
-  service.SetBarrierVariable(&ptre_global.barrier_variable);
-  string server_address = "0.0.0.0:"
-      + std::to_string(ptre_global.this_worker.port);
-  grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  builder.RegisterService(&service);
-  //builder.SetMaxMessageSize(1 * 1024 * 1024 * 1024);
-  ptre_global.grpc_server = builder.BuildAndStart();
-  //std::cout << "Grpc server listening on " << server_address << std::endl;
-  ptre_global.grpc_server->Wait();
 }
 
 void ShutdownGrpcServer() {
@@ -486,6 +508,7 @@ void RegisterTrainableVariables(OpContext* context,
   ptre_global.cm = new ConsensusManager(ptre_global.size, ptre_global.rank,
       inputs, names_);
   ptre_global.grpc_service.SetConsensusManager(ptre_global.cm);
+  ptre_global.tcp_grpc_service.SetConsensusManager(ptre_global.cm);
   ptre_global.cm->InitPeerSelector(ptre_global.peer_selector,
       ptre_global.num_push);
 
@@ -779,7 +802,36 @@ Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
   return Status::OK();
 }
 
-Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
+Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
+                                 const string& node_name,
+                                 StatusCallback callback,
+                                 ModelaverageOp modelaverage_op) {
+  Request message;
+  message.set_tensor_name(node_name);
+  message.set_tensor_type(tensor.dtype());
+
+  TensorTableEntry entry;
+  entry.tensor_name = node_name;
+
+  entry.context = ctx;
+  entry.tensor = std::make_shared<Tensor>(tensor);
+  entry.output = std::make_shared<Tensor>(output);
+  entry.callback = callback;
+  // TODO: Init TensorTableEntry correctly.
+  std::lock_guard<std::mutex> guard(ptre_global.mu_modelaverage);
+  ptre_global.tensor_table_modelaverage.emplace(node_name, std::move(entry));
+  ptre_global.message_queue_modelaverage.push(std::move(message));
+}
+
+Status EnqueueTensorPull(RemoteVariable* rvar) {
+  Request message;
+  message.set_tensor_name(rvar->name());
+
+  std::lock_guard<std::mutex> guard(ptre_global.mu_pull);
+  ptre_global.message_queue_pull.push(std::move(message));
+}
+
+Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
                               const string node_name, StatusCallback callback,
 
                               ReduceOp reduce_op) {
@@ -787,14 +839,14 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
   Request message;
   message.set_request_rank(ptre_rank());
   message.set_tensor_name(node_name);
-  message.set_tensor_type(tensor->dtype());
+  message.set_tensor_type(tensor.dtype());
 
   TensorTableEntry entry;
   entry.tensor_name = node_name;
 //LOG(INFO) << __FUNCTION__ << ": ctx=" << (uint64_t) ctx;
   entry.context = ctx;
-  entry.tensor = tensor;
-  entry.output = output;
+  entry.tensor = std::make_shared<Tensor>(tensor);
+  entry.output = std::make_shared<Tensor>(output);
   entry.callback = callback;
   //entry.device = device;
 
@@ -805,6 +857,77 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor* tensor, Tensor* output,
 
   return Status::OK();
 }
+
+// --------------------------------------------------------------------------
+
+bool RunLoopOnceModelaverage() {
+  std::vector<Request> requests;
+  {
+    std::lock_guard<std::mutex> guard(ptre_global.mu_modelaverage);
+    while (!ptre_global.message_queue_modelaverage.empty()) {
+      auto& req = ptre_global.message_queue_modelaverage.front();
+      requests.push_back(std::move(req));
+      ptre_global.message_queue_modelaverage.pop();
+    }
+  }
+
+  for (auto& req : requests) {
+    const string& name = req.tensor_name();
+    RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
+    // TODO: Check whether this remote variable is up-to-date
+    auto search = ptre_global.tensor_table.find(name);
+    assert(search != ptre_global.tensor_table_modelaverage.end());
+    auto& entry = search->second;
+    memcpy(const_cast<char*>(entry.output->tensor_data().data()),
+        rvar->tensor()->tensor_data().data(), rvar->tensor()->AllocatedBytes());
+    /*
+    std::copy(
+        const_cast<char*>(entry.output->tensor_data().begin()), entry.output->tensor_data().end(),
+        rvar->tensor()->tensor_data().begin());
+    */
+    entry.callback(Status::OK());
+    ptre_global.tensor_table_modelaverage.erase(search);
+  }
+
+  return !ptre_global.shutdown;
+}
+
+void BackgroundThreadLoopModelaverage() {
+  while (RunLoopOnceModelaverage()) continue;
+}
+
+// --------------------------------------------------------------------------
+
+bool RunLoopOncePull() {
+  std::vector<Request> requests;
+  {
+    std::lock_guard<std::mutex> guard(ptre_global.mu_pull);
+    while (!ptre_global.message_queue_pull.empty()) {
+      auto& req = ptre_global.message_queue_pull.front();
+      requests.push_back(std::move(req));
+      ptre_global.message_queue_pull.pop();
+    }
+  }
+
+  // TODO: select dst dynamically.
+  int dst = (ptre_global.rank + 1) % ptre_global.size;
+  for (auto& req : requests) {
+    const string& name = req.tensor_name();
+    TcpGrpcClient* client;
+    ptre_global.tcp_grpc_client_cache->GetClient(dst, &client);
+    RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
+    client->PullTensor(name, *rvar->tensor());
+    // TODO: Mark this RemoteVariable as it was successfully pulled.
+  }
+
+  return !ptre_global.shutdown;
+}
+
+void BackgroundThreadLoopPull() {
+  while (RunLoopOncePull()) continue;
+}
+
+// --------------------------------------------------------------------------
 
 bool RunLoopOnce(PtreGlobal& state);
 

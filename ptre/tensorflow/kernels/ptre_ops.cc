@@ -118,6 +118,48 @@ REGISTER_KERNEL_BUILDER(Name("Broadcast").Device(DEVICE_CPU), BroadcastOp);
 
 // --------------------------------------------------------------------------
 
+REGISTER_OP("PtreModelaverage")
+  .Input("tensor: T")
+  .Output("avg: T")
+  .Attr("T: numbertype")
+  .Attr("modelaverage_op: int")
+  .SetShapeFn([](InferenceContext* c) {
+      c->set_output(0, c->input(0));
+      return Status::OK();
+  });
+template <typename Device, typename T>
+class PtreModelaverageOp : public AsyncOpKernel {
+ public:
+  explicit PtreModelaverageOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("modelaverage_op", &modelaverage_op_));
+  }
+  void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
+    auto node_name = name();
+    auto tensor = ctx->input(0);
+    ptre::common::ModelaverageOp modelaverage_op =
+      static_cast<ptre::common::ModelaverageOp>(modelaverage_op_);
+    Tensor* output;
+    OP_REQUIRES_OK_ASYNC(
+        ctx, ctx->allocate_output(0, tensor.shape(), &output), done);
+    Status enqueue_result = EnqueueTensorModelaverage(
+        ctx, tensor, *output, node_name,
+        [ctx, done](const Status& status) {
+          ctx->SetStatus(status);
+          done();
+        }, modelaverage_op);
+    OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
+  }
+
+ private:
+  int modelaverage_op_;
+};
+REGISTER_KERNEL_BUILDER(Name("PtreModelaverage")
+                            .Device(DEVICE_CPU)
+                            .TypeConstraint<float>("T"),
+                        PtreModelaverageOp<CPUDevice, float>);
+
+// --------------------------------------------------------------------------
+
 namespace functor {
 
 template <typename Device, typename T>
@@ -176,7 +218,7 @@ class PtreAllreduceOp : public AsyncOpKernel {
 #endif
 //LOG(INFO) << __FUNCTION__ << "\n***tensor=" << (uint64_t) tensor.tensor_data().data() << ", output=" << (uint64_t) output->tensor_data().data() << ", name=" << node_name << ", num_elements=" << tensor.NumElements();
     Status enqueue_result = EnqueueTensorAllreduce(
-        ctx, &tensor, output, node_name,
+        ctx, tensor, *output, node_name,
         [ctx, done](const Status& status) {
 //LOG(INFO) << __FUNCTION__ << ": ctx=" << (uint64_t) ctx << ", num_elem=" << ctx->input(0).NumElements();
           ctx->SetStatus(status);

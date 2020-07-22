@@ -3,15 +3,20 @@
 namespace ptre {
 namespace common {
 
-TcpServiceImpl::TcpServiceImpl(ConsensusManager* cm)
-    : Tcp::Service(), cm_(cm) {}
+void TcpServiceImpl::SetConsensusManager(ConsensusManager* cm) {
+  cm_ = cm;
+}
 
 grpc::Status TcpServiceImpl::PullTensor(grpc::ServerContext* context,
                                         const PullTensorRequest* request,
 					PullTensorResponse* response) {
+  if (cm_ == nullptr) return grpc::Status::CANCELLED;
   int rank = request->src_rank();
-  response->set_tensor_name("hi");
-  //response->set_buf();
+  response->set_tensor_name(request->tensor_name());
+  auto t = cm_->ready_tensor(request->tensor_name());
+  response->set_buf(
+      static_cast<const void*>(t->tensor_data().data()),
+      t->AllocatedBytes());
   response->set_status(0);
   return grpc::Status::OK;
 }

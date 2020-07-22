@@ -38,6 +38,7 @@ target_link_libraries(operations
   rdma_mpi
   rdma_mpi_v2
   rdma_request
+  tcp_service_impl
   )
 
 add_executable(operations_test operations_test.cc)

@@ -14,6 +14,8 @@
 #include "ptre/common/communication/rdma/pull_job.h"
 #include "ptre/common/communication/rdma/rdma_mgr.h"
 #include "ptre/common/communication/rdma/rdma_task.h"
+#include "ptre/common/communication/tcp/tcp_grpc_client.h"
+#include "ptre/common/communication/tcp/tcp_service_impl.h"
 #include "ptre/common/message.h"
 #include "ptre/common/rdma/rdma_context.h"
 
@@ -23,7 +25,8 @@ namespace common {
 using std::string;
 using MessageTable =
     std::unordered_map<string, std::unordered_map<int, Request>>;
-//using MessageTable = std::unordered_map<string, std::vector<Request>>;
+using TensorTable =
+    std::unordered_map<string, TensorTableEntry>;
 
 struct PtreGlobal {
   PtreGlobal();
@@ -33,11 +36,18 @@ struct PtreGlobal {
   RdmaMgr* rdma_mgr = nullptr;
   RdmaContext* rdma_ctx = nullptr;
   std::mutex mu;
+  std::mutex mu_modelaverage;
+  std::mutex mu_pull;
 
   std::queue<Request> message_queue;
-  //std::unique_ptr<MessageTable> message_table;
+  std::queue<Request> message_queue_modelaverage;
+  std::queue<Request> message_queue_pull;
   MessageTable message_table;
+  TensorTable tensor_table;
+  TensorTable tensor_table_modelaverage;
   std::thread background_thread;
+  std::thread background_thread_modelaverage;
+  std::thread background_thread_pull;
 
   std::vector<std::thread> polling_threads;
 
@@ -54,6 +64,8 @@ struct PtreGlobal {
 
   // Grpc Service
   RdmaServiceImpl grpc_service;
+  // Tcp Grpc Service
+  TcpServiceImpl tcp_grpc_service;
   // Grpc Server
   std::unique_ptr<grpc::Server> grpc_server = nullptr;
   std::atomic<bool> shutdown;
@@ -78,6 +90,8 @@ struct PtreGlobal {
   std::vector<PtreNode> nodes;
   std::vector<std::string> grpc_hosts;
   std::shared_ptr<GrpcClientCache<GrpcClient>> grpc_client_cache = nullptr;
+  std::shared_ptr<GrpcClientCache<TcpGrpcClient>> tcp_grpc_client_cache =
+      nullptr;
 
   // Training Infos
   int local_step = 0;
@@ -136,8 +150,6 @@ struct PtreGlobal {
   std::map<int, std::map<string, uint64_t>> last_key;
   std::map<int, std::map<string, int>> peer_agg_cnt;
 
-  std::mutex tensor_table_mu;
-  std::map<string, TensorTableEntry> tensor_table;
 };
 
 }  // namespace common

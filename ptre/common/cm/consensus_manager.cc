@@ -38,6 +38,12 @@ ConsensusManager::ConsensusManager(int ptre_size, int ptre_rank,
     var_names_.push_back(names[i]);
     var_name_to_index_[names[i]] = i;
   }
+  // Init Ready Tensors
+  ready_tensors_.reserve(num_vars_);
+  for (int i = 0; i < num_vars_; i++) {
+    Tensor* t = new Tensor(vars[i]->dtype(), vars[i]->shape());
+    ready_tensors_.push_back(t);
+  }
 }
 
 ConsensusManager::~ConsensusManager() {
@@ -555,6 +561,22 @@ RemoteVariable* ConsensusManager::remote_variable(const string& var_name) {
 std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
   return remote_variables_;
 }
+
+Tensor* ConsensusManager::ready_tensor(int idx) {
+  if (idx < num_vars_) return ready_tensors_[idx];
+  return NULL;
+}
+
+Tensor* ConsensusManager::ready_tensor(const string& var_name) {
+  auto search = var_name_to_index_.find(var_name);
+  if (search == var_name_to_index_.end()) {
+    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+    return NULL;
+  }
+  int idx = search->second;
+  return ready_tensor(idx);
+}
+
 
 const std::vector<string>& ConsensusManager::variable_names() {
   return var_names_;

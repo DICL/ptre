@@ -135,6 +135,8 @@ class ConsensusManager {
   RemoteVariable* remote_variable(int idx);
   RemoteVariable* remote_variable(const string& var_name);
   std::vector<RemoteVariable*>& remote_variables();
+  Tensor* ready_tensor(int idx);
+  Tensor* ready_tensor(const string& var_name);
   const std::vector<string>& variable_names();
   int var_name_to_index(const string& var_name);
 
@@ -164,6 +166,7 @@ class ConsensusManager {
   std::vector<string> var_names_;
   std::map<string, int> var_name_to_index_;
   std::vector<RemoteVariable*> remote_variables_;
+  std::vector<Tensor*> ready_tensors_;
   //std::map<string, int> name_to_index_;
   std::vector<Tensor*> global_consensus_;
   std::map<std::string, Tensor*> recv_tensors_;
