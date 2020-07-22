@@ -77,7 +77,7 @@ struct PtreGlobal {
   std::vector<PtreWorker> workers;
   std::vector<PtreNode> nodes;
   std::vector<std::string> grpc_hosts;
-  std::shared_ptr<GrpcClientCache> grpc_client_cache = nullptr;
+  std::shared_ptr<GrpcClientCache<GrpcClient>> grpc_client_cache = nullptr;
 
   // Training Infos
   int local_step = 0;

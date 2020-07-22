@@ -4,10 +4,10 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 //#include <grpcpp/grpcpp.h>
 
-#include "ptre/common/communication/rdma/grpc_client.h"
 
 namespace ptre {
 namespace common {
@@ -15,15 +15,16 @@ namespace common {
 //typedef std::shared_ptr<::grpc::Channel> SharedGrpcChannelPtr;
 using std::string;
 
+template <typename T>
 class GrpcClientCache {
  public:
   GrpcClientCache(int rank, const std::vector<string>& hostnames);
   //~GrpcClientCache();
-  int GetClient(int target, GrpcClient** client);
+  int GetClient(int target, T** client);
 
  private:
   int rank_;
-  std::map<int, std::unique_ptr<GrpcClient>> clients_;
+  std::map<int, std::unique_ptr<T>> clients_;
   std::vector<std::string> hostnames_;
 };
 

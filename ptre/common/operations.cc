@@ -77,8 +77,8 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     LOG(ERROR) << "NOT ENOUGH HOSTS in the hostfile";
     exit(1);
   }
-  ptre_global.grpc_client_cache = std::make_shared<GrpcClientCache>(rank,
-      ptre_global.grpc_hosts);
+  ptre_global.grpc_client_cache =
+    std::make_shared<GrpcClientCache<GrpcClient>>(rank, ptre_global.grpc_hosts);
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
   LOG(INFO) << "Started Grpc Service";
 
