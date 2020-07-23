@@ -137,7 +137,10 @@ def resource_remote_variable(var, var_name):
   return PTRE_LIB.resource_remote_variable(var, var_name)
 
 def modelaverage(var):
-  return PTRE_LIB.ptre_modelaverage(var, name=var.name, modelaverage_op=0)
+  name = _normalize_name(var.name)
+  return PTRE_LIB.ptre_modelaverage(var, name=name, var_name=var.name,
+      modelaverage_op=0)
 
 def publish(var):
-  return PTRE_LIB.ptre_publish(var, name=var.name)
+  name = _normalize_name(var.name)
+  return PTRE_LIB.ptre_publish(var, name=name, var_name=var.name)

@@ -77,9 +77,9 @@ void RunGrpcServer() {
   // Tcp Service
   builder.RegisterService(&ptre_global.tcp_grpc_service);
 
-  //builder.SetMaxMessageSize(1 * 1024 * 1024 * 1024);
+  builder.SetMaxMessageSize(1 * 1024 * 1024 * 1024);
   ptre_global.grpc_server = builder.BuildAndStart();
-  //std::cout << "Grpc server listening on " << server_address << std::endl;
+  LOG(INFO) << "Grpc server listening on " << server_address;
   ptre_global.grpc_server->Wait();
 }
 
@@ -107,7 +107,6 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     std::make_shared<GrpcClientCache<TcpGrpcClient>>(rank,
                                                      ptre_global.grpc_hosts);
   ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
-  LOG(INFO) << "Started Grpc Service";
 
   // Init RdmaMgr
   DVLOG(0) << "Init Rdma Manager";
@@ -811,31 +810,30 @@ Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
 }
 
 Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
-                                 const string& node_name,
+                                 const string& var_name,
                                  StatusCallback callback,
                                  ModelaverageOp modelaverage_op) {
   Request message;
-  message.set_tensor_name(node_name);
+  message.set_tensor_name(var_name);
   message.set_tensor_type(tensor.dtype());
 
   TensorTableEntry entry;
-  entry.tensor_name = node_name;
-
+  entry.tensor_name = var_name;
   entry.context = ctx;
   entry.tensor = std::make_shared<Tensor>(tensor);
   entry.output = std::make_shared<Tensor>(output);
   entry.callback = callback;
   // TODO: Init TensorTableEntry correctly.
   std::lock_guard<std::mutex> guard(ptre_global.mu_modelaverage);
-  ptre_global.tensor_table_modelaverage.emplace(node_name, std::move(entry));
+  ptre_global.tensor_table_modelaverage.emplace(var_name, std::move(entry));
   ptre_global.message_queue_modelaverage.push(std::move(message));
 
   return Status::OK();
 }
 
-Status EnqueueTensorPull(RemoteVariable* rvar) {
+Status EnqueueTensorPull(const string& name) {
   Request message;
-  message.set_tensor_name(rvar->name());
+  message.set_tensor_name(name);
 
   std::lock_guard<std::mutex> guard(ptre_global.mu_pull);
   ptre_global.message_queue_pull.push(std::move(message));
@@ -845,7 +843,6 @@ Status EnqueueTensorPull(RemoteVariable* rvar) {
 
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
                               const string node_name, StatusCallback callback,
-
                               ReduceOp reduce_op) {
   //Status status;
   Request message;
@@ -883,13 +880,27 @@ bool RunLoopOnceModelaverage() {
     }
   }
 
-  for (auto& req : requests) {
-    const string& name = req.tensor_name();
-    RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
+  std::vector<TensorTableEntry> entries;
+  {
+    std::lock_guard<std::mutex> guard(ptre_global.mu_modelaverage);
+    for (auto& req : requests) {
+      const string& name = req.tensor_name();
+      auto search = ptre_global.tensor_table_modelaverage.find(name);
+      if (search == ptre_global.tensor_table_modelaverage.end()) {
+        LOG(ERROR) << "KEY NOT FOUND: " << name;
+        exit(EXIT_FAILURE);
+      }
+      auto& entry = search->second;
+      entries.push_back(std::move(entry));
+      ptre_global.tensor_table_modelaverage.erase(search);
+    }
+  }
+
+  for (auto& entry : entries) {
+    const string& name = entry.tensor_name;
+//LOG(INFO) << __FUNCTION__ << ": entry.tensor_name()=" << name;
     // TODO: Check whether this remote variable is up-to-date
-    auto search = ptre_global.tensor_table.find(name);
-    assert(search != ptre_global.tensor_table_modelaverage.end());
-    auto& entry = search->second;
+    RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
     memcpy(const_cast<char*>(entry.output->tensor_data().data()),
         rvar->tensor()->tensor_data().data(), rvar->tensor()->AllocatedBytes());
     /*
@@ -898,7 +909,6 @@ bool RunLoopOnceModelaverage() {
         rvar->tensor()->tensor_data().begin());
     */
     entry.callback(Status::OK());
-    ptre_global.tensor_table_modelaverage.erase(search);
   }
 
   return !ptre_global.shutdown;
@@ -931,7 +941,14 @@ bool RunLoopOncePull() {
     // TODO: Pull up-to-date tensor
     client->PullTensor(name, *rvar->tensor());
     // TODO: Mark this RemoteVariable as it was successfully pulled.
-    // TODO: Average here or in Modelaverage
+    auto ready_tensor = ptre_global.cm->ready_tensor(name);
+    float* remote = (float*) const_cast<char*>(
+        rvar->tensor()->tensor_data().data());
+    float* local = (float*) const_cast<char*>(
+        ready_tensor->tensor_data().data());
+    for (int i = 0; i < rvar->tensor()->NumElements(); i++) {
+      remote[i] = (remote[i] + local[i]) / 2;
+    }
   }
 
   return !ptre_global.shutdown;
@@ -946,6 +963,7 @@ void BackgroundThreadLoopPull() {
 bool RunLoopOnce(PtreGlobal& state);
 
 void BackgroundThreadLoop(PtreGlobal& state) {
+  return;
   while (RunLoopOnce(state)) continue;
 DVLOG(0) << __FUNCTION__ << "END END END";
 }

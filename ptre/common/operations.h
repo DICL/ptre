@@ -97,6 +97,8 @@ Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
                                  StatusCallback callback,
                                  ModelaverageOp modelaverage_op);
 
+Status EnqueueTensorPull(const string& name);
+
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
                               const string node_name, StatusCallback callback,
                               ReduceOp reduce_op);

@@ -156,6 +156,7 @@ REGISTER_OP("PtreModelaverage")
   .Input("tensor: T")
   .Output("avg: T")
   .Attr("T: numbertype")
+  .Attr("var_name: string")
   .Attr("modelaverage_op: int")
   .SetShapeFn([](InferenceContext* c) {
       c->set_output(0, c->input(0));
@@ -165,6 +166,7 @@ template <typename Device, typename T>
 class PtreModelaverageOp : public AsyncOpKernel {
  public:
   explicit PtreModelaverageOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
     OP_REQUIRES_OK(ctx, ctx->GetAttr("modelaverage_op", &modelaverage_op_));
   }
   void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
@@ -175,8 +177,9 @@ class PtreModelaverageOp : public AsyncOpKernel {
     Tensor* output;
     OP_REQUIRES_OK_ASYNC(
         ctx, ctx->allocate_output(0, tensor.shape(), &output), done);
+//LOG(INFO) << __FUNCTION__ << "tensor name=" << var_name_;
     Status enqueue_result = EnqueueTensorModelaverage(
-        ctx, tensor, *output, node_name,
+        ctx, tensor, *output, var_name_,
         [ctx, done](const Status& status) {
           ctx->SetStatus(status);
           done();
@@ -185,6 +188,7 @@ class PtreModelaverageOp : public AsyncOpKernel {
   }
 
  private:
+  string var_name_;
   int modelaverage_op_;
 };
 REGISTER_KERNEL_BUILDER(Name("PtreModelaverage")
@@ -197,6 +201,7 @@ REGISTER_KERNEL_BUILDER(Name("PtreModelaverage")
 REGISTER_OP("PtrePublish")
   .Input("var: T")
   .Attr("T: numbertype")
+  .Attr("var_name: string")
   .SetShapeFn([](InferenceContext* c) {
       ShapeHandle s = ShapeOrHandleShape(c, 0);
       if (c->num_outputs() > 0) {
@@ -207,13 +212,16 @@ REGISTER_OP("PtrePublish")
 template <typename Device, typename T>
 class PtrePublishOp : public AsyncOpKernel {
  public:
-  explicit PtrePublishOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) { }
+  explicit PtrePublishOp(OpKernelConstruction* ctx) : AsyncOpKernel(ctx) {
+    OP_REQUIRES_OK(ctx, ctx->GetAttr("var_name", &var_name_));
+  }
   void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
     auto var = ctx->input(0);
     const Device& d = ctx->template eigen_device<Device>();
-    Tensor* ready_tensor = GetReadyTensor(name());
+    Tensor* ready_tensor = GetReadyTensor(var_name_);
     functor::MemcpyToHost<Device, T>()(d, var.flat<T>(),
                                        ready_tensor->flat<T>());
+    EnqueueTensorPull(var_name_);
     done();
     // TODO: Will this async memcpy be effective?
     //Status enqueue_result = EnqueueTensorMemcpyToHost(...
@@ -223,6 +231,9 @@ class PtrePublishOp : public AsyncOpKernel {
     //    });
     //OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
   }
+
+ private:
+  string var_name_;
 };
 #define REGISTER_KERNELS(D, T)                         \
   REGISTER_KERNEL_BUILDER(Name("PtrePublish") \
