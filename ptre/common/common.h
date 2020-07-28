@@ -31,6 +31,8 @@ using OpContext = ::tensorflow::OpKernelContext;
 using Status = ::tensorflow::Status;
 using StatusCallback = std::function<void(const Status&)>;
 using Tensor = ::tensorflow::Tensor;
+using ::tensorflow::DataType;
+using ::tensorflow::TensorShape;
 
 enum ReduceOp {
   REDUCE_SUM = 0

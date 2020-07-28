@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <algorithm>
 
+#include "ptre/common/cm/ready_tensor.h"
+
 #define DDLOG DLOG(INFO) << "RANK:" << ptre_rank_ << " "
 
 namespace ptre {
@@ -41,7 +43,7 @@ ConsensusManager::ConsensusManager(int ptre_size, int ptre_rank,
   // Init Ready Tensors
   ready_tensors_.reserve(num_vars_);
   for (int i = 0; i < num_vars_; i++) {
-    Tensor* t = new Tensor(vars[i]->dtype(), vars[i]->shape());
+    ReadyTensor* t = new ReadyTensor(vars[i]->dtype(), vars[i]->shape());
     ready_tensors_.push_back(t);
   }
 }
@@ -562,12 +564,12 @@ std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
   return remote_variables_;
 }
 
-Tensor* ConsensusManager::ready_tensor(int idx) {
+ReadyTensor* ConsensusManager::ready_tensor(int idx) {
   if (idx < num_vars_) return ready_tensors_[idx];
   return NULL;
 }
 
-Tensor* ConsensusManager::ready_tensor(const string& var_name) {
+ReadyTensor* ConsensusManager::ready_tensor(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);
   if (search == var_name_to_index_.end()) {
     LOG(ERROR) << "KEY NOT FOUND: " << var_name;

@@ -8,12 +8,13 @@ target_link_libraries(peer_selector
 add_library(consensus_manager SHARED consensus_manager.cc)
 target_link_libraries(consensus_manager
   :libtensorflow_framework.so.2
-  rdma_mgr
-  peer_selector
-  remote_variable
-  grpc_client_cache
   allocator
+  grpc_client_cache
   message
+  peer_selector
+  rdma_mgr
+  ready_tensor
+  remote_variable
   )
 
 #add_library(tensor_aggregator SHARED tensor_aggregator.cc)
@@ -35,3 +36,7 @@ target_link_libraries(remote_variable
 add_executable(test_peer_selector test_peer_selector.cc)
 target_link_libraries(test_peer_selector peer_selector)
 #target_compile_definitions(consensus_manager PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)
+
+add_library(ready_tensor SHARED ready_tensor.cc)
+target_link_libraries(ready_tensor
+  common)

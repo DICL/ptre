@@ -82,12 +82,13 @@ namespace common {
 
 enum P2PSyncMode : int {
   P2P_SYNC_MODE_STEP = 0,
+  P2P_SYNC_MODE_STEP_ASYNC = 1,
   P2PSyncMode_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::min(),
   P2PSyncMode_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::max()
 };
 bool P2PSyncMode_IsValid(int value);
 constexpr P2PSyncMode P2PSyncMode_MIN = P2P_SYNC_MODE_STEP;
-constexpr P2PSyncMode P2PSyncMode_MAX = P2P_SYNC_MODE_STEP;
+constexpr P2PSyncMode P2PSyncMode_MAX = P2P_SYNC_MODE_STEP_ASYNC;
 constexpr int P2PSyncMode_ARRAYSIZE = P2PSyncMode_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* P2PSyncMode_descriptor();
