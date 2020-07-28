@@ -1,15 +1,21 @@
 syntax = "proto3";
 
-package ptre;
+package ptre.common;
 
 service Tcp {
   rpc PullTensor (PullTensorRequest) returns (PullTensorResponse) {}
   rpc PushTensor(PushTensorRequest) returns (PushTensorResponse) {}
 }
 
+enum P2PSyncMode {
+  P2P_SYNC_MODE_STEP = 0;
+}
+
 message PullTensorRequest{
   int32 src_rank = 1;
   string tensor_name = 2;
+  int32 src_step = 3;
+  P2PSyncMode sync_mode = 4;
 }
 
 message PullTensorResponse{
