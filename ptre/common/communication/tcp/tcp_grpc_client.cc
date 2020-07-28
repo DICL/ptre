@@ -9,8 +9,10 @@ using grpc::ClientContext;
 
 TcpGrpcClient::TcpGrpcClient(int src_rank, int dst_rank, const string& hostname)
     : src_rank_(src_rank), dst_rank_(dst_rank), hostname_(hostname) {
-  std::shared_ptr<::grpc::Channel> channel = grpc::CreateChannel(hostname,
-      grpc::InsecureChannelCredentials());
+  grpc::ChannelArguments ch_args;
+  ch_args.SetMaxReceiveMessageSize(-1);//max msg size
+  std::shared_ptr<::grpc::Channel> channel = grpc::CreateCustomChannel(hostname,
+      grpc::InsecureChannelCredentials(), ch_args);
   stub_ = Tcp::NewStub(channel);
 }
 

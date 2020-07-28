@@ -34,6 +34,7 @@ void RunGrpcServer(int comm_size, int comm_rank) {
   grpc::ServerBuilder builder;
   builder.AddListeningPort(kServerAddrs[comm_rank],
       grpc::InsecureServerCredentials());
+  builder.SetMaxReceiveMessageSize(INT_MAX);
 
   // For multiple service registrations test
   RdmaServiceImpl rdma_service;
