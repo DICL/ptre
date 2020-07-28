@@ -832,6 +832,10 @@ Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
 }
 
 Status EnqueueTensorPull(const string& name) {
+  // TODO: THIS DOES NOT SUPPORT MULTIPLE PULL
+  RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
+  rvar->StartAggregation();
+
   Request message;
   message.set_tensor_name(name);
 
@@ -901,13 +905,16 @@ bool RunLoopOnceModelaverage() {
 //LOG(INFO) << __FUNCTION__ << ": entry.tensor_name()=" << name;
     // TODO: Check whether this remote variable is up-to-date
     RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
-    memcpy(const_cast<char*>(entry.output->tensor_data().data()),
-        rvar->tensor()->tensor_data().data(), rvar->tensor()->AllocatedBytes());
-    /*
-    std::copy(
-        const_cast<char*>(entry.output->tensor_data().begin()), entry.output->tensor_data().end(),
-        rvar->tensor()->tensor_data().begin());
-    */
+    if (rvar->agg_count() > 0) {
+      memcpy(const_cast<char*>(entry.output->tensor_data().data()),
+          rvar->tensor()->tensor_data().data(),
+          rvar->tensor()->AllocatedBytes());
+      /*
+      std::copy(
+          const_cast<char*>(entry.output->tensor_data().begin()), entry.output->tensor_data().end(),
+          rvar->tensor()->tensor_data().begin());
+      */
+    }
     entry.callback(Status::OK());
   }
 
@@ -939,15 +946,27 @@ bool RunLoopOncePull() {
     ptre_global.tcp_grpc_client_cache->GetClient(dst, &client);
     RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
     // TODO: Pull up-to-date tensor
-    client->PullTensor(name, *rvar->tensor());
-    // TODO: Mark this RemoteVariable as it was successfully pulled.
-    auto ready_tensor = ptre_global.cm->ready_tensor(name);
-    float* remote = (float*) const_cast<char*>(
-        rvar->tensor()->tensor_data().data());
-    float* local = (float*) const_cast<char*>(
-        ready_tensor->tensor_data().data());
-    for (int i = 0; i < rvar->tensor()->NumElements(); i++) {
-      remote[i] = (remote[i] + local[i]) / 2;
+    int ret = client->PullTensor(name, GetReadyTensor(name)->step(),
+        *rvar->tensor());
+    if (ret == 0) {
+      // TODO: Mark this RemoteVariable as it was successfully pulled.
+      auto ready_tensor = ptre_global.cm->ready_tensor(name);
+      std::lock_guard<std::mutex> guard(ready_tensor->mu());
+#if 0
+      std::lock_guard<std::mutex> guard2(rvar->mu());
+      float* remote = (float*) const_cast<char*>(
+          rvar->tensor()->tensor_data().data());
+      float* local = (float*) const_cast<char*>(
+          ready_tensor->tensor_data().data());
+      for (int i = 0; i < rvar->tensor()->NumElements(); i++) {
+        remote[i] = (remote[i] + local[i]) / 2;
+      }
+#else
+      // TODO: THIS DOES NOT SUPPORT MULTIPLE PULL
+      rvar->StopAggregation();
+      rvar->Aggregate(*ready_tensor);
+      rvar->Reduce();
+#endif
     }
   }
 

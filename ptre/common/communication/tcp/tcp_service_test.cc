@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
   printf("Before Pull: %s\n", a.DebugString(4).c_str());
   for (int i = 0; i < 2; i++) {
     TcpGrpcClient client(0, i, kServerAddrs[i]);
-    client.PullTensor("tensor_0", a);
+    client.PullTensor("tensor_0", 0, a);
     printf("After Pull from rank %d: %s\n", i, a.DebugString(4).c_str());
   }
 

@@ -44,6 +44,8 @@ class RemoteVariable {
   DataType dtype() const { return tensor_->dtype(); }
   const TensorShape& shape() const { return tensor_->shape(); }
 
+  std::mutex& mu() { return mu_; }
+
  private:
   std::mutex mu_;
   string name_;
