@@ -714,7 +714,7 @@ void ptre_print_counter_summary() {
 
 // --------------------------------------------------------------------------
 
-Tensor* GetReadyTensor(const string& name) {
+ReadyTensor* GetReadyTensor(const string& name) {
   return ptre_global.cm->ready_tensor(name);
 }
 

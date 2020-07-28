@@ -32,6 +32,7 @@ target_link_libraries(ptre_ops
                       cudart
                       cublas
                       operations
+                      ready_tensor
                       #shared_mutex
 )
 #target_compile_definitions(ptre_ops PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)

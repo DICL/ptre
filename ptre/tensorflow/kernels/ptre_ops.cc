@@ -26,6 +26,7 @@
 #include <infiniband/verbs.h>
 
 #include "ptre/common/operations.h"
+#include "ptre/common/cm/ready_tensor.h"
 #include "ptre/common/communication/rdma/rdma.h"
 //#include "ptre/tensorflow/types.h"
 #include "ptre/tensorflow/kernels/job_def.h"
@@ -218,9 +219,12 @@ class PtrePublishOp : public AsyncOpKernel {
   void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
     auto var = ctx->input(0);
     const Device& d = ctx->template eigen_device<Device>();
-    Tensor* ready_tensor = GetReadyTensor(var_name_);
+    ReadyTensor* ready_tensor = GetReadyTensor(var_name_);
+    ready_tensor->mu().lock();
     functor::MemcpyToHost<Device, T>()(d, var.flat<T>(),
                                        ready_tensor->flat<T>());
+    ready_tensor->set_step(ready_tensor->step() + 1);
+    ready_tensor->mu().unlock();
     EnqueueTensorPull(var_name_);
     done();
     // TODO: Will this async memcpy be effective?
@@ -255,7 +259,7 @@ REGISTER_KERNELS(GPU, double);
 #endif  // GOOGLE_CUDA
 
 #undef REGISTER_KERNELS
-  
+
 // --------------------------------------------------------------------------
 
 namespace functor {

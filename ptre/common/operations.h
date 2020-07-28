@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "ptre/common/cm/ready_tensor.h"
 #include "ptre/common/common.h"
 #include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/message.h"
@@ -84,7 +85,7 @@ void ptre_print_counter_summary();
 
 // --------------------------------------------------------------------------
 
-Tensor* GetReadyTensor(const string& name);
+ReadyTensor* GetReadyTensor(const string& name);
 
 // --------------------------------------------------------------------------
 

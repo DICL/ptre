@@ -34,6 +34,7 @@ target_link_libraries(operations
   :libtensorflow_framework.so.2
   host_file_parser
   ptre_global
+  ready_tensor
   rdma_context
   rdma_mpi
   rdma_mpi_v2
