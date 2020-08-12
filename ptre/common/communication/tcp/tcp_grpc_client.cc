@@ -1,5 +1,7 @@
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 
+#include "ptre/common/common.h"
+
 namespace ptre {
 namespace common {
 
@@ -29,12 +31,16 @@ int TcpGrpcClient::PullTensor(const string& tensor_name, uint64_t step,
   grpc::Status status = stub_->PullTensor(&context, request, &response);
   if (status.ok()) {
     if (response.status() == 0) {
+//if (tensor_name == "predictions_kernel_0") {
+//  DVLOGR(0, src_rank_) << __FUNCTION__ << " pulling from " << dst_rank_ << " done " << tensor_name;
+//}
       std::copy(response.buf().begin(), response.buf().end(),
           const_cast<char*>(out.tensor_data().data()));
     }
     return response.status();
   } else {
     std::cout << status.error_code() << ": " << status.error_message() << std::endl;
+    exit(1);
     return -1;
   }
 }

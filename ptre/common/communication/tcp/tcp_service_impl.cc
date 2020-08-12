@@ -1,7 +1,10 @@
 #include "ptre/common/communication/tcp/tcp_service_impl.h"
 
+#include <chrono>
 #include <mutex>
+#include <thread>
 
+#include "ptre/common/common.h"
 #include "ptre/common/cm/ready_tensor.h"
 
 namespace ptre {
@@ -9,6 +12,13 @@ namespace common {
 
 void TcpServiceImpl::SetConsensusManager(ConsensusManager* cm) {
   cm_ = cm;
+}
+
+void TcpServiceImpl::SetCommBufTables(CommBufTable* sbt, CommBufTable* rbt,
+                                      std::mutex* mu) {
+  sendbuf_table_ = sbt;
+  recvbuf_table_ = rbt;
+  commbuf_table_mu_ = mu;
 }
 
 inline void SetBuf(PullTensorResponse* res, ReadyTensor* t) {
@@ -19,6 +29,7 @@ inline void SetBuf(PullTensorResponse* res, ReadyTensor* t) {
 grpc::Status TcpServiceImpl::PullTensor(grpc::ServerContext* context,
                                         const PullTensorRequest* request,
 					PullTensorResponse* response) {
+#if 0
   if (cm_ == nullptr) return grpc::Status::CANCELLED;
   int rank = request->src_rank();
   response->set_tensor_name(request->tensor_name());
@@ -43,6 +54,43 @@ grpc::Status TcpServiceImpl::PullTensor(grpc::ServerContext* context,
     std::lock_guard<std::mutex> guard(t->mu());
     SetBuf(response, t);
   }
+#elif 0
+  auto& name = request->tensor_name();
+  auto sm = ptre_global_->result_state[name];
+  std::lock_guard<std::mutex> guard(sm->mu);
+  if (sm->state == 1 || sm->state == 2) {
+  response->set_tensor_name(request->tensor_name());
+  ptre_global_->comm_buf_table[request->tensor_name()];
+  res->set_buf(static_cast<const void*>(t->tensor_data().data()),
+      t->AllocatedBytes());
+#else
+  auto& name = request->tensor_name();
+  commbuf_table_mu_->lock();
+  auto search = sendbuf_table_->find(name);
+  commbuf_table_mu_->unlock();
+  if (search == sendbuf_table_->end()) {
+//if (name == "predictions_kernel_0") {
+//  DVLOGR(0, cm_->rank()) << __FUNCTION__ << " sendbuf not set " << name;
+//}
+    response->set_status(1);
+    return grpc::Status::OK;
+  }
+  auto sm = search->second.second;
+  if (sm->state != SENDBUF_STATE_READY) {
+//if (name == "predictions_kernel_0") {
+//  DVLOGR(0, cm_->rank()) << __FUNCTION__ << " memcpy not done " << name;
+//}
+    response->set_status(1);
+    return grpc::Status::OK;
+  }
+  auto t = search->second.first;
+  response->set_buf(static_cast<const void*>(t->tensor_data().data()),
+      t->AllocatedBytes());
+  response->set_status(0);
+  sm->mu.lock();
+  sm->state = SENDBUF_STATE_INIT;
+  sm->mu.unlock();
+#endif
   return grpc::Status::OK;
 }
 

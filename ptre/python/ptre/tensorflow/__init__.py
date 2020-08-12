@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from ptre.tensorflow.ptre_ops import _async_comm as async_comm
+from ptre.tensorflow.ptre_ops import _await_comm as await_comm
 from ptre.tensorflow.ptre_ops import allreduce
 from ptre.tensorflow.ptre_ops import _get_remote_variable
 from ptre.tensorflow.ptre_ops import barrier

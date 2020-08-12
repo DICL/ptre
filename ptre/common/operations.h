@@ -89,16 +89,27 @@ ReadyTensor* GetReadyTensor(const string& name);
 
 // --------------------------------------------------------------------------
 
-Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
-                                Tensor* output, Tensor* num_agg,
-                                StatusCallback callback);
+//Status EnqueueGetRemoteVariable(OpContext* ctx, const string& var_name,
+//                                Tensor* output, Tensor* num_agg,
+//                                StatusCallback callback);
+
+Status EnqueueTensorAsyncComm(OpContext* context,
+                              const string var_name,
+                              std::shared_ptr<Tensor> tensor,
+                              StatusCallback callback,
+                              CommOp comm_op);
+
+Status EnqueueTensorAwaitComm(OpContext* context,
+                              const string var_name,
+                              std::shared_ptr<Tensor> tensor,
+                              StatusCallback callback);
 
 Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
                                  const string& node_name,
                                  StatusCallback callback,
                                  ModelaverageOp modelaverage_op);
 
-Status EnqueueTensorPull(const string& name);
+Status EnqueueTensorPull(const string name);
 
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
                               const string node_name, StatusCallback callback,

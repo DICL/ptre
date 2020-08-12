@@ -2,6 +2,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import ptre.tensorflow as ptre
+import tensorflow as tf
+
 from ptre.tensorflow import modelaverage
 from ptre.tensorflow import publish
 
@@ -17,44 +20,24 @@ class _PullOptimizer(optimizer_v2.OptimizerV2):
     self._name = name
     super(self.__class__, self).__init__(**config)
 
-  #def get_updates(self, loss, params):
-  #  grads = self.get_gradients(loss, params)
-  #  grads_and_vars = list(zip(grads, params))
-  #  self._assert_valid_dtypes([
-  #      v for g, v in grads_and_vars
-  #      if g is not None and v.dtype != dtypes.resource
-  #  ])
-  #  return [self.apply_gradients(grads_and_vars)]
+  def _async_comm(self, var):
+    if ptre.size() > 1:
+      async_op = ptre.async_comm(var)
+      with tf.name_scope(self._name + "_AsyncComm"):
+        return async_op
+    else:
+      return var
 
-  #def apply_gradients(self, grads_and_vars, name=None):
-  #  """Wrap `apply_gradients` to apply gradient on averaged variable"""
-  #  avg_ops = []
-  #  with backend.name_scope(name or self._name):
-  #    for grad, var in grads_and_vars:
-  #      scope_name = (
-  #          "modelaverage" if ops.executing_eagerly_outside_functions() else
-  #          "modelaverage_" + var.op.name)
-  #      with ops.control_dependencies([grad]), backend.name_scope(scope_name):
-  #        avg_var = self._modelaverage(var)
-  #        print("DEBUG: ", var.name, avg_var.name, scope_name)
-  #      avg_ops.append(avg_var)
-
-  #  # Apply gradients to newly averaged weights
-  #  gradients, variables = list(zip(*grads_and_vars))
-  #  grads_and_new_vars = zip(gradients, avg_ops)
-  #  return (super(self.__class__, self)
-  #                .apply_gradients(grads_and_new_vars, name))
+  def _await_comm(self, var):
+    if ptre.size() > 1:
+      with tf.name_scope(self._name + "_AwaitComm"):
+        fetch_op = ptre.await_comm(var)
+        return fetch_op 
+    else:
+      return var
 
   def _distributed_apply(self, distribution, grads_and_vars, name, apply_state):
     """Wrap `_distributed_apply` to publish variable after update."""
-    #reduced_grads = distribution.extended.batch_reduce_to(
-    #    ds_reduce_util.ReduceOp.SUM, grads_and_vars)
-    #var_list = [v for _, v in grads_and_vars]
-    #grads_and_vars = zip(reduced_grads, var_list)
-
-    def _modelaverage(var):
-      return var.assign(modelaverage(var))
-
     def _apply_grad_to_update_var(var, grad):
       """Apply gradient to variable."""
       if isinstance(var, ops.Tensor):
@@ -80,28 +63,25 @@ class _PullOptimizer(optimizer_v2.OptimizerV2):
         return update_op
 
     def apply_grad_to_update_var(var, grad):
-      """Average var -> Apply grad -> publish var."""
-      # Average var
-      modelaverage_scope_name = (
-          "modelaverage" if ops.executing_eagerly_outside_functions() else
-          "modelaverage_" + var.op.name)
-      #with (ops.control_dependencies([grad]),
-      #      backend.name_scope(modelaverage_scope_name)):
-      with backend.name_scope(modelaverage_scope_name):
-        avg_op = _modelaverage(var)
-
-      # Apply grad
-      with ops.control_dependencies([avg_op]):
+      """Fetch avg var -> Apply grad -> Async avg var."""
+      if True:
+        # Wait async allreduce var issued from the previous step
+        await_op = self._await_comm(var)
+        # Apply grad
+        with ops.control_dependencies([await_op]):
+          apply_op = _apply_grad_to_update_var(var, grad)
+          # Start Async Allreduce var
+          with ops.control_dependencies([apply_op]):
+            enqueue_op = self._async_comm(var)
+            return enqueue_op
+      else:
+        #print("Sync: ", var.name)
+        # Apply grad
         apply_op = _apply_grad_to_update_var(var, grad)
-
-      # Publish var
-      # TODO: check if this op is executed
-      publish_scope_name = (
-          "publish" if ops.executing_eagerly_outside_functions() else
-          "publish_" + var.op.name)
-      with ops.control_dependencies(
-          [apply_op]), backend.name_scope(publish_scope_name):
-        return publish(var)
+        # Average var
+        with ops.control_dependencies([apply_op]):
+          update_op = self._allreduce(var)
+        return update_op
 
     update_ops = []
     with backend.name_scope(name or self._name):
@@ -127,7 +107,6 @@ class _PullOptimizer(optimizer_v2.OptimizerV2):
             return self._iterations.assign_add(1).op
 
       return self._iterations.assign_add(1)
-
 
 def create_modelaverage_optimizer(optimizer, name):
   # create_modelaverage_optimizer

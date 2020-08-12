@@ -43,7 +43,7 @@
 //using ptre::PushJob;
 
 using namespace tensorflow;
-using namespace ptre::common;
+using namespace ptre;
 
 namespace ptre {
 namespace tensorflow {
@@ -153,6 +153,79 @@ REGISTER_KERNEL_BUILDER(Name("Broadcast").Device(DEVICE_CPU), BroadcastOp);
 
 // --------------------------------------------------------------------------
 
+REGISTER_OP("PtreAsyncComm")
+    .Attr("T: {int32, int64, float16, float32, float64}")
+    .Attr("var_name: string")
+    .Attr("comm_op: int")
+    .Input("tensor: T")
+    .SetShapeFn([](shape_inference::InferenceContext* c) {
+      return Status::OK();
+    });
+class PtreAsyncCommOp : public AsyncOpKernel {
+ public:
+  explicit PtreAsyncCommOp(OpKernelConstruction* context)
+      : AsyncOpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("var_name", &var_name_));
+    OP_REQUIRES_OK(context, context->GetAttr("comm_op", &comm_op_));
+  }
+  void ComputeAsync(OpKernelContext* context, DoneCallback done) override {
+    auto tensor = context->input(0);
+    auto ptre_tensor = std::make_shared<Tensor>(tensor);
+    auto enqueue_result = EnqueueTensorAsyncComm(context, var_name_,
+        ptre_tensor,
+        [context, done](const common::Status& status) {
+          context->SetStatus(status);
+          done();
+        }, common::COMM_P2P_PULL);
+    OP_REQUIRES_OK_ASYNC(context, enqueue_result, done);
+  }
+
+ private:
+  string var_name_;
+  int comm_op_;
+};
+//REGISTER_KERNEL_BUILDER(Name("PtreAsyncComm").Device(DEVICE_CPU),
+//                        PtreAsyncCommOp);
+REGISTER_KERNEL_BUILDER(Name("PtreAsyncComm").Device(DEVICE_GPU),
+                        PtreAsyncCommOp);
+
+// --------------------------------------------------------------------------
+
+REGISTER_OP("PtreAwaitComm")
+    .Attr("T: {int32, int64, float16, float32, float64}")
+    .Attr("var_name: string")
+    .Input("tensor: T")
+    .SetShapeFn([](shape_inference::InferenceContext* c) {
+      return Status::OK();
+    });
+class PtreAwaitCommOp : public AsyncOpKernel {
+ public:
+  explicit PtreAwaitCommOp(OpKernelConstruction* context)
+      : AsyncOpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("var_name", &var_name_));
+  }
+  void ComputeAsync(OpKernelContext* context, DoneCallback done) override {
+    auto tensor = context->input(0);
+    auto ptre_tensor = std::make_shared<common::Tensor>(tensor);
+    auto enqueue_result = common::EnqueueTensorAwaitComm(context, var_name_,
+        ptre_tensor,
+        [context, done](const common::Status& status) {
+          context->SetStatus(status);
+          done();
+        });
+    OP_REQUIRES_OK_ASYNC(context, enqueue_result, done);
+  }
+
+ private:
+  string var_name_;
+};
+//REGISTER_KERNEL_BUILDER(Name("PtreAwaitComm").Device(DEVICE_CPU),
+//                        PtreAwaitCommOp);
+REGISTER_KERNEL_BUILDER(Name("PtreAwaitComm").Device(DEVICE_GPU),
+                        PtreAwaitCommOp);
+
+// --------------------------------------------------------------------------
+
 REGISTER_OP("PtreModelaverage")
   .Input("tensor: T")
   .Output("avg: T")
@@ -199,6 +272,7 @@ REGISTER_KERNEL_BUILDER(Name("PtreModelaverage")
 
 // --------------------------------------------------------------------------
 
+#if 0
 REGISTER_OP("PtrePublish")
   .Input("var: T")
   .Attr("T: numbertype")
@@ -259,6 +333,7 @@ REGISTER_KERNELS(GPU, double);
 #endif  // GOOGLE_CUDA
 
 #undef REGISTER_KERNELS
+#endif
 
 // --------------------------------------------------------------------------
 
@@ -341,6 +416,7 @@ REGISTER_KERNEL_BUILDER(Name("PtreAllreduce").Device(DEVICE_GPU),
 
 // --------------------------------------------------------------------------
 
+#if 0
 REGISTER_OP("PtreResourceRemoteVariable")
   .Input("var: resource")
   .Output("output: T")
@@ -388,6 +464,7 @@ class PtreRemoteVariableOp : public AsyncOpKernel {
 };
 REGISTER_KERNEL_BUILDER(Name("PtreResourceRemoteVariable").Device(DEVICE_CPU),
                         PtreRemoteVariableOp);
+#endif
 
 
 namespace functor {

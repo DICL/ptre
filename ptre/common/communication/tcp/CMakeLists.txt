@@ -9,6 +9,7 @@ target_link_libraries(tcp_service_impl
   consensus_manager
   ready_tensor
   tcp_service_grpc_proto
+  common
   )
 
 add_executable(tcp_service_test tcp_service_test.cc)

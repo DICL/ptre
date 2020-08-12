@@ -4,8 +4,11 @@ from __future__ import print_function
 
 import time
 
+
 import ptre.tensorflow as ptre
 
+#from tensorflow.python.eager import context
+from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.callbacks import Callback
 
 class InitTrainableVariablesCallback(Callback):
@@ -22,13 +25,13 @@ class BroadcastModelCallback(Callback):
     self._broadcast_done = False
     self._root_rank = root_rank
 
-  #def on_batch_end(self, batch, logs=None):
-  def on_train_begin(self, logs={}):
+  def on_batch_end(self, batch, logs=None):
     if self._broadcast_done:
       return
     #self.model.variables
     #self.model.optimizer.variables()
     ptre.broadcast_variables(self.model.variables, self._root_rank)
+    ptre.broadcast_variables(self.model.optimizer.variables(), self._root_rank)
     ptre.barrier()
     #ptre.synchronization_barrier()
     self._broadcast_done = True

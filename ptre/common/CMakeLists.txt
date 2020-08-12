@@ -1,4 +1,5 @@
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Release)
 
 add_subdirectory(cm)
 add_subdirectory(communication)

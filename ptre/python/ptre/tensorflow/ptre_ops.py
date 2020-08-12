@@ -7,6 +7,7 @@ import ctypes
 import time
 
 from tensorflow.python.framework import load_library
+from ptre.tensorflow.util import _executing_eagerly
 
 PTRE_LIB_PATH = '/home/wkim/ptre/build/ptre/tensorflow/kernels/libptre_ops.so'
 #PTRE_LIB_PATH = '/home/wkim/.local/lib/python2.7/site-packages/ptre/tensorflow/libptre_ops.so'
@@ -45,6 +46,19 @@ def unset_push():
 
 def is_new_incoming():
   return PTRE_CDLL.ptre_is_new_incoming()
+
+def _async_comm(tensor, name=None, op=1):
+  if name is None and not _executing_eagerly():
+    name = 'PtreAsyncComm_%s' % _normalize_name(tensor.name)
+  var_name = _normalize_name(tensor.name)
+  return PTRE_LIB.ptre_async_comm(tensor, var_name=var_name, comm_op=op,
+                                  name=name)
+
+def _await_comm(tensor, name=None):
+  if name is None and not _executing_eagerly():
+    name = 'PtreAwaitComm_%s' % _normalize_name(tensor.name)
+  var_name = _normalize_name(tensor.name)
+  return PTRE_LIB.ptre_await_comm(tensor, var_name=var_name, name=name)
 
 def allreduce(tensor, reduce_op=0):
   #name = 'PtreAllreduce_%s' % _normalize_name(tensor.name)

@@ -9,6 +9,8 @@
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 
+#define DVLOGR(X, R) DVLOG(X) << "[" << R << "] "
+
 // Device ID used for CPU.
 #define CPU_DEVICE_ID (-1)
 
@@ -40,6 +42,48 @@ enum ReduceOp {
 
 enum ModelaverageOp {
   MODELAVERAGE_DEFAULT = 0
+};
+
+enum CommOp {
+  COMM_ALLREDUCE = 0,
+  COMM_P2P_PULL = 1
+};
+
+enum MemcpyOp {
+  MEMCPY_DEVICE_TO_HOST = 0,
+  MEMCPY_HOST_TO_DEVICE = 1
+};
+
+struct MemcpyRequest {
+  OpContext* context;
+  string key;
+  std::shared_ptr<Tensor> tensor;
+  MemcpyOp type;
+  StatusCallback callback;
+};
+
+struct RvarRequest {
+  OpContext* context;
+  string var_name;
+  std::shared_ptr<Tensor> tensor;
+  StatusCallback callback;
+};
+
+enum SendbufState {
+  SENDBUF_STATE_INIT,
+  SENDBUF_STATE_READY
+};
+
+enum RecvbufState {
+  RECVBUF_STATE_INIT,
+  RECVBUF_STATE_READY,
+  RECVBUF_STATE_RECV_DONE,
+  RECVBUF_STATE_MEMCPY_READY
+};
+
+struct StateMutex {
+  int state = 0;
+  std::mutex mu;
 };
 
 struct TensorTableEntry {

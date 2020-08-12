@@ -1,11 +1,13 @@
 #ifndef PTRE_COMMON_PTRE_GLOBAL_H_
 #define PTRE_COMMON_PTRE_GLOBAL_H_
 
+#include <atomic>
+#include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <queue>
-#include <vector>
 #include <thread>
-#include <atomic>
+#include <vector>
 
 #include "ptre/common/cm/consensus_manager.h"
 #include "ptre/common/communication/grpc/grpc_client_cache.h"
@@ -16,6 +18,7 @@
 #include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/communication/tcp/tcp_service_impl.h"
+#include "ptre/common/common.h"
 #include "ptre/common/message.h"
 #include "ptre/common/rdma/rdma_context.h"
 
@@ -25,12 +28,30 @@ namespace common {
 using std::string;
 using MessageTable =
     std::unordered_map<string, std::unordered_map<int, Request>>;
-using TensorTable =
-    std::unordered_map<string, TensorTableEntry>;
+using TensorTable = std::unordered_map<string, TensorTableEntry>;
+using TensorState =
+    std::pair<std::shared_ptr<Tensor>, std::shared_ptr<StateMutex>>;
+using CommBufTable = std::unordered_map<string, TensorState>;
 
 struct PtreGlobal {
-  PtreGlobal();
-  ~PtreGlobal();
+  std::thread memcpy_thread;
+  std::deque<MemcpyRequest> memcpy_queue;
+  std::mutex memcpy_mu;
+  TensorTable memcpy_table;
+
+  std::mutex commbuf_table_mu;
+  CommBufTable sendbuf_table;
+  CommBufTable recvbuf_table;
+
+  std::deque<string> pull_queue;
+  std::mutex pull_mu;
+  TensorTable pull_table;
+
+  //std::vector<std::thread> avg_threads;
+  std::thread avg_thread;
+  std::mutex avg_mu;
+  std::condition_variable avg_cv;
+  std::queue<string> avg_queue;
 
   ConsensusManager* cm = nullptr;
   RdmaMgr* rdma_mgr = nullptr;
@@ -150,6 +171,8 @@ struct PtreGlobal {
   std::map<int, std::map<string, uint64_t>> last_key;
   std::map<int, std::map<string, int>> peer_agg_cnt;
 
+  PtreGlobal();
+  ~PtreGlobal();
 };
 
 }  // namespace common
