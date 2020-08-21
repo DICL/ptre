@@ -22,6 +22,7 @@ target_link_libraries(rdma_grpc_server
                         rdma_service_grpc_proto
                         rdma_mgr
                         consensus_manager
+  buffer_table
                         )
 
 add_library          (rdma_grpc_client SHARED grpc_client.cc)

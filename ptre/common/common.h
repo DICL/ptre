@@ -5,6 +5,8 @@
 #include <string>
 
 #include "ptre/common/logging.h"
+#include "ptre/common/communication/rdma/rdma.h"
+#include "ptre/common/communication/rdma/rdma_channel.h"
 
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -82,8 +84,34 @@ enum RecvbufState {
 };
 
 struct StateMutex {
-  int state = 0;
+  uint64_t dummy1;
   std::mutex mu;
+  uint64_t dummy2;
+  int state = 0;
+};
+
+enum RdmaOpState {
+  RDMA_OP_STATE_WRITE_TENSOR,
+  RDMA_OP_STATE_WRITE_STATE
+};
+
+struct RdmaEntry {
+  string tensor_name;
+  std::shared_ptr<Tensor> tensor;
+  std::shared_ptr<StateMutex> tensor_state;
+  struct ibv_mr* state_mr;
+  struct ibv_mr* tensor_mr;
+  int rank;
+  uint32_t tensor_id;
+  RemoteAddr state_addr;
+  RemoteAddr tensor_addr;
+  RdmaChannel* channel;
+  enum RdmaOpState state;
+};
+
+struct RdmaRecvEntry {
+  int rank;
+  RdmaChannel* channel;
 };
 
 struct TensorTableEntry {

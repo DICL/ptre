@@ -69,6 +69,13 @@ enum RdmaWrIdType {
   RDMA_WR_ID_WRITE
 };
 
+enum RdmaRequestType {
+  RDMA_REQUEST_STATE_READ,
+  RDMA_REQUEST_TENSOR_WRITE,
+  RDMA_REQUEST_STATE_WRITE,
+  RDMA_REQUEST_DONE
+};
+
 class RdmaWrId {
  public:
   RdmaWrId(RdmaWrIdType write_type, void* write_context)

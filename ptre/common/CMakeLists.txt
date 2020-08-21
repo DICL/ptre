@@ -11,6 +11,8 @@ target_link_libraries(common
   :libtensorflow_framework.so.2
   )
 
+add_library(buffer_table SHARED buffer_table.cc)
+
 add_library(message SHARED message.cc)
 target_link_libraries(message
   common
@@ -41,6 +43,8 @@ target_link_libraries(operations
   rdma_mpi_v2
   rdma_request
   tcp_service_impl
+  buffer_table
+  rdma_controller
   )
 
 add_executable(operations_test operations_test.cc)

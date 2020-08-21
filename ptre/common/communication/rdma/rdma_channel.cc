@@ -34,6 +34,24 @@ int RdmaChannel::PostRecv(struct ibv_recv_wr& wr) {
   return ret;
 }
 
+int PollCQInternal(struct ibv_cq* cq, struct ibv_wc* wcs, int* num_wcs) {
+  *num_wcs = ibv_poll_cq(cq, MAX_CQE_DEFAULT, wcs);
+  assert(*num_wcs >= 0);
+  return 0;
+}
+
+int RdmaChannel::PollSendCQ(struct ibv_wc* wcs, int* num_wcs) {
+  std::lock_guard<std::mutex> guard(mu_);
+  struct ibv_cq* cq = qp_->send_cq;
+  return PollCQInternal(cq, wcs, num_wcs);
+}
+
+int RdmaChannel::PollRecvCQ(struct ibv_wc* wcs, int* num_wcs) {
+  std::lock_guard<std::mutex> guard(mu_);
+  struct ibv_cq* cq = qp_->recv_cq;
+  return PollCQInternal(cq, wcs, num_wcs);
+}
+
 int RdmaChannel::Recover() {
   struct ibv_qp_attr attr;
   struct ibv_qp_init_attr init_attr;

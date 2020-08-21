@@ -1,11 +1,12 @@
 #ifndef PTRE_COMMON_COMMUNICATION_RDMA_RDMA_MANAGER_H_
 #define PTRE_COMMON_COMMUNICATION_RDMA_RDMA_MANAGER_H_
 
+#include <condition_variable>
+#include <iostream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
-#include <thread>
-#include <iostream>
 
 #include "ptre/common/cm/remote_variable.h"
 #include "ptre/common/communication/pull_variable.h"
@@ -61,9 +62,12 @@ class RdmaMgr {
   void InitMRs(std::vector<RemoteVariable*>& vars);
 
   /// MR management V2
-  void RegisterMR(const BufType buf_type, const string& name, void* buf,
-                  size_t length, int access);
+  struct ibv_mr* RegisterMR(const BufType buf_type, const string& name,
+                            void* buf, size_t length,
+                            int access = IBV_ACCESS_LOCAL_WRITE);
   struct ibv_mr* GetMR(const BufType buf_type, const string& name);
+  struct ibv_mr* WaitAndGetMR(const BufType type, const string& name);
+
   void SetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, const uint64_t remote_addr, const uint32_t rkey);
   // Returns:
@@ -190,6 +194,7 @@ class RdmaMgr {
   std::vector<PullVariable*> pull_variables_;
   std::vector<PushVariable*> push_variables_;
   std::mutex mu_;
+  std::condition_variable cv_;
 
   std::map<RemoteTensorId, RemoteMR> tensor_rmrs_;  // remote tensor data memory regions
   std::map<int, RemoteMR> rpmrs_;  // remote parameter memory regions
@@ -209,6 +214,7 @@ class RdmaMgr {
   /// rank, buf_name
   std::map<int, std::map<string, RemoteMR>> remote_buf_addrs_;
   std::map<int, std::map<BufType, std::map<string, RemoteMR>>> rmrs_;
+  std::map<int, std::map<BufType, std::map<string, RemoteAddr>>> addr_table_;
   //std::map<int, RdmaAggWriter*> agg_writers_;  // owned.
 
   std::map<std::string, ibv_mr*> recv_mrs_;

@@ -184,12 +184,18 @@ enum BufType : int {
   BUF_TYPE_PULL_KEY = 11,
   BUF_TYPE_PULL_TENSOR_A = 12,
   BUF_TYPE_PULL_TENSOR_B = 13,
+  BUF_TYPE_SENDBUF_STATE = 14,
+  BUF_TYPE_SENDBUF = 15,
+  BUF_TYPE_SENDBUF_STATE_READ = 16,
+  BUF_TYPE_RECVBUF = 17,
+  BUF_TYPE_RECVBUF_STATE = 18,
+  BUF_TYPE_RECVBUF_STATE_WRITE = 19,
   BufType_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::min(),
   BufType_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::max()
 };
 bool BufType_IsValid(int value);
 constexpr BufType BufType_MIN = BUF_TYPE_RAW;
-constexpr BufType BufType_MAX = BUF_TYPE_PULL_TENSOR_B;
+constexpr BufType BufType_MAX = BUF_TYPE_RECVBUF_STATE_WRITE;
 constexpr int BufType_ARRAYSIZE = BufType_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* BufType_descriptor();

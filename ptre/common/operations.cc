@@ -5,13 +5,27 @@
 #include <fstream>
 //#include <future>
 
-#include "ptre/common/communication/tcp/tcp_grpc_client.h"
+#include "ptre/common/buffer_table.h"
 #include "ptre/common/logging.h"
+#include "ptre/common/communication/tcp/tcp_grpc_client.h"
+#include "ptre/common/rdma/rdma_controller.h"
 #include "ptre/common/utils/host_file_parser.h"
 
 #include "tensorflow/core/common_runtime/device.h"
 
 #include <arpa/inet.h>
+
+// up to 346ms/step 8 nodes
+//#define THREAD_SLEEP_DURATION std::chrono::nanoseconds(100)
+// up to 233ms/step 8 nodes
+//#define THREAD_SLEEP_DURATION std::chrono::microseconds(1)
+// up to 254ms/step 8 nodes
+//#define THREAD_SLEEP_DURATION std::chrono::microseconds(10)
+// 230ms/step
+#define THREAD_SLEEP_DURATION std::chrono::microseconds(50)
+//#define THREAD_SLEEP_DURATION std::chrono::microseconds(100)
+// 305ms/step
+//#define THREAD_SLEEP_DURATION std::chrono::milliseconds(1)
 
 namespace ptre {
 namespace common {
@@ -77,6 +91,8 @@ void PrintDebugResponseList(ResponseList& response_list) {
 }
 
 void RunGrpcServer() {
+  try {
+
   // Rdma Service
   auto&& service = ptre_global.grpc_service;
   service.SetBarrierVariable(&ptre_global.barrier_variable);
@@ -93,15 +109,32 @@ void RunGrpcServer() {
   ptre_global.grpc_server = builder.BuildAndStart();
   LOG(INFO) << "Grpc server listening on " << server_address;
   ptre_global.grpc_server->Wait();
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
 }
 
 void BackgroundThreadLoop(PtreGlobal& state);
 
 void BackgroundThreadLoopModelaverage();
 
-void BackgroundThreadLoopPull();
+//void BackgroundThreadLoopPull();
 
 void BackgroundMemcpyThread();
+
+void PushThread();
+
+void PollingThread();
+
+void PollingThreadPerQP(int dst);
+
+void PollingRecvThread();
+
+void PostRecvTensorIdNumber(const int rank);
+
+void EnqueueAvgThread();
 
 void AvgThread();
 
@@ -109,6 +142,15 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.size = size;
   ptre_global.rank = rank;
   ptre_global.shutdown = false;
+
+  // Init BufferTable
+  try {
+  ptre_global.buf_table = std::make_shared<BufferTable>();
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+  ptre_global.grpc_service.SetBufferTable(ptre_global.buf_table);
 
   // Init Grpc Service
   load_grpc_hosts(grpc_hosts_file);
@@ -128,9 +170,9 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   DVLOG(0) << "Init Rdma Manager";
   ptre_global.rdma_mgr = new RdmaMgr(size, rank);
   ptre_global.grpc_service.SetRdmaMgr(ptre_global.rdma_mgr);
-  for (int i = 0; i < ptre_global.size; i++) {
-    ptre_global.qp_mus.push_back(new std::mutex());
-  }
+  //for (int i = 0; i < ptre_global.size; i++) {
+  //  ptre_global.qp_mus.push_back(new std::mutex());
+  //}
 
   // Connect Queue Pairs
   for (int i = 0; i < ptre_global.size; i++) {
@@ -160,7 +202,19 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     PtreBarrier();
   } while (ret);
 
-  ptre_global.polling_threads.emplace_back(std::thread(PollingThreadLoop));
+  // Init channels
+  // TODO: Do it in a more sophisticated way.
+  for (int i = 0; i < ptre_size(); i++) {
+    auto channel = ptre_global.rdma_mgr->GetChannel(i);
+  }
+
+  //for (int i = 0; i < ptre_size(); i++) {
+  //  ptre_global.polling_threads.emplace_back(
+  //      std::thread(PollingThreadPerQP, i));
+  //}
+  ptre_global.polling_thread = std::thread(PollingThread);
+  //ptre_global.polling_recv_thread = std::thread(PollingRecvThread);
+  //ptre_global.polling_threads.emplace_back(std::thread(PollingThreadLoop));
   LOG(INFO) << "Launched Polling Thread";
 
   ptre_global.rdma_ctx = new RdmaContext(ptre_global.rdma_mgr);
@@ -176,19 +230,33 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   // Memcpy Thread
   ptre_global.memcpy_thread = std::thread(BackgroundMemcpyThread);
 
+  // RDMA push thread
+  ptre_global.push_thread = std::thread(PushThread);
+
+  // Enqueue Avg Thread
+  //ptre_global.enq_avg_thread = std::thread(EnqueueAvgThread);
+
   // Avg Thread
-  //for (int i = 0; i < 8; i++) {
+  //for (int i = 0; i < 1; i++) {
   //  ptre_global.avg_threads.emplace_back(std::thread(AvgThread));
   //}
   ptre_global.avg_thread = std::thread(AvgThread);
 
   // Background thread for Pull requests
-  ptre_global.background_thread_pull = std::thread(
-      BackgroundThreadLoopPull);
-  LOG(INFO) << "Launched Request Processing Threads";
+  //ptre_global.background_thread_pull = std::thread(
+  //    BackgroundThreadLoopPull);
+  //LOG(INFO) << "Launched Request Processing Threads";
 
   DVLOG(0) << "[1/2] Done InitComm";
 }
+
+void PostRecvTensorIdNumber(const int rank) {
+  RdmaRecvEntry* entry = new RdmaRecvEntry();
+  entry->rank = rank;
+  entry->channel = ptre_global.rdma_mgr->GetChannel(entry->rank);
+  auto post_result = PostRecvWithImm(entry);
+}
+
 
 void ShutdownGrpcServer() {
   if (ptre_global.grpc_server != nullptr) {
@@ -830,8 +898,10 @@ void MemcpyHostToDevice(OpContext* context,
 }
 
 void BackgroundMemcpyThread() {
+  try {
+
   while (!ptre_global.shutdown) {
-    std::this_thread::sleep_for(std::chrono::microseconds(100));
+    std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
 
     std::deque<MemcpyRequest> tmp_queue;
     ptre_global.memcpy_mu.lock();
@@ -842,10 +912,9 @@ void BackgroundMemcpyThread() {
       if (req.type == MEMCPY_DEVICE_TO_HOST) {
         ptre_global.commbuf_table_mu.lock();
         auto search = ptre_global.sendbuf_table.find(req.key);
-        ptre_global.commbuf_table_mu.unlock();
         if (search == ptre_global.sendbuf_table.end()) {
-#ifndef PTRE_RDMA
-          ptre_global.commbuf_table_mu.lock();
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<DtoH> SKIP " << req.key;
+          // Allocate new sendbuf and recvbuf and their states
           auto new_sendbuf = std::make_shared<Tensor>(
               req.tensor->dtype(), req.tensor->shape());
           auto new_sendbuf_state = std::make_shared<StateMutex>();
@@ -857,17 +926,31 @@ void BackgroundMemcpyThread() {
           ptre_global.recvbuf_table.emplace(
               req.key, TensorState(new_recvbuf, new_recvbuf_state));
           ptre_global.commbuf_table_mu.unlock();
-//if (req.key == "predictions_kernel_0") {
-//  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " sendbuf set " << req.key;
-//}
-#else
-          exit(1);
+          ptre_global.id_mu.lock();
+          uint32_t new_id = ptre_global.id_table.size();
+          ptre_global.id_to_name.emplace(new_id, req.key);
+          ptre_global.id_table.emplace(req.key, new_id);
+          ptre_global.id_mu.unlock();
+#ifdef PTRE_RDMA
+          // Register on BufferTable
+          ptre_global.buf_table->Set(BUF_TYPE_SENDBUF, req.key,
+              (void*) const_cast<char*>(new_sendbuf->tensor_data().data()),
+              new_sendbuf->tensor_data().size());
+          ptre_global.buf_table->Set(BUF_TYPE_SENDBUF_STATE, req.key,
+              (void*) &new_sendbuf_state->state, sizeof(int));
+          ptre_global.buf_table->Set(BUF_TYPE_RECVBUF, req.key,
+              (void*) const_cast<char*>(new_recvbuf->tensor_data().data()),
+              new_recvbuf->tensor_data().size());
+          ptre_global.buf_table->Set(BUF_TYPE_RECVBUF_STATE, req.key,
+              (void*) &new_recvbuf_state->state, sizeof(int));
+          for (int i = 0; i < ptre_size(); i++) {
+            PostRecvTensorIdNumber(i);
+          }
 #endif
           req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
           continue;
         }
 
-        ptre_global.commbuf_table_mu.lock();
         auto rsm = ptre_global.recvbuf_table[req.key].second;
         auto sendbuf = ptre_global.sendbuf_table[req.key].first;
         auto sm = ptre_global.sendbuf_table[req.key].second;
@@ -887,16 +970,17 @@ void BackgroundMemcpyThread() {
 //if (req.key == "predictions_kernel_0") {
 //  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " MEMCPY_DEVICE_TO_HOST " << req.key;
 //}
+        sm->mu.unlock();
         auto callback = req.callback;
 #if 1
         MemcpyDeviceToHost(req.context, req.tensor, sendbuf,
             [sm, callback](const Status& s) {
               if (s.ok()) {
+                sm->mu.lock();
                 sm->state = SENDBUF_STATE_READY;
                 sm->mu.unlock();
                 callback(s);
               } else {
-                sm->mu.unlock();
                 callback(s);
               }
             });
@@ -926,23 +1010,26 @@ void BackgroundMemcpyThread() {
         ptre_global.commbuf_table_mu.unlock();
         sm->mu.lock();
         if (sm->state == RECVBUF_STATE_INIT) {
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> SKIP " << req.key;
           // No communication request posted for this tensor. Skip.
           sm->mu.unlock();
           req.callback(Status::OK());
         } else if (sm->state == RECVBUF_STATE_MEMCPY_READY) {
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> FETCH " << req.key;
 //if (req.key == "predictions_kernel_0") {
 //  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " MEMCPY_HOST_TO_DEVICE " << req.key;
 //}
+          sm->mu.unlock();
           auto callback = req.callback;
 #if 1
           MemcpyHostToDevice(req.context, recvbuf, req.tensor,
               [sm, callback](const Status& s) {
                 if (s.ok()) {
+                  sm->mu.lock();
                   sm->state = RECVBUF_STATE_INIT;
                   sm->mu.unlock();
                   callback(s);
                 } else {
-                  sm->mu.unlock();
                   callback(s);
                 }
               });
@@ -959,6 +1046,7 @@ void BackgroundMemcpyThread() {
           callback(Status::OK());
 #endif
         } else {
+//DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> NOT_READY " << req.key;
           // Not ready yet. Retry.
           sm->mu.unlock();
           ptre_global.memcpy_mu.lock();
@@ -969,21 +1057,23 @@ void BackgroundMemcpyThread() {
       }
     }
   }
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
 }
 
-//void BackgroundAvgThread() {
-//  while (!ptre_global.shutdown) {
-//    std::this_thread::sleep_for(std::chrono::microseconds(100));
-//}
+Status EnqueueTensorPush(const string& name);
 
 Status EnqueueTensorAsyncComm(OpContext* context,
                               const string var_name,
                               std::shared_ptr<Tensor> tensor,
                               StatusCallback callback,
                               CommOp comm_op) {
-//if (var_name == "predictions_kernel_0") {
-//  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << var_name;
-//}
+  try {
+
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << var_name;
   MemcpyRequest req;
   req.context = context;
   req.key = var_name;
@@ -992,7 +1082,11 @@ Status EnqueueTensorAsyncComm(OpContext* context,
   req.callback = [callback, var_name](const Status& s) {
         Status enqueue_result;
         if (s.ok()) {
+#ifdef PTRE_RDMA_PULL
           auto enqueue_result = EnqueueTensorPull(var_name);
+#else
+          auto enqueue_result = EnqueueTensorPush(var_name);
+#endif
           callback(enqueue_result);
         } else {
           if (s.error_message() == "skip") {
@@ -1007,12 +1101,19 @@ Status EnqueueTensorAsyncComm(OpContext* context,
   ptre_global.memcpy_queue.push_back(std::move(req));
 
   return Status::OK();
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
 }
 
 Status EnqueueTensorAwaitComm(OpContext* context,
                               const string var_name,
                               std::shared_ptr<Tensor> tensor,
                               StatusCallback callback) {
+  try {
+
   MemcpyRequest req;
   req.context = context;
   req.key = var_name;
@@ -1024,6 +1125,11 @@ Status EnqueueTensorAwaitComm(OpContext* context,
   ptre_global.memcpy_queue.push_back(std::move(req));
 
   return Status::OK();
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
 }
 
 Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
@@ -1048,21 +1154,6 @@ Status EnqueueTensorModelaverage(OpContext* ctx, Tensor& tensor, Tensor& output,
   return Status::OK();
 }
 
-#if 0
-Status EnqueueTensorPull(const string& name) {
-  // TODO: THIS DOES NOT SUPPORT MULTIPLE PULL
-  RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
-  rvar->StartAggregation();
-
-  Request message;
-  message.set_tensor_name(name);
-
-  std::lock_guard<std::mutex> guard(ptre_global.mu_pull);
-  ptre_global.message_queue_pull.push(std::move(message));
-
-  return Status::OK();
-}
-#else
 Status EnqueueTensorAverage(const string var_name,
                             std::shared_ptr<Tensor> sendbuf,
                             std::shared_ptr<Tensor> tensor,
@@ -1109,7 +1200,37 @@ Status EnqueueTensorPull(const string name) {
   return Status::OK();
 #endif
 }
-#endif
+
+Status EnqueueTensorPush(const string& name) {
+  try {
+
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+  ptre_global.commbuf_table_mu.lock();
+  auto send_tensor = ptre_global.sendbuf_table[name].first;
+  auto send_tensor_state = ptre_global.sendbuf_table[name].second;
+  ptre_global.commbuf_table_mu.unlock();
+
+  RdmaEntry* entry;
+  entry = new RdmaEntry();
+  entry->tensor_name = name;
+  entry->tensor = send_tensor;
+  entry->tensor_state = send_tensor_state;
+  // Next peer strategy
+  // TODO: Use dynamic peer selection
+  entry->rank = (ptre_rank() + 1) % ptre_size();
+  entry->state = RDMA_OP_STATE_WRITE_TENSOR;
+
+  ptre_global.push_mu.lock();
+  ptre_global.push_queue.push_back(entry);
+  ptre_global.push_mu.unlock();
+
+  return Status::OK();
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+}
 
 Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
                               const string node_name, StatusCallback callback,
@@ -1169,7 +1290,7 @@ Status EnqueueTensorAverage(const string var_name,
   ptre_global.commbuf_table_mu.unlock();
   auto handle = std::async(std::launch::async, PerformAverage, sendbuf, tensor,
       n, sm);
-  return Status::OK(); 
+  return Status::OK();
 #elif 0
   // For Debugging.
   ptre_global.commbuf_table_mu.lock();
@@ -1184,7 +1305,7 @@ Status EnqueueTensorAverage(const string var_name,
   ssm->mu.lock();
   ssm->state = SENDBUF_STATE_INIT;
   ssm->mu.unlock();
-  return Status::OK(); 
+  return Status::OK();
 #else
   // For Debugging.
   ptre_global.commbuf_table_mu.lock();
@@ -1195,29 +1316,245 @@ Status EnqueueTensorAverage(const string var_name,
   ptre_global.avg_queue.push(var_name);
   ptre_global.avg_mu.unlock();
   ptre_global.avg_cv.notify_one();
-  return Status::OK(); 
+  return Status::OK();
 #endif
 }
 
 void AvgThread() {
-  while (!ptre_global.shutdown) {
-    std::this_thread::sleep_for(std::chrono::microseconds(100));
+  try {
 
+  while (!ptre_global.shutdown) {
+    std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
+
+    //std::vector<string> tensor_names;
     std::unique_lock<std::mutex> lk(ptre_global.avg_mu);
     ptre_global.avg_cv.wait(lk, [&] { return !ptre_global.avg_queue.empty(); });
+    //while (!ptre_global.avg_queue.empty()) {
+    //  tensor_names.push_back(std::move(ptre_global.avg_queue.front()));
+    //  ptre_global.avg_queue.pop();
+    //}
     auto name = std::move(ptre_global.avg_queue.front());
     ptre_global.avg_queue.pop();
     lk.unlock();
 
+    //for (auto& name : tensor_names) {
+      ptre_global.commbuf_table_mu.lock();
+      auto sb = ptre_global.sendbuf_table[name].first;
+      auto ssm = ptre_global.sendbuf_table[name].second;
+      auto rb = ptre_global.recvbuf_table[name].first;
+      auto rsm = ptre_global.recvbuf_table[name].second;
+      ptre_global.commbuf_table_mu.unlock();
+
+      PerformAverage(sb, rb, 2, rsm);
+    //}
+  }
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+}
+
+// --------------------------------------------------------------------------
+
+#ifdef PTRE_RDMA_PUSH
+inline int ReadStateVolatile(volatile int* state) {
+  return *state;
+}
+
+void EnqueueAvgThread() {
+  try {
+
+  while (!ptre_global.shutdown) {
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    std::vector<string> tensor_names;
+    std::vector<std::shared_ptr<Tensor>> sendbufs;
+    std::vector<std::shared_ptr<Tensor>> recvbufs;
     ptre_global.commbuf_table_mu.lock();
-    auto sb = ptre_global.sendbuf_table[name].first;
-    auto ssm = ptre_global.sendbuf_table[name].second;
-    auto rb = ptre_global.recvbuf_table[name].first;
-    auto rsm = ptre_global.recvbuf_table[name].second;
+    for (auto& it : ptre_global.recvbuf_table) {
+      // TODO: Should we do RDMA_READ?
+      if (it.second.second->state == RECVBUF_STATE_RECV_DONE) {
+        tensor_names.push_back(it.first);
+        sendbufs.push_back(ptre_global.sendbuf_table[it.first].first);
+        recvbufs.push_back(it.second.first);
+      }
+    }
     ptre_global.commbuf_table_mu.unlock();
 
-    PerformAverage(sb, rb, 2, rsm);
+    for (int i = 0; i < tensor_names.size(); i++) {
+      EnqueueTensorAverage(tensor_names[i], sendbufs[i], recvbufs[i], 2);
+    }
   }
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+}
+#endif
+
+// --------------------------------------------------------------------------
+
+void PrepareRdmaPush(RdmaEntry* entry);
+
+void PushThread() {
+  try {
+
+  while (!ptre_global.shutdown) {
+    std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
+
+    // RdmaEntry queue for this cycle
+    std::deque<RdmaEntry*> entries;
+    ptre_global.push_mu.lock();
+    ptre_global.push_queue.swap(entries);
+    ptre_global.push_mu.unlock();
+
+    for (auto entry : entries) {
+      // Assume not retry for this entry in this thread
+      PrepareRdmaPush(entry);
+
+      RdmaWrite(entry);
+    }
+  }
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+}
+
+// --------------------------------------------------------------------------
+
+void ProcessWC(RdmaEntry* entry) {
+#ifdef PTRE_RDMA_PULL
+  exit(1);
+#else
+  if (entry->state == RDMA_OP_STATE_WRITE_TENSOR) {
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " WRITE_TENSOR DONE " << entry->tensor_name;
+#if 1
+    entry->tensor_state->mu.lock();
+    entry->tensor_state->state = SENDBUF_STATE_INIT;
+    entry->tensor_state->mu.unlock();
+    delete entry;
+#else
+    // WRITE_TENSOR done. Enqueue WRITE STATE
+    entry->state = RDMA_OP_STATE_WRITE_STATE;
+    *((int*) entry->state_mr->addr) = RECVBUF_STATE_RECV_DONE;
+    RdmaWrite(entry);
+#endif
+  } else if (entry->state == RDMA_OP_STATE_WRITE_STATE) {
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " WRITE_STATE DONE " << entry->tensor_name;
+    entry->tensor_state->mu.lock();
+    entry->tensor_state->state = SENDBUF_STATE_INIT;
+    entry->tensor_state->mu.unlock();
+    delete entry;
+  } else {
+    exit(1);
+  }
+#endif
+}
+
+void ProcessSendWCs(struct ibv_wc* wcs, const int num_wcs) {
+  std::vector<RdmaEntry*> entries;
+  for (int i = 0; i < num_wcs; i++) {
+    assert(wcs[i].status == IBV_WC_SUCCESS);
+    RdmaEntry* entry = reinterpret_cast<RdmaEntry*>(wcs[i].wr_id);
+    entries.push_back(entry);
+  }
+
+  for (auto entry : entries) {
+    ProcessWC(entry);
+  }
+}
+
+void EnqueueAvgWithTensorIdNumber(const uint32_t id) {
+  ptre_global.id_mu.lock();
+  string& name = ptre_global.id_to_name[id];
+  ptre_global.id_mu.unlock();
+  ptre_global.commbuf_table_mu.lock();
+  auto sendbuf = ptre_global.sendbuf_table[name].first;
+  auto recvbuf = ptre_global.recvbuf_table[name].first;
+  auto rsm = ptre_global.recvbuf_table[name].second;
+  ptre_global.commbuf_table_mu.unlock();
+  rsm->mu.lock();
+  rsm->state = RECVBUF_STATE_RECV_DONE;
+  rsm->mu.unlock();
+  EnqueueTensorAverage(name, sendbuf, recvbuf, 2);
+}
+
+void ProcessRecvWCs(struct ibv_wc* wcs, const int num_wcs) {
+  std::vector<uint32_t> ids;
+  int rank;
+  for (int i = 0; i < num_wcs; i++) {
+    assert(wcs[i].status == IBV_WC_SUCCESS);
+    RdmaRecvEntry* entry = reinterpret_cast<RdmaRecvEntry*>(wcs[i].wr_id);
+    if (i == 0) rank = entry->rank;
+    ids.push_back(ntohl(wcs[i].imm_data));
+    delete entry;
+  }
+
+  for (auto id : ids) {
+    EnqueueAvgWithTensorIdNumber(id);
+  }
+
+  for (int i = 0; i < ids.size(); i++) {
+    PostRecvTensorIdNumber(rank);
+  }
+}
+
+void PollingThreadPerQP(int dst) {
+  assert(!"Not implemented yet.");
+#if 0
+  struct ibv_wc wcs[MAX_CQE_DEFAULT];
+  struct ibv_cq* cq = ptre_global.rdma_mgr->send_cq(dst);
+  struct ibv_cq* rcq = ptre_global.rdma_mgr->recv_cq(dst);
+  while (!ptre_global.shutdown) {
+    std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
+    ProcessSendCQ(cq, wcs);
+    ProcessRecvCQ(rcq, wcs);
+  }
+#endif
+}
+
+void PollingThread() {
+  std::vector<RdmaChannel*> channels;
+  channels.reserve(ptre_size());
+  for (int dst = 0; dst < ptre_size(); dst++) {
+    channels[dst] = ptre_global.rdma_mgr->GetChannel(dst);
+  }
+  int num_wcs = 0;
+  struct ibv_wc wcs[MAX_CQE_DEFAULT];
+  while (!ptre_global.shutdown) {
+    std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
+    for (int dst = 0; dst < ptre_size(); dst++) {
+      channels[dst]->PollSendCQ(wcs, &num_wcs);
+      ProcessSendWCs(wcs, num_wcs);
+      channels[dst]->PollRecvCQ(wcs, &num_wcs);
+      ProcessRecvWCs(wcs, num_wcs);
+    }
+  }
+}
+
+void PollingRecvThread() {
+  assert(!"Not implemented yet.");
+#if 0
+  try {
+
+  struct ibv_wc wcs[MAX_CQE_DEFAULT];
+  while (!ptre_global.shutdown) {
+    std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
+    for (int dst = 0; dst < ptre_size(); dst++) {
+      struct ibv_cq* rcq = ptre_global.rdma_mgr->recv_cq(dst);
+      ProcessRecvCQ(rcq, wcs);
+    }
+  }
+
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+#endif
 }
 
 // --------------------------------------------------------------------------
@@ -1276,70 +1613,148 @@ void BackgroundThreadLoopModelaverage() {
 
 // --------------------------------------------------------------------------
 
+RemoteAddr GetOrRetrieveRemoteAddress(const int rank, const BufType& type,
+                                        const string& name) {
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+  int ret;
+  RemoteAddr addr;
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+  ret = ptre_global.rdma_mgr->GetRemoteAddress(
+      rank, type, name, &addr.remote_addr, &addr.rkey);
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+  if (ret) {
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+    GrpcClient* client;
+    ptre_global.grpc_client_cache->GetClient(rank, &client);
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+    ret = client->GetRemoteAddress(
+        type, name, &addr.remote_addr, &addr.rkey);
+    assert(ret == 0);
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+    ptre_global.rdma_mgr->SetRemoteAddress(
+        rank, type, name, addr.remote_addr, addr.rkey);
+  }
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
+  return addr;
+}
+
+void PrepareRdmaPush(RdmaEntry* entry) {
+  // Sendbuf for RDMA_WRITE tensor
+  struct ibv_mr* tensor_mr = ptre_global.rdma_mgr->GetMR(BUF_TYPE_SENDBUF,
+      entry->tensor_name);
+  if (tensor_mr == NULL) {
+    ptre_global.commbuf_table_mu.unlock();
+    auto iter = ptre_global.sendbuf_table.find(entry->tensor_name);
+    // sendbuf must have been initialized at memcpy stage.
+    assert(iter != ptre_global.sendbuf_table.end());
+    auto sendbuf = iter->second.first;
+    ptre_global.commbuf_table_mu.unlock();
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << entry->tensor_name;
+    tensor_mr = ptre_global.rdma_mgr->RegisterMR(BUF_TYPE_SENDBUF,
+        entry->tensor_name,
+        (void*) const_cast<char*>(sendbuf->tensor_data().data()),
+        sendbuf->tensor_data().size(), IBV_ACCESS_LOCAL_WRITE);
+  }
+  entry->tensor_mr = tensor_mr;
+
+  // Sendbuf for RDMA_WRITE state
+  struct ibv_mr* state_mr = ptre_global.rdma_mgr->GetMR(
+      BUF_TYPE_RECVBUF_STATE_WRITE, entry->tensor_name);
+  if (state_mr == NULL) {
+    void* writebuf = ptre_global.buf_table->GetOrAllocate(
+        BUF_TYPE_RECVBUF_STATE_WRITE, entry->tensor_name);
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << entry->tensor_name;
+    state_mr = ptre_global.rdma_mgr->RegisterMR(BUF_TYPE_RECVBUF_STATE_WRITE,
+        entry->tensor_name, writebuf, sizeof(int), IBV_ACCESS_LOCAL_WRITE);
+  }
+  entry->state_mr = state_mr;
+
+  // Remote address of RECVBUF
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << entry->tensor_name;
+  entry->tensor_addr = GetOrRetrieveRemoteAddress(entry->rank,
+      BUF_TYPE_RECVBUF, entry->tensor_name);
+
+  // Remote address of RECVBUF_STATE
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << entry->tensor_name;
+  auto state_addr = GetOrRetrieveRemoteAddress(
+      entry->rank, BUF_TYPE_RECVBUF_STATE, entry->tensor_name);
+  entry->state_addr = state_addr;
+
+  // Remote tensor ID number
+  // TODO: Do all workers always use the same id??
+  entry->tensor_id = ptre_global.id_table[entry->tensor_name];
+
+DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << entry->tensor_name;
+  entry->channel = ptre_global.rdma_mgr->GetChannel(entry->rank);
+}
+
+#if 0
+void PrepareRdmaPull(RdmaEntry* entry) {
+  // Readbuf for reading remote's SENDBUF_STATE
+  auto state_mr = ptre_global.rdma_mgr->GetMR(BUF_TYPE_SENDBUF_STATE_READ,
+      entry->tensor_name);
+  if (state_mr == NULL) {
+    void* readbuf = ptre_global.buf_table->GetOrAllocate(
+        BUF_TYPE_SENDBUF_STATE_READ, entry->tensor_name);
+    state_mr = ptre_global.rdma_mgr->RegisterMR(BUF_TYPE_SENDBUF_STATE_READ,
+        entry->tensor_name, readbuf, sizeof(int), IBV_ACCESS_LOCAL_WRITE);
+  }
+  entry->state_mr = state_mr;
+
+  // Remote address of SENDBUF_STATE
+  auto state_addr = GetOrRetrieveRemoteAddress(
+      entry->rank, BUF_TYPE_SENDBUF_STATE, entry->tensor_name);
+  entry->state_addr = state_addr;
+
+}
+#endif
+
 #if 0
 bool RunLoopOncePull() {
-  std::vector<Request> requests;
+  std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+  // Prepare entries for this cycle
+  std::deque<RdmaEntry*> entries;
   {
-    std::lock_guard<std::mutex> guard(ptre_global.mu_pull);
-    while (!ptre_global.message_queue_pull.empty()) {
-      auto& req = ptre_global.message_queue_pull.front();
-      requests.push_back(std::move(req));
-      ptre_global.message_queue_pull.pop();
-    }
+    std::lock_guard<std::mutex> guard(ptre_global.pull_mu);
+    ptre_global.pull_queue.swap(tmp_queue);
+  }
+
+  // Prepare RDMA attributes
+  for (auto entry : entries) {
+    PrepareRdma(entry);
   }
 
   // TODO: select dst dynamically.
   int dst = (ptre_global.rank + 1) % ptre_global.size;
-  for (auto& req : requests) {
-    const string& name = req.tensor_name();
-    TcpGrpcClient* client;
-    ptre_global.tcp_grpc_client_cache->GetClient(dst, &client);
-    RemoteVariable* rvar = ptre_global.cm->remote_variable(name);
-    // TODO: Pull up-to-date tensor
-    int ret = client->PullTensor(name, GetReadyTensor(name)->step(),
-        *rvar->tensor());
-    if (ret == 0) {
-      // TODO: Mark this RemoteVariable as it was successfully pulled.
-      auto ready_tensor = ptre_global.cm->ready_tensor(name);
-      std::lock_guard<std::mutex> guard(ready_tensor->mu());
-#if 0
-      std::lock_guard<std::mutex> guard2(rvar->mu());
-      float* remote = (float*) const_cast<char*>(
-          rvar->tensor()->tensor_data().data());
-      float* local = (float*) const_cast<char*>(
-          ready_tensor->tensor_data().data());
-      for (int i = 0; i < rvar->tensor()->NumElements(); i++) {
-        remote[i] = (remote[i] + local[i]) / 2;
-      }
-#else
-      // TODO: THIS DOES NOT SUPPORT MULTIPLE PULL
-      rvar->StopAggregation();
-      rvar->Aggregate(*ready_tensor);
-      rvar->Reduce();
-#endif
-    }
+  for (auto entry : entries) {
+    RdmaRead
   }
-
   return !ptre_global.shutdown;
 }
-#else
+#elif 0
+// TODO: Update the re-queueing mechanism
 bool RunLoopOncePull() {
   std::this_thread::sleep_for(std::chrono::microseconds(100));
 
   std::deque<string> tmp_queue;
+  std::vector<RdmaTensorEntry> entries;
   ptre_global.pull_mu.lock();
   ptre_global.pull_queue.swap(tmp_queue);
+  for (auto& name : tmp_queue) {
+    auto it = ptre_global.pull_table.find[name];
+    assert(it != ptre_global.pull_table.end());
+    entries.push_back(std::move(it->second));
+    ptre_global.pull_table.erase(it);
+  }
   ptre_global.pull_mu.unlock();
 
   // TODO: select dst dynamically.
   int dst = (ptre_global.rank + 1) % ptre_global.size;
-  for (auto& name : tmp_queue) {
-    auto& entry = ptre_global.pull_table[name];
+  for (auto& entry : entries) {
+    auto& name = entry.name;
     TcpGrpcClient* client;
     ptre_global.tcp_grpc_client_cache->GetClient(dst, &client);
-//if (name == "predictions_kernel_0") {
-//  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << name;
-//}
     int ret = client->PullTensor(name, 0, *entry.output);
     if (ret == 0) {
       entry.callback(Status::OK());
@@ -1353,14 +1768,13 @@ bool RunLoopOncePull() {
       ptre_global.pull_mu.unlock();
     }
   }
-
   return !ptre_global.shutdown;
 }
-#endif
 
 void BackgroundThreadLoopPull() {
   while (RunLoopOncePull()) continue;
 }
+#endif
 
 // --------------------------------------------------------------------------
 

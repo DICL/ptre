@@ -9,6 +9,9 @@
 #include <thread>
 #include <vector>
 
+#include "ptre/common/buffer_table.h"
+#include "ptre/common/common.h"
+#include "ptre/common/message.h"
 #include "ptre/common/cm/consensus_manager.h"
 #include "ptre/common/communication/grpc/grpc_client_cache.h"
 #include "ptre/common/communication/rdma/grpc_client.h"
@@ -18,8 +21,6 @@
 #include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/communication/tcp/tcp_service_impl.h"
-#include "ptre/common/common.h"
-#include "ptre/common/message.h"
 #include "ptre/common/rdma/rdma_context.h"
 
 namespace ptre {
@@ -43,15 +44,31 @@ struct PtreGlobal {
   CommBufTable sendbuf_table;
   CommBufTable recvbuf_table;
 
+  std::mutex id_mu;
+  // unique uint32_t id to tensor name
+  std::unordered_map<uint32_t, string> id_to_name;
+  std::unordered_map<string, uint32_t> id_table;
+
+  std::shared_ptr<BufferTable> buf_table;
+
+  std::mutex push_mu;
+  std::thread push_thread;
+  std::deque<RdmaEntry*> push_queue;
+
   std::deque<string> pull_queue;
   std::mutex pull_mu;
   TensorTable pull_table;
+
+  std::thread enq_avg_thread;
 
   //std::vector<std::thread> avg_threads;
   std::thread avg_thread;
   std::mutex avg_mu;
   std::condition_variable avg_cv;
   std::queue<string> avg_queue;
+
+  std::thread polling_thread;
+  std::thread polling_recv_thread;
 
   ConsensusManager* cm = nullptr;
   RdmaMgr* rdma_mgr = nullptr;
@@ -147,7 +164,7 @@ struct PtreGlobal {
   int num_copy_cnt = 2;
   std::atomic<int> copy_cnt[2];
 
-  std::mutex push_mu;
+  //std::mutex push_mu;
 
   // Counter
   std::vector<std::vector<int>> rcv_cnts;
@@ -159,7 +176,7 @@ struct PtreGlobal {
 
   std::map<string, int> push_success_cnt;
 
-  std::vector<std::mutex*> qp_mus;
+  //std::vector<std::mutex*> qp_mus;
 
   std::mutex rpn_checker_mu;
   std::map<uint64_t, string> rpn_checker;

@@ -307,7 +307,8 @@ int RdmaMgr::RecoverQP(int dst) {
 
 RdmaChannel* RdmaMgr::GetChannel(int dst) {
   if (dst >= ptre_size_) return NULL;
-
+  
+  //std::lock_guard<std::mutex> guard(mu_);
   auto search = channel_table_.find(dst);
   if (search == channel_table_.end()) {
     RdmaChannel* channel = new RdmaChannel(ctx_, qps_[dst]);
@@ -468,21 +469,48 @@ void RdmaMgr::InitParamMR(bool* is_new_incoming,
 #endif
 
 /// MR management V2
-void RdmaMgr::RegisterMR(const BufType buf_type, const string& name,
-    void* buf, size_t length, int access = IBV_ACCESS_LOCAL_WRITE) {
+struct ibv_mr* RdmaMgr::RegisterMR(const BufType buf_type, const string& name,
+                                   void* buf, size_t length,
+                                   int access) {
+DVLOGR(1, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+  mu_.lock();
+
+  // Already exist for (type, name). Return the existing one.
+  auto it1 = mrs_.find(buf_type);
+  if (it1 != mrs_.end()) {
+    auto it2 = it1->second.find(name);
+    if (it2 != it1->second.end()) {
+      mu_.unlock();
+      return it2->second;
+    }
+  }
+
+  // Register a new MR
   struct ibv_mr* mr = ibv_reg_mr(pd_, buf, length, access);
-  if (mr == NULL) {
-    LOG(ERROR) << "ibv_reg_mr failed : (type, name, buf, length, remote)=("
-        << buf_type << ", " << name << ", " << buf << ", " << length
-        << "), errno=" << errno;
-  }
+  assert(mr != NULL);
+DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+  try {
   mrs_[buf_type][name] = mr;
-  access_flags_[buf_type][name] = access;
-  /*
-  if (buf_type == BUF_TYPE_RECV_BUF) {
-    recv_tensor_names_.push_back(name);
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
   }
-  */
+DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+  try {
+  access_flags_[buf_type][name] = access;
+  } catch (const std::bad_alloc& e) {
+    LOG(ERROR) << "Allocation failed: " << e.what();
+    exit(1);
+  }
+DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+
+  /// Notify MR for (type, name) is registered.
+  mu_.unlock();
+DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+  cv_.notify_all();
+DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+
+  return mr;
 }
 
 /// Return value is the number of buffers remotely writable.
@@ -662,6 +690,7 @@ int RdmaMgr::RdmaWrite(int dst, const BufType buf_type,
 }
 
 struct ibv_mr* RdmaMgr::GetMR(const BufType buf_type, const string& name) {
+  std::lock_guard<std::mutex> guard(mu_);
   if (mrs_.find(buf_type) != mrs_.end()) {
     auto&& inner = mrs_[buf_type];
     if (inner.find(name) != inner.end()) {
@@ -671,15 +700,32 @@ struct ibv_mr* RdmaMgr::GetMR(const BufType buf_type, const string& name) {
   return NULL;
 }
 
+struct ibv_mr* RdmaMgr::WaitAndGetMR(const BufType type, const string& name) {
+  std::unique_lock<std::mutex> lk(mu_);
+  cv_.wait(lk, [&] {
+        auto it1 = mrs_.find(type);
+        if (it1 != mrs_.end()) {
+          auto it2 = it1->second.find(name);
+          return it2 != it1->second.end();
+        }
+        return false;
+      });
+  auto ret = mrs_[type][name];
+  lk.unlock();
+  return ret;
+}
+
 void RdmaMgr::SetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, const uint64_t remote_addr, const uint32_t rkey) {
-  rmrs_[dst_rank][buf_type].emplace(name, RemoteMR { remote_addr, rkey });
+  std::lock_guard<std::mutex> guard(mu_);
+  addr_table_[dst_rank][buf_type][name] = RemoteAddr { remote_addr, rkey };
 }
 
 int RdmaMgr::GetRemoteAddress(int dst_rank, const BufType buf_type,
       const string& name, uint64_t* out_addr, uint32_t* out_rkey) {
-  auto dst_search = rmrs_.find(dst_rank);
-  if (dst_search == rmrs_.end()) {
+  std::lock_guard<std::mutex> guard(mu_);
+  auto dst_search = addr_table_.find(dst_rank);
+  if (dst_search == addr_table_.end()) {
     return 1;
   }
   auto&& type_map = dst_search->second;
@@ -692,9 +738,9 @@ int RdmaMgr::GetRemoteAddress(int dst_rank, const BufType buf_type,
   if (name_search == name_map.end()) {
     return 3;
   }
-  RemoteMR rmr = name_search->second;
-  *out_addr = rmr.remote_addr;
-  *out_rkey = rmr.rkey;
+  //RemoteMR rmr = name_search->second;
+  *out_addr = name_search->second.remote_addr;
+  *out_rkey = name_search->second.rkey;
   return 0;
 }
 

@@ -1,16 +1,19 @@
 #ifndef PTRE_COMMON_COMMUNICATION_RDMA_GRPC_SERVER_H_
 #define PTRE_COMMON_COMMUNICATION_RDMA_GRPC_SERVER_H_
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include <grpcpp/grpcpp.h>
 
-#include "ptre/lib/concurrent_queue.h"
-#include "ptre/common/communication/rdma/rdma.h"
-#include "ptre/protobuf/rdma_service.grpc.pb.h"
+#include "ptre/common/buffer_table.h"
 #include "ptre/common/cm/consensus_manager.h"
+#include "ptre/common/communication/rdma/rdma.h"
 #include "ptre/common/communication/rdma/rdma_mgr.h"
+#include "ptre/lib/concurrent_queue.h"
+#include "ptre/protobuf/rdma_service.grpc.pb.h"
 
 namespace ptre {
 namespace common {
@@ -53,6 +56,7 @@ class RdmaServiceImpl final : public Rdma::Service {
 
   void SetRdmaMgr(RdmaMgr* rdma_mgr);
   void SetConsensusManager(ConsensusManager* cm);
+  void SetBufferTable(std::shared_ptr<BufferTable> buf_table);
   void SetBarrierVariable(bool* barrier_variable);
   void Send(int dst_rank, char* buf, size_t len, const string& name);
 
@@ -63,12 +67,18 @@ class RdmaServiceImpl final : public Rdma::Service {
   std::mutex mu_;
   std::map<int, std::map<string, ConcurrentQueue<string>*>> send_q_cache_;
 
+  std::shared_ptr<BufferTable> buf_table_;
+
   // Rdma Attributes
   //uint32_t lid_;
   //std::map<string, uint32_t> qpns_;
   //std::map<string, uint64_t> remote_addrs_;
   //std::map<string, uint32_t> rkeys_;
 };
+
+void RdmaServiceImpl::SetBufferTable(std::shared_ptr<BufferTable> buf_table) {
+  buf_table_ = buf_table;
+}
 
 class GrpcServer {
  public:

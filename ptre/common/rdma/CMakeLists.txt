@@ -19,3 +19,7 @@ target_link_libraries(rdma_mpi_v2
   rdma_mpi
   message
   rdma_request)
+
+add_library(rdma_controller SHARED rdma_controller.cc)
+target_link_libraries(rdma_controller
+  common)

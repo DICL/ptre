@@ -12,6 +12,7 @@ from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.optimizer_v2 import optimizer_v2
+from tensorflow.python.keras.utils import tf_utils
 
 class _PullOptimizer(optimizer_v2.OptimizerV2):
   def __init__(self, name, config):
@@ -21,20 +22,20 @@ class _PullOptimizer(optimizer_v2.OptimizerV2):
     super(self.__class__, self).__init__(**config)
 
   def _async_comm(self, var):
-    if ptre.size() > 1:
+    if ptre.size() > 0:
       async_op = ptre.async_comm(var)
       with tf.name_scope(self._name + "_AsyncComm"):
         return async_op
     else:
-      return var
+      return tf.no_op
 
   def _await_comm(self, var):
-    if ptre.size() > 1:
+    if ptre.size() > 0:
       with tf.name_scope(self._name + "_AwaitComm"):
         fetch_op = ptre.await_comm(var)
         return fetch_op 
     else:
-      return var
+      return tf.no_op
 
   def _distributed_apply(self, distribution, grads_and_vars, name, apply_state):
     """Wrap `_distributed_apply` to publish variable after update."""

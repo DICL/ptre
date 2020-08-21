@@ -84,7 +84,11 @@ int GrpcClient::GetRemoteAddress(const BufType type, const std::string& name,
     *out_rkey = res.rkey();
     return 0;
   } else {
-    return 1;
+    if (status.error_message() == "Not reaady") {
+      return 1;
+    } else {
+      exit(1);
+    }
   }
 }
 
