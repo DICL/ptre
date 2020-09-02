@@ -19,8 +19,10 @@ add_definitions(-DGOOGLE_CUDA=1)
 # PTRE_RDMA
 add_definitions(-DPTRE_RDMA_PUSH)
 add_definitions(-DPTRE_RDMA)
-link_libraries( -pthread )
-add_compile_options(-pthread
+add_definitions(-DSKIP_HTOD_IF_NOT_READY)
+#add_definitions(-DATOMIC_MODEL)
+link_libraries(-pthread)
+add_compile_options(
   -fno-strict-aliasing
   -fstack-protector-strong
   -fassociative-math

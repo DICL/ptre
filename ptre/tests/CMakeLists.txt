@@ -1,4 +1,4 @@
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -pthread")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -pthread")
 
 include_directories(
   /home/wkim/.local/include/libmongoc-1.0

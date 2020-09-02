@@ -1002,6 +1002,12 @@ DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<DtoH> SKIP " << req.key;
         ptre_global.commbuf_table_mu.unlock();
         if (search == ptre_global.recvbuf_table.end()) {
           req.callback(Status::OK());
+#ifdef ATOMIC_MODEL
+          {
+            std::lock_guard<std::mutex> guard(ptre_global.htod_mu);
+            ptre_global.num_htod++;
+          }
+#endif
           continue;
         }
         ptre_global.commbuf_table_mu.lock();
@@ -1010,15 +1016,35 @@ DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<DtoH> SKIP " << req.key;
         ptre_global.commbuf_table_mu.unlock();
         sm->mu.lock();
         if (sm->state == RECVBUF_STATE_INIT) {
-DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> SKIP " << req.key;
           // No communication request posted for this tensor. Skip.
+          DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> SKIP " << req.key;
           sm->mu.unlock();
           req.callback(Status::OK());
         } else if (sm->state == RECVBUF_STATE_MEMCPY_READY) {
-DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> FETCH " << req.key;
-//if (req.key == "predictions_kernel_0") {
-//  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " MEMCPY_HOST_TO_DEVICE " << req.key;
-//}
+#ifdef ATOMIC_MODEL
+          {
+            std::lock_guard<std::mutex> guard(ptre_global.htod_mu);
+            bool skip = false;
+            if (ptre_global.htod_ever_skipped) {
+              skip = true;
+            } else {
+              ptre_global.htod_ever_performed = true;
+            }
+            ptre_global.htod_cnt++;
+            if (ptre_global.htod_cnt == ptre_global.num_htod) {
+              ptre_global.htod_ever_performed = false;
+              ptre_global.htod_ever_skipped = false;
+              ptre_global.htod_cnt = 0;
+            }
+            if (skip) {
+              sm->state = RECVBUF_STATE_READY;
+              sm->mu.unlock();
+              req.callback(Status::OK());
+              continue;
+            }
+          }
+#endif
+          DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> FETCH " << req.key;
           sm->mu.unlock();
           auto callback = req.callback;
 #if 1
@@ -1026,7 +1052,7 @@ DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> FETCH " << req.key;
               [sm, callback](const Status& s) {
                 if (s.ok()) {
                   sm->mu.lock();
-                  sm->state = RECVBUF_STATE_INIT;
+                  sm->state = RECVBUF_STATE_READY;
                   sm->mu.unlock();
                   callback(s);
                 } else {
@@ -1046,13 +1072,39 @@ DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> FETCH " << req.key;
           callback(Status::OK());
 #endif
         } else {
-//DVLOGR(0, ptre_rank()) << __FUNCTION__ << "<HtoD> NOT_READY " << req.key;
           // Not ready yet. Retry.
+#ifdef SKIP_HTOD_IF_NOT_READY
+#ifdef ATOMIC_MODEL
+          {
+            std::lock_guard<std::mutex> guard(ptre_global.htod_mu);
+            if (ptre_global.htod_ever_performed) {
+              // Wait
+              sm->mu.unlock();
+              ptre_global.memcpy_mu.lock();
+              ptre_global.memcpy_queue.push_back(std::move(req));
+              ptre_global.memcpy_mu.unlock();
+              continue;
+            }
+            ptre_global.htod_cnt++;
+            ptre_global.htod_ever_skipped = true;
+            if (ptre_global.htod_cnt == ptre_global.num_htod) {
+              ptre_global.htod_ever_performed = false;
+              ptre_global.htod_ever_skipped = false;
+              ptre_global.htod_cnt = 0;
+            }
+          }
+#endif
+          // TODO: Check if there won't be a probelm if we set the state to
+          //  RECVBUF_STATE_READY
+          sm->state = RECVBUF_STATE_READY;
+          sm->mu.unlock();
+          req.callback(Status::OK());
+#else
           sm->mu.unlock();
           ptre_global.memcpy_mu.lock();
           ptre_global.memcpy_queue.push_back(std::move(req));
           ptre_global.memcpy_mu.unlock();
-          continue;
+#endif
         }
       }
     }
@@ -1261,6 +1313,13 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
 void PerformAverage(std::shared_ptr<Tensor> sendbuf,
                     std::shared_ptr<Tensor> tensor, int n,
                     std::shared_ptr<StateMutex> sm) {
+  {
+    std::lock_guard<std::mutex> guard(sm->mu);
+    if (sm->state != RECVBUF_STATE_RECV_DONE) {
+      sm->state = RECVBUF_STATE_READY;
+      return;
+    }
+  }
   float* data = (float*) const_cast<char*>(tensor->tensor_data().data());
   if (sendbuf == nullptr) {
     for (int i = 0; i < tensor->NumElements(); i++) {
@@ -1272,9 +1331,14 @@ void PerformAverage(std::shared_ptr<Tensor> sendbuf,
       data[i] = (data[i] + sdata[i]) / n;
     }
   }
-  sm->mu.lock();
-  sm->state = RECVBUF_STATE_MEMCPY_READY;
-  sm->mu.unlock();
+  {
+    std::lock_guard<std::mutex> guard(sm->mu);
+    if (sm->state == RECVBUF_STATE_RECV_DONE) {
+      sm->state = RECVBUF_STATE_MEMCPY_READY;
+    } else {
+      sm->state = RECVBUF_STATE_READY;
+    }
+  }
 }
 
 Status EnqueueTensorAverage(const string var_name,
@@ -1477,10 +1541,19 @@ void EnqueueAvgWithTensorIdNumber(const uint32_t id) {
   auto recvbuf = ptre_global.recvbuf_table[name].first;
   auto rsm = ptre_global.recvbuf_table[name].second;
   ptre_global.commbuf_table_mu.unlock();
+  
+  bool do_average = false;
   rsm->mu.lock();
-  rsm->state = RECVBUF_STATE_RECV_DONE;
+  if (rsm->state == RECVBUF_STATE_READY) {
+    rsm->state = RECVBUF_STATE_RECV_DONE;
+    do_average = true;
+  } else {
+    rsm->state = RECVBUF_STATE_READY;
+  }
   rsm->mu.unlock();
-  EnqueueTensorAverage(name, sendbuf, recvbuf, 2);
+  if (do_average) {
+    EnqueueTensorAverage(name, sendbuf, recvbuf, 2);
+  }
 }
 
 void ProcessRecvWCs(struct ibv_wc* wcs, const int num_wcs) {
