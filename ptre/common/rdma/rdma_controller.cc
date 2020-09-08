@@ -6,14 +6,14 @@
 namespace ptre {
 namespace common {
 
-Status PostRecvWithImm(RdmaRecvEntry* entry) {
+Status PostRecvWithImm(RdmaRecvEntry* entry, const bool locking) {
   struct ibv_recv_wr wr;
   memset(&wr, 0, sizeof(wr));
   wr.wr_id = (uint64_t) entry;
   wr.sg_list = NULL;
   wr.num_sge = 0;
 
-  int ret = entry->channel->PostRecv(wr);
+  int ret = entry->channel->PostRecv(wr, locking);
   assert(ret == 0);
   return Status::OK();
 }

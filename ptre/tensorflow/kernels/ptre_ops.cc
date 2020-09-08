@@ -111,7 +111,12 @@ class RegisterVariablesOp : public OpKernel {
     context->GetAttr("names", &names_);
   }
   void Compute(OpKernelContext* context) override {
+#if 1
+    LOG(ERROR) << "Not Implemented.";
+    exit(1);
+#else
     ptre::common::RegisterTrainableVariables(context, names_);
+#endif
   }
  private:
   std::vector<string> names_;
@@ -244,6 +249,10 @@ class PtreModelaverageOp : public AsyncOpKernel {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("modelaverage_op", &modelaverage_op_));
   }
   void ComputeAsync(OpKernelContext* ctx, DoneCallback done) override {
+#if 1
+    LOG(ERROR) << "Not Implemented.";
+    exit(1);
+#else
     auto node_name = name();
     auto tensor = ctx->input(0);
     ptre::common::ModelaverageOp modelaverage_op =
@@ -259,6 +268,7 @@ class PtreModelaverageOp : public AsyncOpKernel {
           done();
         }, modelaverage_op);
     OP_REQUIRES_OK_ASYNC(ctx, enqueue_result, done);
+#endif
   }
 
  private:

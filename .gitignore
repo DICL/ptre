@@ -2,3 +2,4 @@
 *.pyc
 build/
 ptre/common/tcp/
+ptre/tags

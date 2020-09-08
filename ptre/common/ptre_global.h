@@ -35,6 +35,15 @@ using TensorState =
 using CommBufTable = std::unordered_map<string, TensorState>;
 
 struct PtreGlobal {
+  std::mutex htod_mu;
+  std::mutex dtoh_mu;
+  std::deque<MemcpyRequest> htod_queue;
+  std::deque<MemcpyRequest> dtoh_queue;
+  std::unordered_map<string, int> htod_cnts;
+
+  std::mutex bcast_mu;
+  std::unordered_map<string, bool> bcast_done;
+
 #ifdef ATOMIC_MODEL
   std::mutex htod_mu;
   int num_htod = 0;
@@ -69,7 +78,7 @@ struct PtreGlobal {
 
   std::thread enq_avg_thread;
 
-  //std::vector<std::thread> avg_threads;
+  std::vector<std::thread> avg_threads;
   std::thread avg_thread;
   std::mutex avg_mu;
   std::condition_variable avg_cv;

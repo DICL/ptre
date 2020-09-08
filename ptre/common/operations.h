@@ -115,8 +115,6 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
                               const string node_name, StatusCallback callback,
                               ReduceOp reduce_op);
 
-Status PtreAllreduce(const void* sendbuf, void* recvbuf, int count);
-
 }  // namespace common
 }  // namespace ptre
 

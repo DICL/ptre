@@ -6,7 +6,7 @@
 namespace ptre {
 namespace common {
 
-Status PostRecvWithImm(RdmaRecvEntry* entry);
+Status PostRecvWithImm(RdmaRecvEntry* entry, const bool locking = true);
 
 Status RdmaRead(RdmaEntry* entry);
 

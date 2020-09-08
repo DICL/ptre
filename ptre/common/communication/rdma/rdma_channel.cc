@@ -16,21 +16,23 @@ int RdmaChannel::PostSend(struct ibv_send_wr& wr) {
   if (ret) {
     LOG(ERROR) << "Failed ibv_post_send @ " << __PRETTY_FUNCTION__
         << ": ret=" << ret;
+    exit(1);
   }
   mu_.unlock();
   return ret;
 }
 
-int RdmaChannel::PostRecv(struct ibv_recv_wr& wr) {
+int RdmaChannel::PostRecv(struct ibv_recv_wr& wr, const bool locking) {
   int ret;
   struct ibv_recv_wr* bad_wr;
-  mu_.lock();
+  if (locking) mu_.lock();
   ret = ibv_post_recv(qp_, &wr, &bad_wr);
   if (ret) {
     LOG(ERROR) << "Failed ibv_post_recv @ " << __PRETTY_FUNCTION__
         << ": ret=" << ret;
+    exit(1);
   }
-  mu_.unlock();
+  if (locking) mu_.unlock();
   return ret;
 }
 
@@ -40,16 +42,26 @@ int PollCQInternal(struct ibv_cq* cq, struct ibv_wc* wcs, int* num_wcs) {
   return 0;
 }
 
-int RdmaChannel::PollSendCQ(struct ibv_wc* wcs, int* num_wcs) {
+int RdmaChannel::PollSendCQ(struct ibv_wc* wcs, int* num_wcs,
+                            const bool use_locking) {
+  if (use_locking) mu_.lock();
   std::lock_guard<std::mutex> guard(mu_);
   struct ibv_cq* cq = qp_->send_cq;
-  return PollCQInternal(cq, wcs, num_wcs);
+  int ret = PollCQInternal(cq, wcs, num_wcs);
+  if (use_locking) mu_.unlock();
+  return ret;
 }
 
-int RdmaChannel::PollRecvCQ(struct ibv_wc* wcs, int* num_wcs) {
-  std::lock_guard<std::mutex> guard(mu_);
+int RdmaChannel::PollRecvCQ(struct ibv_wc* wcs, int* num_wcs, bool locking) {
+  if (locking) {
+    mu_.lock();
+  }
   struct ibv_cq* cq = qp_->recv_cq;
-  return PollCQInternal(cq, wcs, num_wcs);
+  int ret = PollCQInternal(cq, wcs, num_wcs);
+  if (locking) {
+    mu_.unlock();
+  }
+  return ret;
 }
 
 int RdmaChannel::Recover() {

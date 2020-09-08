@@ -10,4 +10,4 @@ add_subdirectory(core)
 add_subdirectory(protobuf)
 add_subdirectory(lib)
 
-add_subdirectory(tests)
+#add_subdirectory(tests)

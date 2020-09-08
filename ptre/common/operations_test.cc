@@ -18,6 +18,10 @@ void print_arr(float arr[], int count) {
 }
 
 int main(int argc, char* argv[]) {
+#if 1
+  LOG(ERROR) << "Not Implemented.";
+  exit(1);
+#else
   // TODO: Use a command line argument parsing library.
   string hostfile = argv[2];
   int comm_size = atoi(argv[4]);
@@ -52,4 +56,5 @@ int main(int argc, char* argv[]) {
   ptre_finalize(1);
 
   return 0;
+#endif
 }
