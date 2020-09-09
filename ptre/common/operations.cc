@@ -834,10 +834,12 @@ Status EnqueueTensorAllreduce(OpContext* ctx, Tensor& tensor, Tensor& output,
 
 void PerformAverage(std::shared_ptr<Tensor> sendbuf,
                     std::shared_ptr<Tensor> tensor, int n,
-                    std::shared_ptr<StateMutex> sm) {
+                    std::shared_ptr<StateMutex> sm,
+                    const string& name) {
   {
     std::lock_guard<std::mutex> guard(sm->mu);
     if (sm->state != RECVBUF_STATE_RECV_DONE) {
+DBGR(name, ptre_rank());
       sm->state = RECVBUF_STATE_READY;
       return;
     }
@@ -856,8 +858,10 @@ void PerformAverage(std::shared_ptr<Tensor> sendbuf,
   {
     std::lock_guard<std::mutex> guard(sm->mu);
     if (sm->state == RECVBUF_STATE_RECV_DONE) {
+DBGR(name, ptre_rank());
       sm->state = RECVBUF_STATE_MEMCPY_READY;
     } else {
+DBGR(name, ptre_rank());
       sm->state = RECVBUF_STATE_READY;
     }
   }
@@ -920,8 +924,8 @@ void AverageThread() {
       auto rb = ptre_global.recvbuf_table[name].first;
       auto rsm = ptre_global.recvbuf_table[name].second;
       ptre_global.commbuf_table_mu.unlock();
-DVLOGR(0, ptre_rank()) << __FUNCTION__ << " calling PerformAverage: " << name;
-      PerformAverage(sb, rb, 2, rsm);
+DBGR(name, ptre_rank());
+      PerformAverage(sb, rb, 2, rsm, name);
     //}
   }
 }
@@ -1005,9 +1009,11 @@ void EnqueueAvgWithTensorIdNumber(const uint32_t id) {
   bool do_average = false;
   rsm->mu.lock();
   if (rsm->state == RECVBUF_STATE_READY) {
+DBGR(name, ptre_rank()) << "state=" << rsm->state;
     rsm->state = RECVBUF_STATE_RECV_DONE;
     do_average = true;
   } else {
+DBGR(name, ptre_rank()) << "state=" << rsm->state;
     rsm->state = RECVBUF_STATE_READY;
   }
   rsm->mu.unlock();
@@ -1312,14 +1318,18 @@ void CheckBufferTable(std::deque<MemcpyRequest>& htod_reqs) {
         PostRecvTensorIdNumber(i);
       }
 #endif
-DVLOGR(0, ptre_rank()) << __FUNCTION__ << "] call callback no buffer: " << req.key;
+DBGR(req.key, ptre_rank()) << "NO BUFFER";
       req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
     } else {
       ptre_global.htod_cnts[req.key]++;
       if (ptre_global.htod_cnts[req.key] < 2) {
-DVLOGR(0, ptre_rank()) << __FUNCTION__ << "] call callback cnt < 2: " << req.key;
+DBGR(req.key, ptre_rank()) << "CNT < 2";
         req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
       } else {
+        auto& name = req.key;
+        auto rsm = ptre_global.recvbuf_table[name].second;
+        std::lock_guard<std::mutex> guard(rsm->mu);
+        rsm->state = RECVBUF_STATE_READY;
         reqs.push_back(std::move(req));
       }
     }
@@ -1332,7 +1342,7 @@ void CheckBcastDone(std::deque<MemcpyRequest>& dtoh_reqs) {
   std::deque<MemcpyRequest> reqs;
   for (auto& req : dtoh_reqs) {
     if (ptre_global.bcast_done.find(req.key) == ptre_global.bcast_done.end()) {
-DVLOGR(0, ptre_rank()) << __FUNCTION__ << "] call callback: " << req.key;
+DBGR(req.key, ptre_rank()) << "BCAST NOT DONE";
       req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
     } else {
       reqs.push_back(std::move(req));

@@ -41,14 +41,14 @@ grpc::Status RdmaServiceImpl::GetQPAttr(grpc::ServerContext* ctx,
 grpc::Status RdmaServiceImpl::GetRemoteAddress(grpc::ServerContext* ctx,
                                 const GetRemoteAddressRequest* req,
                                 GetRemoteAddressResponse* res) {
-DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
+//DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
   if (rdma_mgr_ != nullptr) {
-DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
+//DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
     struct ibv_mr* mr = rdma_mgr_->GetMR(req->buf_type(), req->var_name());
     if (!mr) {
-DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
+//DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
       auto buf = buf_table_->WaitAndGet(req->buf_type(), req->var_name());
-DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
+//DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
       size_t size = buf_table_->GetSize(req->buf_type(), req->var_name());
       int access;
       switch (req->buf_type()) {
@@ -62,7 +62,7 @@ DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
           access = IBV_ACCESS_LOCAL_WRITE;
           break;
       }
-DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
+//DVLOGR(0, rdma_mgr_->rank()) << __FUNCTION__ << " " << req->var_name();
       mr = rdma_mgr_->RegisterMR(req->buf_type(), req->var_name(), buf, size,
           access);
     }

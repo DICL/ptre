@@ -472,7 +472,7 @@ void RdmaMgr::InitParamMR(bool* is_new_incoming,
 struct ibv_mr* RdmaMgr::RegisterMR(const BufType buf_type, const string& name,
                                    void* buf, size_t length,
                                    int access) {
-DVLOGR(1, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+//DBGR(name, ptre_rank_) << buf_type << " " <<  buf << " " << length << " " << access;
   mu_.lock();
 
   // Already exist for (type, name). Return the existing one.
@@ -488,27 +488,27 @@ DVLOGR(1, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " <
   // Register a new MR
   struct ibv_mr* mr = ibv_reg_mr(pd_, buf, length, access);
   assert(mr != NULL);
-DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+//DBGR(name, ptre_rank_) << buf_type << " " <<  buf << " " << length << " " << access;
   try {
   mrs_[buf_type][name] = mr;
   } catch (const std::bad_alloc& e) {
     LOG(ERROR) << "Allocation failed: " << e.what();
     exit(1);
   }
-DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+//DBGR(name, ptre_rank_) << buf_type << " " <<  buf << " " << length << " " << access;
   try {
   access_flags_[buf_type][name] = access;
   } catch (const std::bad_alloc& e) {
     LOG(ERROR) << "Allocation failed: " << e.what();
     exit(1);
   }
-DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+//DBGR(name, ptre_rank_) << buf_type << " " <<  buf << " " << length << " " << access;
 
   /// Notify MR for (type, name) is registered.
   mu_.unlock();
-DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+//DBGR(name, ptre_rank_) << buf_type << " " <<  buf << " " << length << " " << access;
   cv_.notify_all();
-DVLOGR(0, ptre_rank_) << __FUNCTION__ << " " << buf_type << " " << name << " " << buf << " " << length << " " << access;
+//DBGR(name, ptre_rank_) << buf_type << " " <<  buf << " " << length << " " << access;
 
   return mr;
 }
