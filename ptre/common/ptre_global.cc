@@ -81,6 +81,13 @@ PtreGlobal::~PtreGlobal() {
       }
     }
   }
+
+  avg_cv.notify_all();
+  for (auto& t : avg_threads) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
   //for (auto& t : receive_threads) {
   //  if (t.joinable()) {
   //    t.join();
