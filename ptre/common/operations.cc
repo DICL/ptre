@@ -929,12 +929,14 @@ void AverageThread() {
     //std::this_thread::sleep_for(THREAD_SLEEP_DURATION);
 
     //std::vector<string> tensor_names;
+    bool shutdown = false;
     std::unique_lock<std::mutex> lk(ptre_global.avg_mu);
     ptre_global.avg_cv.wait(lk,
         [&] {
-          return (!ptre_global.avg_queue.empty() || ptre_global.shutdown);
+          shutdown = ptre_global.shutdown;
+          return (!ptre_global.avg_queue.empty() || shutdown);
         });
-    if (ptre_global.shutdown) break;
+    if (shutdown) break;
     //while (!ptre_global.avg_queue.empty()) {
     //  tensor_names.push_back(std::move(ptre_global.avg_queue.front()));
     //  ptre_global.avg_queue.pop();
@@ -1259,6 +1261,7 @@ void BackgroundThread() {
     ptre_global.push_mu.lock();
     ptre_global.push_queue.swap(entries);
     ptre_global.push_mu.unlock();
+#if 1
     for (auto entry : entries) {
       PrepareRdmaPush(entry);
       RdmaWrite(entry);
@@ -1274,6 +1277,7 @@ void BackgroundThread() {
         delete entry;
       }
     }
+#endif
 
     // Recv Remote Write
     std::vector<uint32_t> ids;
@@ -1309,11 +1313,17 @@ void BackgroundThread() {
       auto sm = ptre_global.recvbuf_table[name].second;
       sm->state = RECVBUF_STATE_MEMCPY_READY;
     }
-#else
+#elif 1
     for (auto id : ids) {
       string& name = ptre_global.id_to_name[id];
       auto sm = ptre_global.recvbuf_table[name].second;
       sm->state = RECVBUF_STATE_MEMCPY_READY;
+    }
+#else
+    for (auto id : ids) {
+      string& name = ptre_global.id_to_name[id];
+      auto sm = ptre_global.recvbuf_table[name].second;
+      sm->state = RECVBUF_STATE_READY;
     }
 #endif
   }
