@@ -30,6 +30,7 @@ target_link_libraries(ptre_global
   rdma_channel
   rdma_pull_job
   message
+  minitrace
   )
 
 add_library(operations SHARED operations.cc)
@@ -45,6 +46,7 @@ target_link_libraries(operations
   tcp_service_impl
   buffer_table
   rdma_controller
+  minitrace
   )
 
 add_executable(operations_test operations_test.cc)

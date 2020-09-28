@@ -4,16 +4,20 @@
 #include <cstdlib>
 #include <deque>
 #include <fstream>
+#include <random>
 
 #include "ptre/common/buffer_table.h"
 #include "ptre/common/logging.h"
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/rdma/rdma_controller.h"
 #include "ptre/common/utils/host_file_parser.h"
+#include "third_party/minitrace/minitrace.h"
 
 #include "tensorflow/core/common_runtime/device.h"
 
 #include <arpa/inet.h>
+
+#define LOGR(x) LOG(x) << __FUNCTION__ << "]" << "[" << ptre_rank() << "]"
 
 // up to 346ms/step 8 nodes
 //#define THREAD_SLEEP_DURATION std::chrono::nanoseconds(100)
@@ -34,7 +38,60 @@ namespace {
 
 PtreGlobal ptre_global;
 
+std::unordered_map<string, const char*> persistent_strs;
+std::mutex ps_mu;
+auto& op_tracers = ptre_global.op_tracers;
+std::mutex ot_mu;
+
+std::mutex push_cnt_mu;
+std::unordered_map<string, int> push_cnts;
+
+std::mutex peer_sel_mu;
+int peer_selected;
+int peer_sel_cnt;
+std::random_device rd;
+std::mt19937 gen(rd());
+
+std::mutex await_mu;
+int await_cnt;
+
 }  // namespace
+
+inline const char* ToPersistentCStr(const string& str) {
+  auto it = persistent_strs.find(str);
+  if (it == persistent_strs.end()) {
+    ps_mu.lock();
+    it = persistent_strs.find(str);
+    if (it == persistent_strs.end()) {
+      char* new_cstr = (char*) malloc(sizeof(char) * (str.length() + 1));
+      std::copy(str.begin(), str.end(), new_cstr);
+      new_cstr[str.length()] = NULL;
+      persistent_strs.emplace(str, new_cstr);
+    }
+    ps_mu.unlock();
+  }
+  const char* ret = persistent_strs[str];
+  return ret;
+}
+
+void OpTrace(const string& cat, const string& str, const string& step) {
+#ifdef MTR_ENABLED
+  std::lock_guard<std::mutex> guard(ot_mu);
+  auto category = ToPersistentCStr(cat);
+  auto var_name = ToPersistentCStr(str);
+  auto step_name = ToPersistentCStr(step);
+  if (op_tracers.find(cat) == op_tracers.end()) {
+    op_tracers[cat];
+  }
+  auto& t = op_tracers[cat];
+  if (t.find(str) == t.end()) {
+    t.emplace(str, int());
+    MTR_START(category, var_name, &t[str]);
+  }
+  //LOG(INFO) << category << " " << var_name << " " << step_name;
+  MTR_STEP(category, var_name, &t[str], step_name);
+#endif
+}
 
 // Parse host information
 //  A host file is structured as:
@@ -94,7 +151,7 @@ void RunGrpcServer() {
   builder.RegisterService(&service);
 
   // Tcp Service
-  builder.RegisterService(&ptre_global.tcp_grpc_service);
+  //builder.RegisterService(&ptre_global.tcp_grpc_service);
 
   builder.SetMaxMessageSize(1 * 1024 * 1024 * 1024);
   ptre_global.grpc_server = builder.BuildAndStart();
@@ -122,13 +179,9 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   ptre_global.shutdown = false;
 
   // Init BufferTable
-  try {
   ptre_global.buf_table = std::make_shared<BufferTable>();
-  } catch (const std::bad_alloc& e) {
-    LOG(ERROR) << "Allocation failed: " << e.what();
-    exit(1);
-  }
   ptre_global.grpc_service.SetBufferTable(ptre_global.buf_table);
+  ptre_global.grpc_service.SetCommbufState(ptre_global.commbuf_state);
 
   // Init Grpc Service
   load_grpc_hosts(grpc_hosts_file);
@@ -311,6 +364,8 @@ int ptre_init(int size, int rank, const char* grpc_hosts_file,
   InitComm(size, rank, grpc_hosts_file);
   //ptre_global.cm->InitPeerSelector(selection_strategy, num_push);
   //LOG(INFO) << "Peer selection strategy = " << selection_strategy;
+  peer_sel_cnt = 0;
+  await_cnt = 0;
 }
 
 void ptre_finalize(unsigned int wait_time) {
@@ -686,6 +741,12 @@ Status EnqueueTensorAsyncComm(OpContext* context,
                               std::shared_ptr<Tensor> tensor,
                               StatusCallback callback,
                               CommOp comm_op) {
+#if 0
+  if (var_name == "fc1_kernel_0") {
+    callback(Status::OK());
+    return Status::OK();
+  }
+#endif
 //DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << var_name;
   MemcpyRequest req;
   req.context = context;
@@ -720,6 +781,12 @@ Status EnqueueTensorAwaitComm(OpContext* context,
                               const string var_name,
                               std::shared_ptr<Tensor> tensor,
                               StatusCallback callback) {
+#if 0
+  if (var_name == "fc1_kernel_0") {
+    callback(Status::OK());
+    return Status::OK();
+  }
+#endif
 //DVLOGR(0, ptre_rank()) << __FUNCTION__ << "] " << var_name;
   MemcpyRequest req;
   req.context = context;
@@ -799,9 +866,33 @@ Status EnqueueTensorPush(const string& name) {
   entry->tensor_name = name;
   entry->tensor = send_tensor;
   entry->tensor_state = send_tensor_state;
+#if 0
   // Next peer strategy
   // TODO: Use dynamic peer selection
   entry->rank = (ptre_rank() + 1) % ptre_size();
+#elif 1
+  // Random peer
+  {
+    std::lock_guard<std::mutex> guard(peer_sel_mu);
+    if (peer_sel_cnt == 0) {
+      std::uniform_int_distribution<int> distribution(0, ptre_size() - 1);
+      int peer;
+      while (!ptre_global.shutdown) {
+        peer = distribution(gen);
+        //peer = (ptre_rank() + 1) % ptre_size();
+        if (peer == ptre_rank()) continue;
+        //LOGR(INFO) << "DEBUG: AttemptPush to " << peer;
+        GrpcClient* client;
+        ptre_global.grpc_client_cache->GetClient(peer, &client);
+        if (client->AttemptPush()) break;
+      }
+      peer_selected = peer;
+      //LOGR(INFO) << "DEBUG: peer_selected=" << peer_selected << ", " << peer;
+    }
+    entry->rank = peer_selected;
+    peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
+  }
+#endif
   entry->state = RDMA_OP_STATE_WRITE_TENSOR;
 
   ptre_global.push_mu.lock();
@@ -953,7 +1044,11 @@ void AverageThread() {
       auto rsm = ptre_global.recvbuf_table[name].second;
       //ptre_global.commbuf_table_mu.unlock();
 //DBGR(name, ptre_rank()) << "state=" << rsm->state;
+      //MTR_BEGIN("AVERAGE", ToPersistentCStr(name));
+      OpTrace("PTREOp", name, "Average");
       PerformAverage(sb, rb, 2, rsm, name);
+      OpTrace("PTREOp", name, "");
+      //MTR_END("AVERAGE", ToPersistentCStr(name));
     //}
   }
 }
@@ -1128,6 +1223,24 @@ RemoteAddr GetOrRetrieveRemoteAddress(const int rank, const BufType& type,
 }
 
 void PrepareRdmaPush(RdmaEntry* entry) {
+  /*
+  // Random peer
+  if (peer_sel_cnt == 0) {
+    //LOG(INFO) << "DEBUG: " << ptre_global.num_tvars;
+    std::uniform_int_distribution<int> distribution(0, ptre_size() - 1);
+    int peer;
+    while (!ptre_global.shutdown) {
+      int peer = distribution(gen);
+      if (peer == ptre_rank()) continue;
+      GrpcClient* client;
+      ptre_global.grpc_client_cache->GetClient(peer, &client);
+      if (client->AttemptPush()) break;
+    }
+    peer_selected = peer;
+  }
+  entry->rank = peer_selected;
+  peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
+  */
   // Sendbuf for RDMA_WRITE tensor
   struct ibv_mr* tensor_mr = ptre_global.rdma_mgr->GetMR(BUF_TYPE_SENDBUF,
       entry->tensor_name);
@@ -1178,6 +1291,8 @@ void CheckBufferTable(std::deque<MemcpyRequest>& htod_reqs);
 
 void CheckBcastDone(std::deque<MemcpyRequest>& dtoh_reqs);
 
+void TryOpenCommbuf();
+
 void BackgroundThread() {
   // Operations:
   //  - PollCQ for Recv WC (Remote Push)
@@ -1203,6 +1318,15 @@ void BackgroundThread() {
   int num_wcs = 0;
   struct ibv_wc wcs[MAX_CQE_DEFAULT];
 
+  // Grpc Channels
+  std::vector<GrpcClient*> grpc_clients;
+  grpc_clients.reserve(ptre_size());
+  for (int dst = 0; dst < ptre_size(); dst++) {
+    GrpcClient* client;
+    ptre_global.grpc_client_cache->GetClient(dst, &client);
+    grpc_clients[dst] = client;
+  }
+
   while (!ptre_global.shutdown) {
     // MemcpyHtoD
     std::deque<MemcpyRequest> htod_reqs;
@@ -1212,6 +1336,8 @@ void BackgroundThread() {
     ptre_global.htod_mu.unlock();
     CheckBufferTable(htod_reqs);
     for (auto& req : htod_reqs) {
+      OpTrace("TFOp", req.key, "");
+      OpTrace("TFOp", req.key, "<-DoneComputeGrad");
       auto sm = ptre_global.recvbuf_table[req.key].second;
       std::lock_guard<std::mutex> guard(sm->mu);
       if (sm->state == RECVBUF_STATE_MEMCPY_READY) {
@@ -1220,6 +1346,7 @@ void BackgroundThread() {
 #ifdef SKIP_HTOD_IF_NOT_READY
         sm->state = RECVBUF_STATE_READY;
         req.callback(Status::OK());
+        TryOpenCommbuf();
 #else
         ptre_global.htod_mu.lock();
         ptre_global.htod_queue.push_back(std::move(req));
@@ -1232,11 +1359,18 @@ void BackgroundThread() {
       auto sm = ptre_global.recvbuf_table[req.key].second;
       auto callback = req.callback;
 //DBGR(req.key, ptre_rank()) << "HtoD";
+      //auto name = ToPersistentCStr(req.key);
+      auto& name = req.key;
+      //MTR_BEGIN("MemcpyHtoD", name);
+      OpTrace("PTREOp", req.key, "HtoD");
       MemcpyHostToDevice(req.context, recvbuf, req.tensor,
-          [sm, callback](const Status& s) {
+          [sm, callback, name](const Status& s) {
+            //MTR_END("MemcpyHtoD", name);
+            OpTrace("PTREOp", name, "");
             std::lock_guard<std::mutex> guard(sm->mu);
             sm->state = RECVBUF_STATE_READY;
             callback(s);
+            TryOpenCommbuf();
           });
     }
 
@@ -1247,11 +1381,19 @@ void BackgroundThread() {
     ptre_global.dtoh_mu.unlock();
     CheckBcastDone(dtoh_reqs);
     for (auto& req : dtoh_reqs) {
+      OpTrace("TFOp", req.key, "");
+      OpTrace("TFOp", req.key, "<-EnqueuePush");
       auto sendbuf = ptre_global.sendbuf_table[req.key].first;
       auto callback = req.callback;
 //DBGR(req.key, ptre_rank()) << "DtoH";
+      //auto name = ToPersistentCStr(req.key);
+      //MTR_BEGIN("MemcpyDtoH", name);
+      auto& name = req.key;
+      OpTrace("MemcpyOp", req.key, "DtoH");
       MemcpyDeviceToHost(req.context, req.tensor, sendbuf,
-          [callback](const Status& s) {
+          [callback, name](const Status& s) {
+            //MTR_END("MemcpyDtoH", name);
+            OpTrace("MemcpyOp", name, "");
             callback(s);
           });
     }
@@ -1262,10 +1404,28 @@ void BackgroundThread() {
     ptre_global.push_queue.swap(entries);
     ptre_global.push_mu.unlock();
 #if 1
-    for (auto entry : entries) {
-      PrepareRdmaPush(entry);
-      RdmaWrite(entry);
-//DBGR(entry->tensor_name, ptre_rank()) << "PUSH";
+    {
+      std::lock_guard<std::mutex> guard(push_cnt_mu);
+      for (auto entry : entries) {
+        PrepareRdmaPush(entry);
+#if 0
+        if (push_cnts.find(entry->tensor_name) == push_cnts.end()) {
+          push_cnts.emplace(entry->tensor_name, 0);
+          //OpTrace("PTREOp", entry->tensor_name, "WarmupPush");
+          //RdmaWrite(entry, false);
+          //OpTrace("PTREOp", entry->tensor_name, "Push");
+          //RdmaWrite(entry);
+        } else {
+          OpTrace("PTREOp", entry->tensor_name, "Push");
+          //MTR_BEGIN("PUSH", ToPersistentCStr(entry->tensor_name));
+          RdmaWrite(entry);
+        }
+        push_cnts[entry->tensor_name]++;
+  //DBGR(entry->tensor_name, ptre_rank()) << "PUSH";
+#else
+        RdmaWrite(entry);
+#endif
+      }
     }
 
     // Poll Send WC
@@ -1274,6 +1434,8 @@ void BackgroundThread() {
       for (int i = 0; i < num_wcs; i++) {
         assert(wcs[i].status == IBV_WC_SUCCESS);
         RdmaEntry* entry = reinterpret_cast<RdmaEntry*>(wcs[i].wr_id);
+        //MTR_END("PUSH", ToPersistentCStr(entry->tensor_name));
+        OpTrace("PTREOp", entry->tensor_name, "");
         delete entry;
       }
     }
@@ -1286,6 +1448,8 @@ void BackgroundThread() {
       for (int i = 0; i < num_wcs; i++) {
         assert(wcs[i].status == IBV_WC_SUCCESS);
         RdmaRecvEntry* entry = reinterpret_cast<RdmaRecvEntry*>(wcs[i].wr_id);
+        uint32_t id = ntohl(wcs[i].imm_data);
+        OpTrace("PTREOp", ptre_global.id_to_name[id], "Recv");
         ids.push_back(ntohl(wcs[i].imm_data));
         delete entry;
       }
@@ -1330,6 +1494,16 @@ void BackgroundThread() {
   //DVLOGR(0, ptre_rank()) << __FUNCTION__ << "] End.";
 }
 
+void TryOpenCommbuf() {
+  await_mu.lock();
+  await_cnt++;
+  if (await_cnt == ptre_global.num_tvars) {
+    ptre_global.commbuf_state->store(COMMBUF_STATE_IDLE);
+    await_cnt = 0;
+  }
+  await_mu.unlock();
+}
+
 void CheckBufferTable(std::deque<MemcpyRequest>& htod_reqs) {
   std::deque<MemcpyRequest> reqs;
   for (auto& req : htod_reqs) {
@@ -1371,6 +1545,11 @@ void CheckBufferTable(std::deque<MemcpyRequest>& htod_reqs) {
 //DBGR(req.key, ptre_rank()) << "NO BUFFER";
       req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
     } else {
+      if (!ptre_global.num_tvars_initialized) {
+        LOG(INFO) << "DEBUG, num_tvars=" << ptre_global.htod_cnts.size();
+        ptre_global.num_tvars = ptre_global.htod_cnts.size();
+        ptre_global.num_tvars_initialized = true;
+      }
       ptre_global.htod_cnts[req.key]++;
       if (ptre_global.htod_cnts[req.key] < 2) {
 //DBGR(req.key, ptre_rank()) << "CNT < 2";

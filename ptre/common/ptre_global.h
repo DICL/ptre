@@ -22,6 +22,7 @@
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/communication/tcp/tcp_service_impl.h"
 #include "ptre/common/rdma/rdma_context.h"
+#include "third_party/minitrace/minitrace.h"
 
 namespace ptre {
 namespace common {
@@ -35,6 +36,12 @@ using TensorState =
 using CommBufTable = std::unordered_map<string, TensorState>;
 
 struct PtreGlobal {
+  std::shared_ptr<std::atomic<int>> commbuf_state;
+  bool num_tvars_initialized = false;
+  int num_tvars = -1;
+
+  std::unordered_map<string, std::unordered_map<string, int>> op_tracers;
+
   std::mutex htod_mu;
   std::mutex dtoh_mu;
   std::deque<MemcpyRequest> htod_queue;
@@ -45,7 +52,7 @@ struct PtreGlobal {
   std::unordered_map<string, bool> bcast_done;
 
 #ifdef ATOMIC_MODEL
-  std::mutex htod_mu;
+  //std::mutex htod_mu;
   int num_htod = 0;
   int htod_cnt = 0;
   bool htod_ever_skipped = false;

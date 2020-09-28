@@ -105,18 +105,6 @@ class PullModelCallback(Callback):
     self._step = self._step + 1
     ptre.create_pull_job()
 
-
-class PrintVariablesCallback(Callback):
-  def __init__(self, verbose=True):
-    super(PrintVariablesCallback, self).__init__()
-    self._verbose = verbose
-
-  def on_train_begin(self, batch, logs=None):
-    if self._verbose:
-      non_tvars = self.model.non_trainable_variables
-      names = [ v.name for v in non_tvars ]
-      print(names)
-
 class PrintLocalRemoteCallback(Callback):
   def __init__(self, verbose=True):
     super(PrintLocalRemoteCallback, self).__init__()

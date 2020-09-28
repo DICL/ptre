@@ -15,8 +15,16 @@
 namespace ptre {
 namespace common {
 
+namespace {
+
+int kCommbufStateIdle = COMMBUF_STATE_IDLE;
+int kCommbufStateBusy = COMMBUF_STATE_BUSY;
+
+}
+
 ConsensusManager::ConsensusManager(int ptre_size, int ptre_rank,
-    const std::vector<const Tensor*>& vars, const std::vector<string>& names) {
+    const std::vector<const Tensor*>& vars, const std::vector<string>& names)
+    : commbuf_state_(COMMBUF_STATE_IDLE) {
   ptre_size_ = ptre_size;
   ptre_rank_ = ptre_rank;
   num_vars_ = vars.size();
@@ -378,6 +386,10 @@ Tensor* ConsensusManager::send_tensor(const string& name) {
 }
 
 bool ConsensusManager::CanReceive(int src_rank, int src_vstep) {
+  LOG(INFO) << "DEBUG: CanReceive" << std::boolalpha << commbuf_state_;
+  bool ret = commbuf_state_.compare_exchange_strong(
+      kCommbufStateIdle, kCommbufStateBusy);
+  return ret;
   LOG(ERROR) << "Deprecated.";
   exit(EXIT_FAILURE);
 #if 0

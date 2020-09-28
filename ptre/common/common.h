@@ -12,7 +12,7 @@
 #include "tensorflow/core/framework/tensor.h"
 
 #define DVLOGR(X, R) DVLOG(X) << "[" << R << "] "
-#define LOGR(X, R) LOG(X) << "[" << R << "] "
+//#define LOGR(X, R) LOG(X) << "[" << R << "] "
 
 // Device ID used for CPU.
 #define CPU_DEVICE_ID (-1)

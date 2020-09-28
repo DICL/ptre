@@ -41,7 +41,7 @@ Status RdmaRead(RdmaEntry* entry) {
   return Status(::tensorflow::error::Code::UNIMPLEMENTED, __PRETTY_FUNCTION__);
 }
 
-Status RdmaWrite(RdmaEntry* entry) {
+Status RdmaWrite(RdmaEntry* entry, const bool write_with_imm) {
   struct ibv_mr* mr;
   RemoteAddr addr;
   assert(entry->state == RDMA_OP_STATE_WRITE_TENSOR);
@@ -70,9 +70,13 @@ Status RdmaWrite(RdmaEntry* entry) {
   wr.wr_id = (uint64_t) entry;
   wr.sg_list = &sge;
   wr.num_sge = 1;
-  wr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
+  if (write_with_imm) {
+    wr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
+    wr.imm_data = htonl(entry->tensor_id);
+  } else {
+    wr.opcode = IBV_WR_RDMA_WRITE;
+  }
   wr.send_flags = IBV_SEND_SIGNALED;
-  wr.imm_data = htonl(entry->tensor_id);
   wr.wr.rdma.remote_addr = addr.remote_addr;
   wr.wr.rdma.rkey = addr.rkey;
 

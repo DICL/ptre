@@ -1,9 +1,14 @@
 #include "ptre/common/ptre_global.h"
 
+#include "third_party/minitrace/minitrace.h"
+
 namespace ptre {
 namespace common {
 
 PtreGlobal::PtreGlobal() {
+#ifdef MTR_ENABLED
+  mtr_init("/tmp/ptre_trace.json");
+#endif
   ma_op_cnt = 0;
   ma_op_cnt2 = 0;
   reduce_op_cnt0 = 0;
@@ -16,6 +21,8 @@ PtreGlobal::PtreGlobal() {
   agg_cnt_total = 0;
   rcv_cnt_total = 0;
   send_cnt_total = 0;
+
+  commbuf_state = std::make_shared<std::atomic<int>>(0);
 }
 
 PtreGlobal::~PtreGlobal() {
@@ -106,6 +113,15 @@ PtreGlobal::~PtreGlobal() {
     delete rdma_mgr;
   }
   */
+#ifdef MTR_ENABLED
+  for (auto& cat : op_tracers) {
+    for (auto& title : cat.second) {
+      MTR_FINISH(cat.first.c_str(), title.first.c_str(), &title.second);
+    }
+  }
+  mtr_flush();
+  mtr_shutdown();
+#endif
 }
 
 }  // namespace common

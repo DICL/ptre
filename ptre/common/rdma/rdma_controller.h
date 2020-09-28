@@ -10,7 +10,7 @@ Status PostRecvWithImm(RdmaRecvEntry* entry, const bool locking = true);
 
 Status RdmaRead(RdmaEntry* entry);
 
-Status RdmaWrite(RdmaEntry* entry);
+Status RdmaWrite(RdmaEntry* entry, const bool write_with_imm = true);
 
 }  // namespace common
 }  // namespace ptre

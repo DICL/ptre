@@ -1,6 +1,7 @@
 #ifndef PTRE_COMMON_CM_CONSENSUS_MANAGR_H_
 #define PTRE_COMMON_CM_CONSENSUS_MANAGR_H_
 
+#include <atomic>
 #include <vector>
 #include <map>
 #include <mutex>
@@ -29,6 +30,11 @@ using std::cout;
 using std::endl;
 
 using ::tensorflow::Tensor;
+
+enum CommbufState {
+  COMMBUF_STATE_IDLE,
+  COMMBUF_STATE_BUSY
+};
 
 class ConsensusManager {
  public:
@@ -148,6 +154,7 @@ class ConsensusManager {
     SEND_IN_PROGRESS
   };
   int send_status_ = SEND_IDLE;
+  std::atomic<int> commbuf_state_;
 
  private:
   int ptre_size_;

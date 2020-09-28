@@ -21,6 +21,8 @@ add_definitions(-DPTRE_RDMA_PUSH)
 add_definitions(-DPTRE_RDMA)
 add_definitions(-DSKIP_HTOD_IF_NOT_READY)
 #add_definitions(-DATOMIC_MODEL)
+#add_definitions(-DMTR_ENABLED)
+
 link_libraries(-pthread)
 add_compile_options(
   -fno-strict-aliasing
@@ -61,3 +63,4 @@ set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 add_subdirectory(ptre)
 add_subdirectory(test)
+add_subdirectory(third_party)

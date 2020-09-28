@@ -26,7 +26,7 @@ class GrpcClient {
       uint64_t* out_remote_addr, uint32_t* out_rkey);
   int GetRemoteParamAddress();
   int GetRemoteEnv();
-  bool AttemptPush(int vstep);
+  bool AttemptPush(int vstep = -1);
   int NotifyPushDone(const string& var_name);
   bool Barrier();
 

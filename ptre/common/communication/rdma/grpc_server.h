@@ -1,6 +1,7 @@
 #ifndef PTRE_COMMON_COMMUNICATION_RDMA_GRPC_SERVER_H_
 #define PTRE_COMMON_COMMUNICATION_RDMA_GRPC_SERVER_H_
 
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -57,6 +58,7 @@ class RdmaServiceImpl final : public Rdma::Service {
   void SetRdmaMgr(RdmaMgr* rdma_mgr);
   void SetConsensusManager(ConsensusManager* cm);
   void SetBufferTable(std::shared_ptr<BufferTable> buf_table);
+  void SetCommbufState(std::shared_ptr<std::atomic<int>> s);
   void SetBarrierVariable(bool* barrier_variable);
   void Send(int dst_rank, char* buf, size_t len, const string& name);
 
@@ -68,6 +70,7 @@ class RdmaServiceImpl final : public Rdma::Service {
   std::map<int, std::map<string, ConcurrentQueue<string>*>> send_q_cache_;
 
   std::shared_ptr<BufferTable> buf_table_;
+  std::shared_ptr<std::atomic<int>> commbuf_state_;
 
   // Rdma Attributes
   //uint32_t lid_;
@@ -78,6 +81,10 @@ class RdmaServiceImpl final : public Rdma::Service {
 
 void RdmaServiceImpl::SetBufferTable(std::shared_ptr<BufferTable> buf_table) {
   buf_table_ = buf_table;
+}
+
+void RdmaServiceImpl::SetCommbufState(std::shared_ptr<std::atomic<int>> s) {
+  commbuf_state_ = s;
 }
 
 class GrpcServer {

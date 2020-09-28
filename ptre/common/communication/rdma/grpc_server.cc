@@ -6,6 +6,12 @@
 namespace ptre {
 namespace common {
 
+namespace {
+
+int kCommbufStateIdle = COMMBUF_STATE_IDLE;
+int kCommbufStateBusy = COMMBUF_STATE_BUSY;
+
+}
 //GrpcServer::~GrpcServer() {
 //  if (t_ != nullptr) {
 //    t_->join();
@@ -79,11 +85,18 @@ grpc::Status RdmaServiceImpl::AttemptPush(grpc::ServerContext* context,
                                       AttemptPushResponse* response) {
   int src_rank = request->rank();
   int src_vstep = request->vstep();
+#if 0
   if (cm_->CanReceive(src_rank, src_vstep)) {
     response->set_available(true);
   } else {
     response->set_available(false);
   }
+#else
+  bool ret = commbuf_state_->compare_exchange_strong(
+      kCommbufStateIdle, kCommbufStateBusy);
+  //LOG(INFO) << "DEBUG: AttemptPush from remote, ret=" << std::boolalpha << ret;
+  response->set_available(ret);
+#endif
 
   return grpc::Status::OK;
 }
