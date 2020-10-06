@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <deque>
 #include <fstream>
+#include <queue>
 #include <random>
 
 #include "ptre/common/buffer_table.h"
@@ -882,6 +883,24 @@ Status EnqueueTensorPush(const string& name) {
         //peer = (ptre_rank() + 1) % ptre_size();
         if (peer == ptre_rank()) continue;
         //LOGR(INFO) << "DEBUG: AttemptPush to " << peer;
+        GrpcClient* client;
+        ptre_global.grpc_client_cache->GetClient(peer, &client);
+        if (client->AttemptPush()) break;
+      }
+      peer_selected = peer;
+      //LOGR(INFO) << "DEBUG: peer_selected=" << peer_selected << ", " << peer;
+    }
+    entry->rank = peer_selected;
+    peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
+  }
+#else
+  // Least Selected First
+  {
+    std::lock_guard<std::mutex> guard(peer_sel_mu);
+    if (peer_sel_cnt == 0) {
+      int peer;
+      while (!ptre_global.shutdown) {
+        if (peer == ptre_rank()) continue;
         GrpcClient* client;
         ptre_global.grpc_client_cache->GetClient(peer, &client);
         if (client->AttemptPush()) break;
