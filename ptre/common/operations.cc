@@ -12,6 +12,7 @@
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/rdma/rdma_controller.h"
 #include "ptre/common/utils/host_file_parser.h"
+#include "ptre/lib/distributions.h"
 #include "third_party/minitrace/minitrace.h"
 
 #include "tensorflow/core/common_runtime/device.h"
@@ -52,6 +53,7 @@ int peer_selected;
 int peer_sel_cnt;
 std::random_device rd;
 std::mt19937 gen(rd());
+std::unique_ptr<MyDistribution> inverse_count_distribution;
 
 std::mutex await_mu;
 int await_cnt;
@@ -367,6 +369,8 @@ int ptre_init(int size, int rank, const char* grpc_hosts_file,
   //LOG(INFO) << "Peer selection strategy = " << selection_strategy;
   peer_sel_cnt = 0;
   await_cnt = 0;
+  inverse_count_distribution =
+      std::unique_ptr<MyDistribution>(new MyDistribution(size, rank));
 }
 
 void ptre_finalize(unsigned int wait_time) {
@@ -871,7 +875,7 @@ Status EnqueueTensorPush(const string& name) {
   // Next peer strategy
   // TODO: Use dynamic peer selection
   entry->rank = (ptre_rank() + 1) % ptre_size();
-#elif 1
+#elif 0
   // Random peer
   {
     std::lock_guard<std::mutex> guard(peer_sel_mu);
@@ -900,12 +904,14 @@ Status EnqueueTensorPush(const string& name) {
     if (peer_sel_cnt == 0) {
       int peer;
       while (!ptre_global.shutdown) {
+        peer = (*inverse_count_distribution)(gen);
         if (peer == ptre_rank()) continue;
         GrpcClient* client;
         ptre_global.grpc_client_cache->GetClient(peer, &client);
         if (client->AttemptPush()) break;
       }
       peer_selected = peer;
+      inverse_count_distribution->count(peer_selected);
       //LOGR(INFO) << "DEBUG: peer_selected=" << peer_selected << ", " << peer;
     }
     entry->rank = peer_selected;
@@ -1585,9 +1591,19 @@ void CheckBcastDone(std::deque<MemcpyRequest>& dtoh_reqs) {
   std::lock_guard<std::mutex> guard(ptre_global.bcast_mu);
   std::deque<MemcpyRequest> reqs;
   for (auto& req : dtoh_reqs) {
+#if 1
     if (ptre_global.bcast_done.find(req.key) == ptre_global.bcast_done.end()) {
 //DBGR(req.key, ptre_rank()) << "BCAST NOT DONE";
       req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
+#else
+    if (push_cnts.find(req.key) == push_cnts.end()) {
+      push_cnts.emplace(req.key, 0);
+    } else {
+      push_cnts[req.key]++;
+    }
+    if (push_cnts[req.key] < 3) {
+      req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
+#endif
     } else {
       reqs.push_back(std::move(req));
     }
