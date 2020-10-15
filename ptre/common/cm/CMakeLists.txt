@@ -14,8 +14,9 @@ target_link_libraries(consensus_manager
   peer_selector
   rdma_mgr
   ready_tensor
-  remote_variable
+  #remote_variable
   )
+target_compile_definitions(consensus_manager PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 #add_library(tensor_aggregator SHARED tensor_aggregator.cc)
 #target_link_libraries(tensor_aggregator
@@ -26,12 +27,13 @@ target_link_libraries(push_permit
   allocator
   )
 
-add_library(remote_variable SHARED remote_variable.cc)
-target_link_libraries(remote_variable
-  :libtensorflow_framework.so.2
-  #push_permit
-  allocator
-  )
+#add_library(remote_variable SHARED remote_variable.cc)
+#target_link_libraries(remote_variable
+#  :libtensorflow_framework.so.2
+#  #push_permit
+#  allocator
+#  )
+#target_compile_definitions(remote_variable PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_executable(test_peer_selector test_peer_selector.cc)
 target_link_libraries(test_peer_selector peer_selector)

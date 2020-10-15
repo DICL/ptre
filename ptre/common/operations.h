@@ -5,7 +5,7 @@
 
 #include "ptre/common/cm/ready_tensor.h"
 #include "ptre/common/common.h"
-#include "ptre/common/communication/rdma/rdma_task.h"
+//#include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/message.h"
 #include "ptre/common/ptre_global.h"
 #include "ptre/common/rdma/rdma_context.h"
@@ -46,8 +46,8 @@ void ClearPullJobs();
 void EnqueuePullTasks(const string& var_name, int num_pull);
 void StopPullTasks(const string& var_name);
 
-void EnqueueAggregation(PullTask* task);
-void ProcessPullTaskCQ(PullTask* task);
+//void EnqueueAggregation(PullTask* task);
+//void ProcessPullTaskCQ(PullTask* task);
 int ProcessCQ(int dst, struct ibv_wc* wcs);
 #if 0
 void PollingThreadLoop(int tid);

@@ -1,4 +1,4 @@
-#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_library          (rdma_service_proto      SHARED rdma_service.pb.cc)
 target_link_libraries(rdma_service_proto

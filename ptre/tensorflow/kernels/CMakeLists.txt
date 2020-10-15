@@ -2,7 +2,7 @@
 #target_link_libraries(ptre_op_helpers
 #                      :libtensorflow_framework.so.2)
 
-find_package(CUDA 10.0 REQUIRED)
+find_package(CUDA 10.1 REQUIRED)
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-D_GLIBCXX_USE_CXX11_ABI=0)
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-DGOOGLE_CUDA=1)
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-x cu)
@@ -35,4 +35,9 @@ target_link_libraries(ptre_ops
                       ready_tensor
                       #shared_mutex
 )
-#target_compile_definitions(ptre_ops PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)
+target_compile_definitions(ptre_ops PRIVATE -D_GLIBCXX_USE_CXX11_ABI=0)
+
+add_library(tf_ops_test SHARED tf_ops_test.cc)
+target_link_libraries(tf_ops_test :libtensorflow_framework.so.2)
+#target_link_libraries(tf_ops_test :libtensorflow_framework.so.2 operations)
+target_compile_definitions(tf_ops_test PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)

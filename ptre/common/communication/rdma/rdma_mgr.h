@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ptre/common/cm/remote_variable.h"
+//#include "ptre/common/cm/remote_variable.h"
 #include "ptre/common/communication/pull_variable.h"
 #include "ptre/common/communication/push_variable.h"
 #include "ptre/common/communication/rdma/rdma.h"
@@ -59,7 +59,9 @@ class RdmaMgr {
   void SetTrainableVariables(std::vector<RemoteVariable*>& vars,
       const std::vector<string>& names);
 #endif
+#if 0
   void InitMRs(std::vector<RemoteVariable*>& vars);
+#endif
 
   /// MR management V2
   struct ibv_mr* RegisterMR(const BufType buf_type, const string& name,

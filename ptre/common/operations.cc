@@ -362,6 +362,7 @@ extern "C" {
 
 int ptre_init(int size, int rank, const char* grpc_hosts_file,
               int selection_strategy, int num_push) {
+  if (rank == 0) LOG(INFO) << "Init PTRE.";
   ptre_global.num_push = num_push;
   ptre_global.peer_selector = selection_strategy;
   InitComm(size, rank, grpc_hosts_file);
@@ -420,6 +421,7 @@ void ptre_barrier() {
 }
 
 void ptre_print_counter_summary_epoch() {
+#if 0
   int begin = ptre_global.agg_cnts_last;
   int end = ptre_global.agg_cnts.size();
   int n = end - begin;
@@ -448,9 +450,11 @@ void ptre_print_counter_summary_epoch() {
   ss << "\nAVG COUNT=" << avg_count << std::endl;
   ss << "AVG BYTES=" << (int) avg_bytes << std::endl;
   LOG(INFO) << ss.str();
+#endif
 }
 
 void ptre_print_counter_summary() {
+#if 0
   int begin = 1;
   int end = ptre_global.agg_cnts.size();
   int n = end - begin;
@@ -505,6 +509,7 @@ void ptre_print_counter_summary() {
     ss << "\n";
   }
   LOG(INFO) << ss.str();
+#endif
 }
 
 }  // extern "C"

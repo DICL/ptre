@@ -19,6 +19,7 @@ from ptre.tensorflow.keras import callbacks
 from ptre.tensorflow.keras.optimizers.allreduce_optimizer import PtreAllreduceOptimizer
 from ptre.tensorflow.keras.optimizers.pull_optimizer import PtreModelaverageOptimizer
 
+
 from tensorflow.python.distribute import reduce_util as ds_reduce_util
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops

@@ -13,4 +13,5 @@ target_link_libraries(pull_variable
   :libtensorflow_framework.so.2
   allocator
   )
+target_compile_definitions(pull_variable PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 

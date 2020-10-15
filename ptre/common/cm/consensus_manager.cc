@@ -39,8 +39,8 @@ ConsensusManager::ConsensusManager(int ptre_size, int ptre_rank,
   allocator_ = new Allocator(sizes);
   // Init Remote Variable
   for (int i = 0; i < num_vars_; i++) {
-    RemoteVariable* rvar = new RemoteVariable(*vars[i], names[i], allocator_);
-    remote_variables_.push_back(rvar);
+    //RemoteVariable* rvar = new RemoteVariable(*vars[i], names[i], allocator_);
+    //remote_variables_.push_back(rvar);
     /*
     LOG(INFO) << names[i] << ": TotalBytes()=" << vars[i]->TotalBytes()
         << ", AllocatedBytes()=" << vars[i]->AllocatedBytes();
@@ -532,6 +532,7 @@ void* ConsensusManager::buf_ptr(const BufType type, const string& name) {
 }
 
 void ConsensusManager::ReceivePushNotify(int dst) {
+#if 0
   int ret = rdma_mgr_->ReceivePushNotify(dst);
 #if 0
   if (ret >= 0) {
@@ -553,28 +554,29 @@ void ConsensusManager::ReceivePushNotify(int dst) {
     auto&& var = remote_variables_[idx];
     var->SetAggState(1);
   }
+#endif
 }
 
-RemoteVariable* ConsensusManager::remote_variable(int idx) {
-  if (idx < num_vars_) {
-    return remote_variables_[idx];
-  }
-  return NULL;
-}
+//RemoteVariable* ConsensusManager::remote_variable(int idx) {
+//  if (idx < num_vars_) {
+//    return remote_variables_[idx];
+//  }
+//  return NULL;
+//}
 
-RemoteVariable* ConsensusManager::remote_variable(const string& var_name) {
-  auto search = var_name_to_index_.find(var_name);
-  if (search == var_name_to_index_.end()) {
-    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
-    return NULL;
-  }
-  int idx = search->second;
-  return remote_variable(idx);
-}
+//RemoteVariable* ConsensusManager::remote_variable(const string& var_name) {
+//  auto search = var_name_to_index_.find(var_name);
+//  if (search == var_name_to_index_.end()) {
+//    LOG(ERROR) << "KEY NOT FOUND: " << var_name;
+//    return NULL;
+//  }
+//  int idx = search->second;
+//  return remote_variable(idx);
+//}
 
-std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
-  return remote_variables_;
-}
+//std::vector<RemoteVariable*>& ConsensusManager::remote_variables() {
+//  return remote_variables_;
+//}
 
 ReadyTensor* ConsensusManager::ready_tensor(int idx) {
   if (idx < num_vars_) return ready_tensors_[idx];

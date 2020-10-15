@@ -4,6 +4,7 @@
 #include <infiniband/verbs.h>
 
 #include "ptre/common/common.h"
+#include "ptre/common/message.h"
 #include "ptre/common/rdma/rdma_context.h"
 #include "ptre/common/rdma/rdma_request.h"
 

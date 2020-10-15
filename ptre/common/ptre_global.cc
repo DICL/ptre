@@ -100,10 +100,12 @@ PtreGlobal::~PtreGlobal() {
   //    t.join();
   //  }
   //}
+#if 0
   DVLOG(0) << "Delete EigenThreadpools";
   delete eigen_pool;
   delete agg_eigen_pool;
   delete reduce_eigen_pool;
+#endif
   DVLOG(0) << "Destruction Done.";
   //if (qp_recover_thread.joinable()) {
   //  qp_recover_thread.join();

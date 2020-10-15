@@ -11,7 +11,7 @@
 
 #include "ptre/common/cm/peer_selector.h"
 #include "ptre/common/cm/ready_tensor.h"
-#include "ptre/common/cm/remote_variable.h"
+//#include "ptre/common/cm/remote_variable.h"
 //#include "ptre/common/cm/tensor_aggregator.h"
 #include "ptre/common/communication/rdma/rdma_mgr.h"
 #include "ptre/common/communication/grpc/grpc_client_cache.h"
@@ -139,9 +139,9 @@ class ConsensusManager {
   int rcv_steps_sum() { return rcv_steps_sum_; }
   int num_apply_ops() { return num_rcv_tensors_; }
   //TensorAggregator* tensor_aggregator() { return tensor_aggregator_; }
-  RemoteVariable* remote_variable(int idx);
-  RemoteVariable* remote_variable(const string& var_name);
-  std::vector<RemoteVariable*>& remote_variables();
+  //RemoteVariable* remote_variable(int idx);
+  //RemoteVariable* remote_variable(const string& var_name);
+  //std::vector<RemoteVariable*>& remote_variables();
   ReadyTensor* ready_tensor(int idx);
   ReadyTensor* ready_tensor(const string& var_name);
   const std::vector<string>& variable_names();
@@ -173,7 +173,7 @@ class ConsensusManager {
   int num_vars_;
   std::vector<string> var_names_;
   std::map<string, int> var_name_to_index_;
-  std::vector<RemoteVariable*> remote_variables_;
+  //std::vector<RemoteVariable*> remote_variables_;
   std::vector<ReadyTensor*> ready_tensors_;
   //std::map<string, int> name_to_index_;
   std::vector<Tensor*> global_consensus_;
@@ -237,10 +237,12 @@ class ConsensusManager {
 
   //TensorAggregator* tensor_aggregator_ = nullptr;
   /// size = num_trainable_vars
+#if 0
   std::vector<Flat*> glc_flats_;
   std::vector<Flat*> agg_flats_;
   std::vector<int> var_agg_done_cnts_;
   std::vector<int> recv_status_;
+#endif
   /// size = comm_size
 };
 

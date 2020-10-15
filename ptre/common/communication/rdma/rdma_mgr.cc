@@ -356,6 +356,7 @@ void RdmaMgr::SetTrainableVariables(std::vector<RemoteVariable*>& vars,
 }
 #endif
 
+#if 0
 // PullVariable
 void RdmaMgr::InitMRs(std::vector<RemoteVariable*>& vars) {
   std::vector<size_t> sizes;
@@ -381,6 +382,7 @@ void RdmaMgr::InitMRs(std::vector<RemoteVariable*>& vars) {
         pvar->length(), IBV_ACCESS_REMOTE_READ);
   }
 }
+#endif
 
 int RdmaMgr::var_name_to_index(const string& var_name) {
   auto search = var_name_to_index_.find(var_name);

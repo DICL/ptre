@@ -16,9 +16,9 @@
 #include "ptre/common/communication/grpc/grpc_client_cache.h"
 #include "ptre/common/communication/rdma/grpc_client.h"
 #include "ptre/common/communication/rdma/grpc_server.h"
-#include "ptre/common/communication/rdma/pull_job.h"
+//#include "ptre/common/communication/rdma/pull_job.h"
 #include "ptre/common/communication/rdma/rdma_mgr.h"
-#include "ptre/common/communication/rdma/rdma_task.h"
+//#include "ptre/common/communication/rdma/rdma_task.h"
 #include "ptre/common/communication/tcp/tcp_grpc_client.h"
 #include "ptre/common/communication/tcp/tcp_service_impl.h"
 #include "ptre/common/rdma/rdma_context.h"
@@ -139,9 +139,11 @@ struct PtreGlobal {
   //std::vector<std::thread> polling_threads;
   std::vector<std::thread> aggregation_threads;
   //std::vector<std::thread> receive_threads;
+#if 0
   Eigen::ThreadPool* eigen_pool;
   Eigen::ThreadPool* agg_eigen_pool;
   Eigen::ThreadPool* reduce_eigen_pool;
+#endif
 
   int size;
   int rank;
@@ -205,12 +207,14 @@ struct PtreGlobal {
   std::mutex rpn_checker_mu;
   std::map<uint64_t, string> rpn_checker;
 
+#if 0
   std::map<int, PullJob*> pull_jobs;
   std::mutex job_table_mu;
   std::queue<PullTask*> agg_q;
   std::mutex agg_q_mu;
   std::map<int, std::map<string, uint64_t>> last_key;
   std::map<int, std::map<string, int>> peer_agg_cnt;
+#endif
 
   PtreGlobal();
   ~PtreGlobal();
