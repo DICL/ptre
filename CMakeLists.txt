@@ -13,8 +13,8 @@ link_directories(/home/wkim/.local/lib
                  /usr/local/cuda/lib64
 )
 
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 add_definitions(-DGOOGLE_CUDA=1)
 # PTRE_RDMA
 add_definitions(-DPTRE_RDMA_PUSH)

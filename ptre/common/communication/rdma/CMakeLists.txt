@@ -1,4 +1,3 @@
-#add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_library          (rdma SHARED rdma.cc)
 target_link_libraries(rdma
@@ -15,7 +14,6 @@ target_link_libraries(rdma_mgr
   allocator
   #rdma_agg_writer
   )
-target_compile_definitions(rdma_mgr PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_library          (rdma_grpc_server SHARED grpc_server.cc)
 target_link_libraries(rdma_grpc_server
@@ -25,14 +23,12 @@ target_link_libraries(rdma_grpc_server
   consensus_manager
   buffer_table
   )
-target_compile_definitions(rdma_grpc_server PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_library          (rdma_grpc_client SHARED grpc_client.cc)
 target_link_libraries(rdma_grpc_client
   rdma_service_grpc_proto
   rdma_mgr
   )
-target_compile_definitions(rdma_grpc_client PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 #add_library (rdma_task SHARED rdma_task.cc)
 #target_link_libraries(rdma_task

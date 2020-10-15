@@ -12,7 +12,6 @@ target_link_libraries(common
   )
 
 add_library(buffer_table SHARED buffer_table.cc)
-target_compile_definitions(buffer_table PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_library(message SHARED message.cc)
 target_link_libraries(message
@@ -49,7 +48,6 @@ target_link_libraries(operations
   rdma_controller
   minitrace
   )
-target_compile_definitions(operations PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_executable(operations_test operations_test.cc)
 target_link_libraries(operations_test

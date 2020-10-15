@@ -16,7 +16,6 @@ target_link_libraries(consensus_manager
   ready_tensor
   #remote_variable
   )
-target_compile_definitions(consensus_manager PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 #add_library(tensor_aggregator SHARED tensor_aggregator.cc)
 #target_link_libraries(tensor_aggregator
@@ -33,11 +32,9 @@ target_link_libraries(push_permit
 #  #push_permit
 #  allocator
 #  )
-#target_compile_definitions(remote_variable PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 add_executable(test_peer_selector test_peer_selector.cc)
 target_link_libraries(test_peer_selector peer_selector)
-#target_compile_definitions(consensus_manager PUBLIC -D_GLIBCXX_USE_CXX11_ABI=0)
 
 add_library(ready_tensor SHARED ready_tensor.cc)
 target_link_libraries(ready_tensor
