@@ -74,7 +74,8 @@ struct RvarRequest {
 
 enum SendbufState {
   SENDBUF_STATE_INIT,
-  SENDBUF_STATE_READY
+  SENDBUF_STATE_READY,
+  SENDBUF_STATE_BUSY
 };
 
 enum RecvbufState {

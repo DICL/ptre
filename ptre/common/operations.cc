@@ -61,6 +61,7 @@ int await_cnt;
 }  // namespace
 
 inline const char* ToPersistentCStr(const string& str) {
+#ifdef MTR_ENABLED
   auto it = persistent_strs.find(str);
   if (it == persistent_strs.end()) {
     ps_mu.lock();
@@ -75,6 +76,9 @@ inline const char* ToPersistentCStr(const string& str) {
   }
   const char* ret = persistent_strs[str];
   return ret;
+#else
+  return NULL;
+#endif
 }
 
 void OpTrace(const string& cat, const string& str, const string& step) {
@@ -362,7 +366,6 @@ extern "C" {
 
 int ptre_init(int size, int rank, const char* grpc_hosts_file,
               int selection_strategy, int num_push) {
-  if (rank == 0) LOG(INFO) << "Init PTRE.";
   ptre_global.num_push = num_push;
   ptre_global.peer_selector = selection_strategy;
   InitComm(size, rank, grpc_hosts_file);
@@ -766,6 +769,7 @@ Status EnqueueTensorAsyncComm(OpContext* context,
   req.callback = [callback, var_name](const Status& s) {
         Status enqueue_result;
         if (s.ok()) {
+          // TODO: DECOUPLE THIS CHAINED CALLBACK
 #ifdef PTRE_RDMA_PULL
           auto enqueue_result = EnqueueTensorPull(var_name);
 #else
@@ -876,10 +880,25 @@ Status EnqueueTensorPush(const string& name) {
   entry->tensor_name = name;
   entry->tensor = send_tensor;
   entry->tensor_state = send_tensor_state;
-#if 0
+#if 1
   // Next peer strategy
   // TODO: Use dynamic peer selection
   entry->rank = (ptre_rank() + 1) % ptre_size();
+  {
+    std::lock_guard<std::mutex> guard(peer_sel_mu);
+    if (peer_sel_cnt == 0) {
+      int peer = (ptre_rank() + 1) % ptre_size();
+      GrpcClient* client;
+      ptre_global.grpc_client_cache->GetClient(peer, &client);
+      if (client->AttemptPush()) {
+        peer_selected = peer;
+      } else {
+        peer_selected = -1;  // skip
+      }
+    }
+    entry->rank = peer_selected;
+    peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
+  }
 #elif 0
   // Random peer
   {
@@ -1064,21 +1083,29 @@ void AverageThread() {
     //}
     auto name = std::move(ptre_global.avg_queue.front());
     ptre_global.avg_queue.pop();
+    auto ss = ptre_global.sendbuf_table[name].second;
+    ss->mu.lock();
+    if (ss->state == SENDBUF_STATE_BUSY) {
+      ptre_global.avg_queue.push(std::move(name));
+      ss->mu.unlock();
+      lk.unlock();
+      continue;
+    }
+    ss->state = SENDBUF_STATE_BUSY;
+    ss->mu.unlock();
     lk.unlock();
 
     //for (auto& name : tensor_names) {
       //ptre_global.commbuf_table_mu.lock();
       auto sb = ptre_global.sendbuf_table[name].first;
-      auto ssm = ptre_global.sendbuf_table[name].second;
       auto rb = ptre_global.recvbuf_table[name].first;
       auto rsm = ptre_global.recvbuf_table[name].second;
       //ptre_global.commbuf_table_mu.unlock();
 //DBGR(name, ptre_rank()) << "state=" << rsm->state;
-      //MTR_BEGIN("AVERAGE", ToPersistentCStr(name));
-      OpTrace("PTREOp", name, "Average");
       PerformAverage(sb, rb, 2, rsm, name);
-      OpTrace("PTREOp", name, "");
-      //MTR_END("AVERAGE", ToPersistentCStr(name));
+      ss->mu.lock();
+      ss->state = SENDBUF_STATE_READY;
+      ss->mu.unlock();
     //}
   }
 }
@@ -1371,9 +1398,49 @@ void BackgroundThread() {
       auto sm = ptre_global.recvbuf_table[req.key].second;
       std::lock_guard<std::mutex> guard(sm->mu);
       if (sm->state == RECVBUF_STATE_MEMCPY_READY) {
+#ifdef ATOMIC_MODEL
+        {
+          std::lock_guard<std::mutex> guard(ptre_global.htod_mu);
+          bool skip = false;
+          if (ptre_global.htod_ever_skipped) {
+            skip = true;
+          } else {
+            ptre_global.htod_ever_performed = true;
+          }
+          ptre_global.htod_cnt++;
+          if (ptre_global.htod_cnt == ptre_global.num_tvars) {
+            ptre_global.htod_ever_performed = false;
+            ptre_global.htod_ever_skipped = false;
+            ptre_global.htod_cnt = 0;
+          }
+          if (skip) {
+            sm->state = RECVBUF_STATE_READY;
+            req.callback(Status::OK());
+            TryOpenCommbuf();
+            continue;
+          }
+        }
+#endif
         htod_finals.push_back(std::move(req));
       } else {
 #ifdef SKIP_HTOD_IF_NOT_READY
+#ifdef ATOMIC_MODEL
+        {
+          std::lock_guard<std::mutex> guard(ptre_global.htod_mu);
+          if (ptre_global.htod_ever_performed) {
+            // Wait
+            ptre_global.htod_queue.push_back(std::move(req));
+            continue;
+          }
+          ptre_global.htod_cnt++;
+          ptre_global.htod_ever_skipped = true;
+          if (ptre_global.htod_cnt == ptre_global.num_tvars) {
+            ptre_global.htod_ever_performed = false;
+            ptre_global.htod_ever_skipped = false;
+            ptre_global.htod_cnt = 0;
+          }
+        }
+#endif
         sm->state = RECVBUF_STATE_READY;
         req.callback(Status::OK());
         TryOpenCommbuf();
@@ -1391,12 +1458,8 @@ void BackgroundThread() {
 //DBGR(req.key, ptre_rank()) << "HtoD";
       //auto name = ToPersistentCStr(req.key);
       auto& name = req.key;
-      //MTR_BEGIN("MemcpyHtoD", name);
-      OpTrace("PTREOp", req.key, "HtoD");
       MemcpyHostToDevice(req.context, recvbuf, req.tensor,
           [sm, callback, name](const Status& s) {
-            //MTR_END("MemcpyHtoD", name);
-            OpTrace("PTREOp", name, "");
             std::lock_guard<std::mutex> guard(sm->mu);
             sm->state = RECVBUF_STATE_READY;
             callback(s);
@@ -1406,24 +1469,32 @@ void BackgroundThread() {
 
     // MemcpyDtoH
     std::deque<MemcpyRequest> dtoh_reqs;
+    std::deque<MemcpyRequest> dtoh_finals;
     ptre_global.dtoh_mu.lock();
     ptre_global.dtoh_queue.swap(dtoh_reqs);
     ptre_global.dtoh_mu.unlock();
     CheckBcastDone(dtoh_reqs);
-    for (auto& req : dtoh_reqs) {
-      OpTrace("TFOp", req.key, "");
-      OpTrace("TFOp", req.key, "<-EnqueuePush");
+
+    // Wait if pushing
+    {
+      std::lock_guard<std::mutex> dtoh_guard(ptre_global.dtoh_mu);
+      for (auto& req : dtoh_reqs) {
+        auto sm = ptre_global.sendbuf_table[req.key].second;
+        std::lock_guard<std::mutex> guard(sm->mu);
+        if (sm->state == SENDBUF_STATE_BUSY) {
+          ptre_global.dtoh_queue.push_back(std::move(req));
+        } else {
+          sm->state = SENDBUF_STATE_BUSY;
+          dtoh_finals.push_back(std::move(req));
+        }
+      }
+    }
+    for (auto& req : dtoh_finals) {
       auto sendbuf = ptre_global.sendbuf_table[req.key].first;
       auto callback = req.callback;
-//DBGR(req.key, ptre_rank()) << "DtoH";
-      //auto name = ToPersistentCStr(req.key);
-      //MTR_BEGIN("MemcpyDtoH", name);
       auto& name = req.key;
-      OpTrace("MemcpyOp", req.key, "DtoH");
       MemcpyDeviceToHost(req.context, req.tensor, sendbuf,
           [callback, name](const Status& s) {
-            //MTR_END("MemcpyDtoH", name);
-            OpTrace("MemcpyOp", name, "");
             callback(s);
           });
     }
@@ -1437,17 +1508,18 @@ void BackgroundThread() {
     {
       std::lock_guard<std::mutex> guard(push_cnt_mu);
       for (auto entry : entries) {
+        if (entry->rank < 0) {
+          entry->tensor_state->state = SENDBUF_STATE_READY;
+          delete entry;
+          continue;
+        }
         PrepareRdmaPush(entry);
 #if 0
         if (push_cnts.find(entry->tensor_name) == push_cnts.end()) {
           push_cnts.emplace(entry->tensor_name, 0);
-          //OpTrace("PTREOp", entry->tensor_name, "WarmupPush");
           //RdmaWrite(entry, false);
-          //OpTrace("PTREOp", entry->tensor_name, "Push");
           //RdmaWrite(entry);
         } else {
-          OpTrace("PTREOp", entry->tensor_name, "Push");
-          //MTR_BEGIN("PUSH", ToPersistentCStr(entry->tensor_name));
           RdmaWrite(entry);
         }
         push_cnts[entry->tensor_name]++;
@@ -1464,8 +1536,8 @@ void BackgroundThread() {
       for (int i = 0; i < num_wcs; i++) {
         assert(wcs[i].status == IBV_WC_SUCCESS);
         RdmaEntry* entry = reinterpret_cast<RdmaEntry*>(wcs[i].wr_id);
-        //MTR_END("PUSH", ToPersistentCStr(entry->tensor_name));
-        OpTrace("PTREOp", entry->tensor_name, "");
+        std::lock_guard<std::mutex> guard(entry->tensor_state->mu);
+        entry->tensor_state->state = SENDBUF_STATE_READY;
         delete entry;
       }
     }
@@ -1479,7 +1551,6 @@ void BackgroundThread() {
         assert(wcs[i].status == IBV_WC_SUCCESS);
         RdmaRecvEntry* entry = reinterpret_cast<RdmaRecvEntry*>(wcs[i].wr_id);
         uint32_t id = ntohl(wcs[i].imm_data);
-        OpTrace("PTREOp", ptre_global.id_to_name[id], "Recv");
         ids.push_back(ntohl(wcs[i].imm_data));
         delete entry;
       }

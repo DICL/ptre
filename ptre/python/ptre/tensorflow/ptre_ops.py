@@ -9,13 +9,10 @@ import time
 from tensorflow.python.framework import load_library
 from ptre.tensorflow.util import _executing_eagerly
 
-print("DEBUG*")
 PTRE_LIB_PATH = '/home/wkim/ptre/build/ptre/tensorflow/kernels/libptre_ops.so'
 #PTRE_LIB_PATH = '/home/wkim/.local/lib/python2.7/site-packages/ptre/tensorflow/libptre_ops.so'
 PTRE_LIB = load_library.load_op_library(PTRE_LIB_PATH)
-print("DEBUG**")
 PTRE_CDLL = ctypes.CDLL(PTRE_LIB_PATH, mode=ctypes.RTLD_GLOBAL)
-print("DEBUG***")
 
 def _normalize_name(name):
   """Normalizes operation name to TensorFlow rules."""
