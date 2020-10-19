@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <fstream>
 #include <queue>
@@ -51,12 +52,16 @@ std::unordered_map<string, int> push_cnts;
 std::mutex peer_sel_mu;
 int peer_selected;
 int peer_sel_cnt;
-std::random_device rd;
+std::random_device rd;  // Non-deterministic
 std::mt19937 gen(rd());
 std::unique_ptr<MyDistribution> inverse_count_distribution;
 
 std::mutex await_mu;
 int await_cnt;
+
+std::unordered_map<string, int*> simple_htod_cnt;
+std::unordered_map<string, int> recent_avg_enqueue_rank;
+string filePath;
 
 }  // namespace
 
@@ -349,6 +354,26 @@ void PtreBarrier() {
   }
 }
 
+#if 1
+void PtreFlushSimpleHtod() {
+  std::ofstream writeFile;
+  writeFile.open(filePath, std::fstream::out | std::fstream::app);
+  if (writeFile.is_open()) {
+    writeFile << "---------\n";
+    for (int i = 0; i < ptre_global.num_tvars; i++) {
+      auto& name = ptre_global.id_to_name[i];
+      writeFile << name << ":";
+      for (int j = 0; j < ptre_size(); j++) {
+        writeFile << " " << simple_htod_cnt[name][j];
+        simple_htod_cnt[name][j] = 0;  // Initialize
+      }
+      writeFile << std::endl;
+    }
+    writeFile.close();
+  }
+}
+#endif
+
 void RdmaSetRemoteAddress(int dst, BufType buf_type, const string& var_name) {
   GrpcClient* client;
   ptre_global.grpc_client_cache->GetClient(dst, &client);
@@ -375,6 +400,18 @@ int ptre_init(int size, int rank, const char* grpc_hosts_file,
   await_cnt = 0;
   inverse_count_distribution =
       std::unique_ptr<MyDistribution>(new MyDistribution(size, rank));
+
+  string nameBase = "simple_htod_cnt";
+  time_t rawtime;
+  struct tm* timeinfo;
+  char buffer[16];
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(buffer, 16, "%Y%m%H%M%S", timeinfo);
+
+  filePath = "/tmp/simple_htod_cnt_";
+  filePath = filePath + buffer + ".txt";
+  LOG(INFO) << "filePath: " << filePath;
 }
 
 void ptre_finalize(unsigned int wait_time) {
@@ -512,6 +549,14 @@ void ptre_print_counter_summary() {
     ss << "\n";
   }
   LOG(INFO) << ss.str();
+#endif
+}
+
+void ptre_call_generic(const char* func_name) {
+#if 1
+  if (!strcmp(func_name, "FlushSimpleHtod")) {
+    PtreFlushSimpleHtod();
+  }
 #endif
 }
 
@@ -824,7 +869,8 @@ Status EnqueueTensorAwaitComm(OpContext* context,
 Status EnqueueTensorAverage(const string var_name,
                             std::shared_ptr<Tensor> sendbuf,
                             std::shared_ptr<Tensor> tensor,
-                            int n);
+                            int n,
+                            int from_rank);
 
 Status EnqueueTensorPull(const string name) {
 //if (name == "predictions_kernel_0") {
@@ -837,7 +883,7 @@ Status EnqueueTensorPull(const string name) {
   ptre_global.commbuf_table_mu.unlock();
 #if 1
   auto enqueue_func = [name, send_tensor, recv_tensor]() {
-        EnqueueTensorAverage(name, send_tensor, recv_tensor, 2);
+        EnqueueTensorAverage(name, send_tensor, recv_tensor, 2, -1);
       };
   TensorTableEntry entry;
   entry.tensor_name = name;
@@ -880,7 +926,7 @@ Status EnqueueTensorPush(const string& name) {
   entry->tensor_name = name;
   entry->tensor = send_tensor;
   entry->tensor_state = send_tensor_state;
-#if 1
+#if 0
   // Next peer strategy
   // TODO: Use dynamic peer selection
   entry->rank = (ptre_rank() + 1) % ptre_size();
@@ -902,21 +948,23 @@ Status EnqueueTensorPush(const string& name) {
 #elif 0
   // Random peer
   {
+    std::uniform_int_distribution<int> distribution(0, ptre_size() - 1);
     std::lock_guard<std::mutex> guard(peer_sel_mu);
     if (peer_sel_cnt == 0) {
-      std::uniform_int_distribution<int> distribution(0, ptre_size() - 1);
-      int peer;
-      while (!ptre_global.shutdown) {
-        peer = distribution(gen);
-        //peer = (ptre_rank() + 1) % ptre_size();
-        if (peer == ptre_rank()) continue;
-        //LOGR(INFO) << "DEBUG: AttemptPush to " << peer;
+      peer_selected = -1;  // skip
+      for (int i = 0; i < 3; i++) {
+        int peer = distribution(gen);
+        if (peer == ptre_rank()) {
+          i--;
+          continue;
+        }
         GrpcClient* client;
         ptre_global.grpc_client_cache->GetClient(peer, &client);
-        if (client->AttemptPush()) break;
+        if (client->AttemptPush()) {
+          peer_selected = peer;
+          break;
+        }
       }
-      peer_selected = peer;
-      //LOGR(INFO) << "DEBUG: peer_selected=" << peer_selected << ", " << peer;
     }
     entry->rank = peer_selected;
     peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
@@ -926,17 +974,23 @@ Status EnqueueTensorPush(const string& name) {
   {
     std::lock_guard<std::mutex> guard(peer_sel_mu);
     if (peer_sel_cnt == 0) {
-      int peer;
-      while (!ptre_global.shutdown) {
-        peer = (*inverse_count_distribution)(gen);
-        if (peer == ptre_rank()) continue;
+      peer_selected = -1;  // skip
+      for (int i = 0; i < 3; i++) {
+        int peer = (*inverse_count_distribution)(gen);
+        if (peer == ptre_rank()) {
+          i--;
+          continue;
+        }
         GrpcClient* client;
         ptre_global.grpc_client_cache->GetClient(peer, &client);
-        if (client->AttemptPush()) break;
+        if (client->AttemptPush()) {
+          peer_selected = peer;
+          break;
+        }
       }
-      peer_selected = peer;
-      inverse_count_distribution->count(peer_selected);
-      //LOGR(INFO) << "DEBUG: peer_selected=" << peer_selected << ", " << peer;
+      if (peer_selected >= 0) {
+        inverse_count_distribution->count(peer_selected);
+      }
     }
     entry->rank = peer_selected;
     peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
@@ -1031,7 +1085,8 @@ DBGR(name, ptre_rank()) << "state=" << sm->state;
 Status EnqueueTensorAverage(const string var_name,
                             std::shared_ptr<Tensor> sendbuf,
                             std::shared_ptr<Tensor> tensor,
-                            int n) {
+                            int n,
+                            int from_rank) {
 //if (var_name == "predictions_kernel_0") {
 //  DVLOGR(0, ptre_rank()) << __FUNCTION__ << " " << var_name;
 //}
@@ -1042,6 +1097,7 @@ Status EnqueueTensorAverage(const string var_name,
   ptre_global.commbuf_table_mu.unlock();
   ptre_global.avg_mu.lock();
   ptre_global.avg_queue.push(var_name);
+  recent_avg_enqueue_rank[var_name] = from_rank;
   ptre_global.avg_mu.unlock();
   ptre_global.avg_cv.notify_one();
   return Status::OK();
@@ -1176,7 +1232,7 @@ void ProcessSendWCs(struct ibv_wc* wcs, const int num_wcs) {
   }
 }
 
-void EnqueueAvgWithTensorIdNumber(const uint32_t id) {
+void EnqueueAvgWithTensorIdNumber(const uint32_t id, const int from_rank) {
   ptre_global.id_mu.lock();
   string& name = ptre_global.id_to_name[id];
   ptre_global.id_mu.unlock();
@@ -1202,11 +1258,14 @@ DBGR(name, ptre_rank()) << "state=" << rsm->state;
     EnqueueTensorAverage(name, sendbuf, recvbuf, 2);
   }
 #else
-  EnqueueTensorAverage(name, sendbuf, recvbuf, 2);
+  EnqueueTensorAverage(name, sendbuf, recvbuf, 2, from_rank);
 #endif
 }
 
 void ProcessRecvWCs(struct ibv_wc* wcs, const int num_wcs) {
+#if 1
+  assert(!"Not implemented yet.");
+#else
   std::vector<uint32_t> ids;
   int rank;
   for (int i = 0; i < num_wcs; i++) {
@@ -1224,6 +1283,7 @@ void ProcessRecvWCs(struct ibv_wc* wcs, const int num_wcs) {
   for (int i = 0; i < ids.size(); i++) {
     PostRecvTensorIdNumber(rank);
   }
+#endif
 }
 
 void PollingThreadPerQP(int dst) {
@@ -1465,6 +1525,12 @@ void BackgroundThread() {
             callback(s);
             TryOpenCommbuf();
           });
+#ifdef SIMPLE_HTOD_CNT
+      int from_rank = recent_avg_enqueue_rank[name];
+      if (from_rank >= 0) {
+        simple_htod_cnt[name][from_rank]++;
+      }
+#endif
     }
 
     // MemcpyDtoH
@@ -1544,14 +1610,16 @@ void BackgroundThread() {
 #endif
 
     // Recv Remote Write
-    std::vector<uint32_t> ids;
+    //std::vector<uint32_t> ids;
+    std::vector<std::pair<uint32_t, int>> ids2;  // tensor_id, from_rank
     for (int dst = 0; dst < ptre_size(); dst++) {
       channels[dst]->PollRecvCQ(wcs, &num_wcs, false);
       for (int i = 0; i < num_wcs; i++) {
         assert(wcs[i].status == IBV_WC_SUCCESS);
         RdmaRecvEntry* entry = reinterpret_cast<RdmaRecvEntry*>(wcs[i].wr_id);
         uint32_t id = ntohl(wcs[i].imm_data);
-        ids.push_back(ntohl(wcs[i].imm_data));
+        //ids.push_back(ntohl(wcs[i].imm_data));
+        ids2.emplace_back(id, dst);
         delete entry;
       }
       for (int i = 0; i < num_wcs; i++) {
@@ -1561,8 +1629,8 @@ void BackgroundThread() {
 
     // Average
 #if 1
-    for (auto id : ids) {
-      EnqueueAvgWithTensorIdNumber(id);
+    for (auto& e : ids2) {
+      EnqueueAvgWithTensorIdNumber(e.first, e.second);
     }
 #elif 0
     for (auto id : ids) {
@@ -1610,6 +1678,9 @@ void CheckBufferTable(std::deque<MemcpyRequest>& htod_reqs) {
   for (auto& req : htod_reqs) {
     auto search = ptre_global.recvbuf_table.find(req.key);
     if (search == ptre_global.recvbuf_table.end()) {
+      recent_avg_enqueue_rank[req.key] = -1;
+      simple_htod_cnt[req.key] = new int[ptre_size()];
+      memset(simple_htod_cnt[req.key], 0, ptre_size() * sizeof(int));
       ptre_global.htod_cnts[req.key] = 0;
       // Allocate new sendbuf and recvbuf and their states
       auto new_recvbuf = std::make_shared<Tensor>(

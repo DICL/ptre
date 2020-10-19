@@ -26,6 +26,9 @@ def init(comm_size, comm_rank, grpc_hosts_file=None, comm=None,
       ctypes.c_char_p(grpc_hosts_file.encode('utf-8')),
       selection_strategy, num_push)
 
+def call_generic(func_name):
+  PTRE_CDLL.ptre_call_generic(ctypes.c_char_p(func_name.encode('utf-8')))
+
 def init_rdma_grpc_service():
   PTRE_CDLL.ptre_init_rdma_grpc_service()
 

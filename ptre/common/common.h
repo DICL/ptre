@@ -63,6 +63,7 @@ struct MemcpyRequest {
   std::shared_ptr<Tensor> tensor;
   MemcpyOp type;
   StatusCallback callback;
+  int from;
 };
 
 struct RvarRequest {

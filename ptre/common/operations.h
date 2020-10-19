@@ -39,6 +39,10 @@ void PtreBroadcast(char* buf, size_t len, int root_rank, const string& name);
 
 void PtreBarrier();
 
+#if 1
+void PtreFlushSimpleHtod();
+#endif
+
 void CreatePullJob(int step, int num_pull);
 
 void ClearPullJobs();
@@ -80,6 +84,8 @@ void ptre_barrier();
 void ptre_print_counter_summary_epoch();
 
 void ptre_print_counter_summary();
+
+void ptre_call_generic(const char* func_name);
 
 }
 

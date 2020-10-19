@@ -22,6 +22,7 @@ add_definitions(-DPTRE_RDMA)
 add_definitions(-DSKIP_HTOD_IF_NOT_READY)
 #add_definitions(-DATOMIC_MODEL)
 #add_definitions(-DMTR_ENABLED)
+add_definitions(-DSIMPLE_HTOD_CNT)
 
 link_libraries(-pthread)
 add_compile_options(
