@@ -251,6 +251,12 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
     auto channel = ptre_global.rdma_mgr->GetChannel(i);
   }
 
+  for (int i = 0; i < ptre_size(); i++) {
+     for (int j = 0; j < 256; j++) {
+       PostRecvTensorIdNumber(i);
+     }
+  }
+
   //for (int i = 0; i < ptre_size(); i++) {
   //  ptre_global.polling_threads.emplace_back(
   //      std::thread(PollingThreadPerQP, i));
@@ -356,6 +362,7 @@ void PtreBarrier() {
 
 #if 1
 void PtreFlushSimpleHtod() {
+#ifdef SIMPLE_HTOD_CNT
   std::ofstream writeFile;
   writeFile.open(filePath, std::fstream::out | std::fstream::app);
   if (writeFile.is_open()) {
@@ -371,6 +378,7 @@ void PtreFlushSimpleHtod() {
     }
     writeFile.close();
   }
+#endif
 }
 #endif
 
@@ -401,17 +409,19 @@ int ptre_init(int size, int rank, const char* grpc_hosts_file,
   inverse_count_distribution =
       std::unique_ptr<MyDistribution>(new MyDistribution(size, rank));
 
+#ifdef SIMPLE_HTOD_CNT
   string nameBase = "simple_htod_cnt";
   time_t rawtime;
   struct tm* timeinfo;
-  char buffer[16];
+  char buffer[32];
   time(&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(buffer, 16, "%Y%m%H%M%S", timeinfo);
+  strftime(buffer, 32, "%Y%m%d%H%M", timeinfo);
 
   filePath = "/tmp/simple_htod_cnt_";
   filePath = filePath + buffer + ".txt";
   LOG(INFO) << "filePath: " << filePath;
+#endif
 }
 
 void ptre_finalize(unsigned int wait_time) {
@@ -952,7 +962,7 @@ Status EnqueueTensorPush(const string& name) {
     std::lock_guard<std::mutex> guard(peer_sel_mu);
     if (peer_sel_cnt == 0) {
       peer_selected = -1;  // skip
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; ; i++) {
         int peer = distribution(gen);
         if (peer == ptre_rank()) {
           i--;
@@ -975,7 +985,8 @@ Status EnqueueTensorPush(const string& name) {
     std::lock_guard<std::mutex> guard(peer_sel_mu);
     if (peer_sel_cnt == 0) {
       peer_selected = -1;  // skip
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; ; i++) {
+        //break;
         int peer = (*inverse_count_distribution)(gen);
         if (peer == ptre_rank()) {
           i--;
@@ -1548,7 +1559,11 @@ void BackgroundThread() {
         auto sm = ptre_global.sendbuf_table[req.key].second;
         std::lock_guard<std::mutex> guard(sm->mu);
         if (sm->state == SENDBUF_STATE_BUSY) {
+#ifdef SKIP_DTOH_IF_NOT_READY
+          req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
+#else
           ptre_global.dtoh_queue.push_back(std::move(req));
+#endif
         } else {
           sm->state = SENDBUF_STATE_BUSY;
           dtoh_finals.push_back(std::move(req));
