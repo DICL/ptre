@@ -955,7 +955,7 @@ Status EnqueueTensorPush(const string& name) {
     entry->rank = peer_selected;
     peer_sel_cnt = (peer_sel_cnt + 1) % ptre_global.num_tvars;
   }
-#elif 0
+#elif 1
   // Random peer
   {
     std::uniform_int_distribution<int> distribution(0, ptre_size() - 1);
