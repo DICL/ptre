@@ -71,7 +71,7 @@ class _PullOptimizer(optimizer_v2.OptimizerV2):
         # Apply grad
         with ops.control_dependencies([await_op]):
           apply_op = _apply_grad_to_update_var(var, grad)
-          # Start Async Allreduce var
+          # Start Async Comm var
           with ops.control_dependencies([apply_op]):
             enqueue_op = self._async_comm(var)
             return enqueue_op
