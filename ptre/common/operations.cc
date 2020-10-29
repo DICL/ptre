@@ -112,13 +112,13 @@ void OpTrace(const string& cat, const string& str, const string& step) {
 //   hostname_1:port_1_0, ...
 //   ...
 //   hostname_n:port_n_0, ...
-void load_grpc_hosts(const string& grpc_hosts_file) {
-  HostFileParser p(grpc_hosts_file);
+void load_tcp_hosts(const string& hosts_file) {
+  HostFileParser p(hosts_file);
   p.Parse(ptre_global.size);
   ptre_global.nodes = p.nodes();
   ptre_global.workers = p.workers();
   for (auto& worker : ptre_global.workers) {
-    ptre_global.grpc_hosts.push_back(worker.grpc_host);
+    ptre_global.tcp_hosts.push_back(worker.tcp_host);
   }
   ptre_global.this_worker = ptre_global.workers[ptre_global.rank];
 }
@@ -152,6 +152,7 @@ void PrintDebugResponseList(ResponseList& response_list) {
   DVLOG(0) << ss.str();
 }
 
+/*
 void RunGrpcServer() {
   // Rdma Service
   auto&& service = ptre_global.grpc_service;
@@ -170,6 +171,7 @@ void RunGrpcServer() {
   LOG(INFO) << "Grpc server listening on " << server_address;
   ptre_global.grpc_server->Wait();
 }
+*/
 
 void BackgroundMemcpyThread();
 
@@ -185,39 +187,26 @@ void AverageThread();
 
 void BackgroundThread();
 
-void InitComm(int size, int rank, const string& grpc_hosts_file) {
+void InitComm(int size, int rank, const string& hosts_file) {
   ptre_global.size = size;
   ptre_global.rank = rank;
   ptre_global.shutdown = false;
 
   // Init BufferTable
   ptre_global.buf_table = std::make_shared<BufferTable>();
-  ptre_global.grpc_service.SetBufferTable(ptre_global.buf_table);
-  ptre_global.grpc_service.SetCommbufState(ptre_global.commbuf_state);
 
-  // Init Grpc Service
-  load_grpc_hosts(grpc_hosts_file);
-
-  if (size > ptre_global.grpc_hosts.size()) {
-    LOG(ERROR) << "NOT ENOUGH HOSTS in the hostfile";
-    exit(1);
-  }
-  ptre_global.grpc_client_cache =
-    std::make_shared<GrpcClientCache<GrpcClient>>(rank, ptre_global.grpc_hosts);
-  ptre_global.tcp_grpc_client_cache =
-    std::make_shared<GrpcClientCache<TcpGrpcClient>>(rank,
-                                                     ptre_global.grpc_hosts);
-  ptre_global.grpc_server_thread = std::thread(RunGrpcServer);
+  load_tcp_hosts(hosts_file);
 
   // Init RdmaMgr
-  DVLOG(0) << "Init Rdma Manager";
-  ptre_global.rdma_mgr = new RdmaMgr(size, rank);
-  ptre_global.grpc_service.SetRdmaMgr(ptre_global.rdma_mgr);
+  //DVLOG(0) << "Init Rdma Manager";
+  //ptre_global.rdma_mgr = new RdmaMgr(size, rank);
+  //ptre_global.grpc_service.SetRdmaMgr(ptre_global.rdma_mgr);
   //for (int i = 0; i < ptre_global.size; i++) {
   //  ptre_global.qp_mus.push_back(new std::mutex());
   //}
 
   // Connect Queue Pairs
+  /*
   for (int i = 0; i < ptre_global.size; i++) {
     GrpcClient* client;
     ptre_global.grpc_client_cache->GetClient(i, &client);
@@ -237,6 +226,7 @@ void InitComm(int size, int rank, const string& grpc_hosts_file) {
   }
   PtreBarrier();
   LOG(INFO) << "Connected Queue Pairs";
+  */
 
   // Connectivity Check
   int ret;
@@ -304,62 +294,6 @@ PtreGlobal& PtreGlobalState() {
   return ptre_global;
 }
 
-// Non-blocking
-void PtreSend(int dst_rank, char* buf, size_t len, const string& name) {
-  ptre_global.grpc_service.Send(dst_rank, buf, len, name);
-}
-
-/*
-void PtreSendZeroCopy(int dst_rank, std::shared_ptr<char> buf, size_t len,
-    const string& name) {
-  ptre_global.grpc_service.SendZeroCopy(dst_rank, buf, len, name);
-}
-*/
-
-// Blocking
-void PtreRecv(int src_rank, char* buf, size_t len, const string& name) {
-  GrpcClient* grpc_client;
-  ptre_global.grpc_client_cache->GetClient(src_rank, &grpc_client);
-  int ret = -1;
-  while (ret) {
-    ret = grpc_client->Recv(buf, len, name);
-    if (ret) exit(1);
-  }
-}
-
-void PtreBroadcast(char* buf, size_t len, int root_rank, const string& name) {
-  if (ptre_global.rank == root_rank) {
-    //LOG(INFO) << "BCASTSEND " << name << ": var[0]=" << ((float*) buf)[0];
-    for (int i = 0; i < ptre_global.size; i++) {
-      if (i == root_rank) continue;
-      PtreSend(i, buf, len, name);
-    }
-  } else {
-    PtreRecv(root_rank, buf, len, name);
-    //LOG(INFO) << "BCASTRECV " << name << ": var[0]=" << ((float*) buf)[0];
-  }
-
-  std::lock_guard<std::mutex> guard(ptre_global.bcast_mu);
-  // PtreBroadcast_training_SGD_fc2_kernel_momentum_0
-  // PtreBroadcast_fc2_kernel_0
-  string var_name = name.substr(14);
-  ptre_global.bcast_done[var_name] = true;
-}
-
-void PtreBarrier() {
-  int size = ptre_global.size;
-  if (size == 1) return;
-  int my_rank = ptre_global.rank;
-  int mask = 0x1;
-  while (mask < size) {
-    int dst = (my_rank + mask) % size;
-    PtreSend(dst, NULL, 0, "PtreBarrier");
-    int src = (my_rank - mask + size) % size;
-    PtreRecv(src, NULL, 0, "PtreBarrier");
-    mask <<= 1;
-  }
-}
-
 #if 1
 void PtreFlushSimpleHtod() {
 #ifdef SIMPLE_HTOD_CNT
@@ -397,11 +331,11 @@ void RdmaSetRemoteAddress(int dst, BufType buf_type, const string& var_name) {
 
 extern "C" {
 
-int ptre_init(int size, int rank, const char* grpc_hosts_file,
+int ptre_init(int size, int rank, const char* hosts_file,
               int selection_strategy, int num_push) {
   ptre_global.num_push = num_push;
   ptre_global.peer_selector = selection_strategy;
-  InitComm(size, rank, grpc_hosts_file);
+  InitComm(size, rank, hosts_file);
   //ptre_global.cm->InitPeerSelector(selection_strategy, num_push);
   //LOG(INFO) << "Peer selection strategy = " << selection_strategy;
   peer_sel_cnt = 0;
@@ -1464,8 +1398,6 @@ void BackgroundThread() {
     ptre_global.htod_mu.unlock();
     CheckBufferTable(htod_reqs);
     for (auto& req : htod_reqs) {
-      OpTrace("TFOp", req.key, "");
-      OpTrace("TFOp", req.key, "<-DoneComputeGrad");
       auto sm = ptre_global.recvbuf_table[req.key].second;
       std::lock_guard<std::mutex> guard(sm->mu);
       if (sm->state == RECVBUF_STATE_MEMCPY_READY) {

@@ -13,14 +13,9 @@
 #include "ptre/common/common.h"
 #include "ptre/common/message.h"
 #include "ptre/common/cm/consensus_manager.h"
-#include "ptre/common/communication/grpc/grpc_client_cache.h"
-#include "ptre/common/communication/rdma/grpc_client.h"
-#include "ptre/common/communication/rdma/grpc_server.h"
 //#include "ptre/common/communication/rdma/pull_job.h"
 #include "ptre/common/communication/rdma/rdma_mgr.h"
 //#include "ptre/common/communication/rdma/rdma_task.h"
-#include "ptre/common/communication/tcp/tcp_grpc_client.h"
-#include "ptre/common/communication/tcp/tcp_service_impl.h"
 #include "ptre/common/rdma/rdma_context.h"
 #include "third_party/minitrace/minitrace.h"
 
@@ -124,15 +119,8 @@ struct PtreGlobal {
   //std::vector<int> push_dsts;
   //std::queue<std::shared_ptr<PushTaskV2>> push_q;
 
-  // Grpc Service
-  RdmaServiceImpl grpc_service;
-  // Tcp Grpc Service
-  TcpServiceImpl tcp_grpc_service;
-  // Grpc Server
-  std::unique_ptr<grpc::Server> grpc_server = nullptr;
   std::atomic<bool> shutdown;
   // Background thread running PTRE communication.
-  std::thread grpc_server_thread;
   std::vector<std::thread> push_threads;
   std::vector<std::thread> send_polling_threads;
   std::vector<std::thread> recv_polling_threads;
@@ -152,10 +140,7 @@ struct PtreGlobal {
   PtreWorker this_worker;
   std::vector<PtreWorker> workers;
   std::vector<PtreNode> nodes;
-  std::vector<std::string> grpc_hosts;
-  std::shared_ptr<GrpcClientCache<GrpcClient>> grpc_client_cache = nullptr;
-  std::shared_ptr<GrpcClientCache<TcpGrpcClient>> tcp_grpc_client_cache =
-      nullptr;
+  std::vector<std::string> tcp_hosts;
 
   // Training Infos
   int local_step = 0;

@@ -45,8 +45,8 @@ std::vector<PtreWorker> ParseNode(const PtreNode& node) {
     worker.local_rank = i;
     std::stringstream ss;
     ss << node.hostname << ":" << node.grpc_ports[i];
-    string grpc_host = ss.str();
-    worker.grpc_host = std::move(grpc_host);
+    string tcp_host = ss.str();
+    worker.tcp_host = std::move(tcp_host);
     worker.host = node;
     worker.port = node.grpc_ports[i];
     workers.push_back(std::move(worker));
