@@ -1,0 +1,25 @@
+#!/bin/bash
+if [[ $# -ne 3 ]]; then
+  echo "Usage: $0 app hostfile ptre_size"
+  exit 1
+fi
+app=$(realpath $1)
+hostfile=$(realpath $2)
+ptre_size=$3
+num_hosts=$(cat $hostfile | wc -l)
+if [[ $ptre_size -gt $num_hosts ]]; then
+  echo "ptre_size=$ptre_size > $num_hosts"
+  exit 1
+fi
+
+rank=0
+while read line
+do
+  host=$(echo $line | cut -d ':' -f 1)
+  ssh $host "python3 $app -hostfile $hostfile -np $ptre_size -rank $rank" &
+  ((rank++))
+  if ((rank == ptre_size)); then
+    break
+  fi
+done < $hostfile
+wait
