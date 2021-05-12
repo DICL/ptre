@@ -22,7 +22,7 @@ export PYTHONPATH="${PYTHONPATH}:${PROJECT_ROOT}/ptre/python"
 cd $PROJECT_ROOT/examples
 ./run-ptre tensorflow2_keras_mnist.py hosts 1
 ```
-Command just `./run-ptre` without any argument to see what each argument means.
+Command just `./run-ptre` without any argument to see what each argument means. \
 To run a training on multiple hosts, provide your host file that contain
 s your hosts information.
 Each line of a host file should be formatted as:
