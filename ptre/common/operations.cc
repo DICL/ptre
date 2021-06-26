@@ -20,6 +20,17 @@
 
 #include <arpa/inet.h>
 
+// tensorflow
+#include "tensorflow/stream_executor/stream.h"
+#include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/framework/shape_inference.h"
+#include "tensorflow/core/common_runtime/dma_helper.h"
+
+// cuda
+#include "cuda_runtime.h"
+#include "cuda.h"
+
 #define LOGR(x) LOG(x) << __FUNCTION__ << "]" << "[" << ptre_rank() << "]"
 
 // up to 346ms/step 8 nodes
@@ -571,6 +582,18 @@ void ptre_call_generic(const char* func_name) {
 }
 
 }  // extern "C"
+
+bool GPUTensorReady(OpContext* context){
+  auto device_context = context->op_device_context();
+  auto executor = device_context->stream()->parent();
+  auto ready_event = new perftools::gputools::Event(executor);
+  ready_event->Init();
+  device_context->stream()->ThenRecordEvent(ready_event);
+  auto event_ = std::shared_ptr<perftools::gputools::Event>(ready_event);
+
+
+  return event_->PollForStatus() != perftools::gputools::Event::Status::kPending;
+}
 
 void MemcpyDeviceToHost(OpContext* context,
                         std::shared_ptr<Tensor> d,
@@ -1558,7 +1581,7 @@ void BackgroundThread() {
       for (auto& req : dtoh_reqs) {
         auto sm = ptre_global.sendbuf_table[req.key].second;
         std::lock_guard<std::mutex> guard(sm->mu);
-        if (sm->state == SENDBUF_STATE_BUSY) {
+        if (sm->state == SENDBUF_STATE_BUSY || !GPUTensorReady(req.context)) {
 #ifdef SKIP_DTOH_IF_NOT_READY
           req.callback(Status(::tensorflow::error::Code::UNKNOWN, "skip"));
 #else
