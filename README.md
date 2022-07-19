@@ -1,5 +1,9 @@
-# PTRE
-p2p training runtime environment
+# PTRE: P2P-based asynchronous distributed Training Runtime Environment
+
+## Introduction
+PTRE is a distributed deep learning training runtime for Tensorflow.
+PTRE uses peer-to-peer based asynchronous communication for data synchronization.
+The communication component is implemented with RDMA technology to reduce communication costs and achieve better training throughput.
 
 ## 1. Build Project
 ```
